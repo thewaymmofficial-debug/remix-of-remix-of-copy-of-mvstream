@@ -120,8 +120,8 @@ export default function CategoriesAdmin() {
           {isLoading ? (
             <div className="p-8 text-center text-muted-foreground">Loading...</div>
           ) : categories && categories.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table className="min-w-[400px]">
+            <div className="overflow-x-auto -mx-3 px-3 md:mx-0 md:px-0">
+              <Table className="min-w-[320px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-12">Order</TableHead>

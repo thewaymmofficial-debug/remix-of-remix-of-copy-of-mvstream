@@ -259,8 +259,8 @@ export default function UsersAdmin() {
           {isLoading ? (
             <div className="p-8 text-center text-muted-foreground">Loading...</div>
           ) : filteredUsers && filteredUsers.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table className="min-w-[700px]">
+            <div className="overflow-x-auto -mx-3 px-3 md:mx-0 md:px-0">
+              <Table className="min-w-[550px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>User</TableHead>
