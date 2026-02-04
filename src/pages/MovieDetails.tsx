@@ -9,12 +9,16 @@ import {
   Users,
   ExternalLink,
   ArrowLeft,
+  Bookmark,
+  BookmarkCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Navbar } from '@/components/Navbar';
+import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { PremiumModal } from '@/components/PremiumModal';
 import { useAuth } from '@/hooks/useAuth';
 import { useMovie } from '@/hooks/useMovies';
+import { useToast } from '@/hooks/use-toast';
 
 export default function MovieDetails() {
   const { id } = useParams<{ id: string }>();
@@ -22,6 +26,8 @@ export default function MovieDetails() {
   const { user, isPremium, isLoading: authLoading } = useAuth();
   const { data: movie, isLoading } = useMovie(id || '');
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [isInWatchlist, setIsInWatchlist] = useState(false);
+  const { toast } = useToast();
 
   // Redirect if not logged in
   if (!authLoading && !user) {
@@ -68,8 +74,18 @@ export default function MovieDetails() {
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
+  const toggleWatchlist = () => {
+    setIsInWatchlist(!isInWatchlist);
+    toast({
+      title: isInWatchlist ? "Removed from Watchlist" : "Added to Watchlist",
+      description: isInWatchlist 
+        ? `${movie.title} has been removed from your watchlist.`
+        : `${movie.title} has been added to your watchlist.`,
+    });
+  };
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background mobile-nav-spacing">
       <Navbar />
 
       {/* Backdrop */}
@@ -199,6 +215,20 @@ export default function MovieDetails() {
                   </Button>
                 )}
 
+                {/* Watchlist Button */}
+                <Button
+                  size="lg"
+                  variant={isInWatchlist ? "default" : "secondary"}
+                  className="gap-2"
+                  onClick={toggleWatchlist}
+                >
+                  {isInWatchlist ? (
+                    <BookmarkCheck className="w-5 h-5" />
+                  ) : (
+                    <Bookmark className="w-5 h-5" />
+                  )}
+                </Button>
+
                 {movie.telegram_url && (
                   <Button
                     size="lg"
@@ -230,6 +260,8 @@ export default function MovieDetails() {
 
       {/* Premium Modal */}
       <PremiumModal open={showPremiumModal} onOpenChange={setShowPremiumModal} />
+      
+      <MobileBottomNav />
     </div>
   );
 }
