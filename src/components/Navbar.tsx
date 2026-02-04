@@ -1,8 +1,9 @@
 import { useState, ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Menu, X, LogOut, Settings, Crown, Sun, Moon } from 'lucide-react';
+import { User, Menu, X, LogOut, Settings, Crown, Sun, Moon, Search } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,19 +11,31 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useAuth } from '@/hooks/useAuth';
 import { LoginModal } from './LoginModal';
+import { useFilter } from '@/contexts/FilterContext';
+import { cn } from '@/lib/utils';
 
 interface NavbarProps {
   children?: ReactNode;
+  categories?: string[];
+  years?: number[];
 }
 
-export function Navbar({ children }: NavbarProps) {
+export function Navbar({ children, categories = [], years = [] }: NavbarProps) {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const { user, profile, role, isAdmin, signOut } = useAuth();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { searchQuery, setSearchQuery, selectedCategory, setSelectedCategory, selectedYear, setSelectedYear } = useFilter();
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
@@ -35,48 +48,81 @@ export function Navbar({ children }: NavbarProps) {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-xl border-b border-white/10">
-        <div className="flex items-center justify-between px-4 md:px-8 h-16 max-w-[1920px] mx-auto">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-xl border-b border-white/10">
+        <div className="flex items-center justify-between px-4 md:px-6 h-14 max-w-[1920px] mx-auto">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2">
-            <span className="text-2xl font-bold text-gradient">Ceniverse</span>
-            <span className="text-xs font-semibold px-2 py-0.5 premium-badge rounded text-black">
+          <Link to="/" className="flex items-center gap-2 flex-shrink-0">
+            <span className="text-xl font-bold text-gradient">Ceniverse</span>
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 premium-badge rounded text-black hidden sm:inline">
               PREMIUM
             </span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-6">
-            <Link to="/" className="text-sm font-medium text-white hover:text-primary transition-colors">
-              Home
-            </Link>
-            {user && (
-              <>
-                <Link to="/profile" className="text-sm font-medium text-white/70 hover:text-primary transition-colors">
-                  My Profile
-                </Link>
-                {isAdmin && (
-                  <Link to="/admin" className="text-sm font-medium text-cg-gold hover:text-cg-gold/80 transition-colors">
-                    Admin
-                  </Link>
-                )}
-              </>
+          {/* Desktop: Search and Filters */}
+          <div className="hidden md:flex items-center gap-3 flex-1 max-w-2xl mx-6">
+            {/* Search Input */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
+              <Input
+                type="text"
+                placeholder="Search movies..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 h-9 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:bg-white/15 focus:border-white/30"
+              />
+            </div>
+
+            {/* Category Filter */}
+            {categories.length > 0 && (
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="w-32 h-9 bg-white/10 border-white/20 text-white text-sm">
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border-border">
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {/* Year Filter */}
+            {years.length > 0 && (
+              <Select value={selectedYear} onValueChange={setSelectedYear}>
+                <SelectTrigger className="w-24 h-9 bg-white/10 border-white/20 text-white text-sm">
+                  <SelectValue placeholder="Year" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border-border">
+                  <SelectItem value="all">All Years</SelectItem>
+                  {years.map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
           </div>
 
           {/* Right side */}
-          <div className="flex items-center gap-2 md:gap-3">
-            {/* Search bar slot */}
-            <div className="hidden md:block">
-              {children}
-            </div>
-
+          <div className="flex items-center gap-2">
             {/* Theme toggle */}
-            <Button variant="ghost" size="icon" onClick={toggleTheme} className="text-white hover:bg-white/10">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleTheme}
+              className={cn(
+                "text-white hover:bg-white/10 h-9 w-9",
+                theme === 'dark' && "theme-toggle-ring"
+              )}
+            >
               {theme === 'dark' ? (
-                <Sun className="w-5 h-5" />
+                <Sun className="w-4 h-4" />
               ) : (
-                <Moon className="w-5 h-5" />
+                <Moon className="w-4 h-4" />
               )}
             </Button>
 
@@ -84,14 +130,14 @@ export function Navbar({ children }: NavbarProps) {
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="relative text-white hover:bg-white/10">
-                    <User className="w-5 h-5" />
+                  <Button variant="ghost" size="icon" className="relative text-white hover:bg-white/10 h-9 w-9">
+                    <User className="w-4 h-4" />
                     {role === 'premium' && (
-                      <Crown className="w-3 h-3 absolute -top-1 -right-1 text-cg-gold" />
+                      <Crown className="w-2.5 h-2.5 absolute -top-0.5 -right-0.5 text-cg-gold" />
                     )}
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 glass">
+                <DropdownMenuContent align="end" className="w-56 bg-popover border-border">
                   <div className="px-2 py-1.5">
                     <p className="text-sm font-medium">{profile?.display_name || 'User'}</p>
                     <p className="text-xs text-muted-foreground">{user.email}</p>
@@ -124,7 +170,7 @@ export function Navbar({ children }: NavbarProps) {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button onClick={() => setShowLoginModal(true)} size="sm">
+              <Button onClick={() => setShowLoginModal(true)} size="sm" className="h-8 text-xs">
                 Sign In
               </Button>
             )}
@@ -133,7 +179,7 @@ export function Navbar({ children }: NavbarProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden"
+              className="md:hidden text-white h-9 w-9"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -145,6 +191,52 @@ export function Navbar({ children }: NavbarProps) {
         {mobileMenuOpen && (
           <div className="md:hidden bg-black/95 backdrop-blur-xl border-t border-white/10">
             <div className="flex flex-col p-4 space-y-3">
+              {/* Mobile Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
+                <Input
+                  type="text"
+                  placeholder="Search movies..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                />
+              </div>
+
+              {/* Mobile Filters */}
+              <div className="flex gap-2">
+                {categories.length > 0 && (
+                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <SelectTrigger className="flex-1 bg-white/10 border-white/20 text-white text-sm">
+                      <SelectValue placeholder="Category" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border-border">
+                      <SelectItem value="all">All Categories</SelectItem>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat} value={cat}>
+                          {cat}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                {years.length > 0 && (
+                  <Select value={selectedYear} onValueChange={setSelectedYear}>
+                    <SelectTrigger className="flex-1 bg-white/10 border-white/20 text-white text-sm">
+                      <SelectValue placeholder="Year" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border-border">
+                      <SelectItem value="all">All Years</SelectItem>
+                      {years.map((year) => (
+                        <SelectItem key={year} value={year.toString()}>
+                          {year}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
               <Link
                 to="/"
                 className="text-sm font-medium py-2 text-white"

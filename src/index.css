@@ -2,10 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Ceniverse Premium - Dark Cinematic Theme */
+/* Ceniverse Premium - Cinematic Theme */
 
 @layer base {
-  /* Light mode - Light content with dark hero */
+  /* Light mode - Warm beige theme */
   :root {
     --background: 40 20% 94%;
     --foreground: 30 10% 15%;
@@ -44,9 +44,6 @@
     --cg-glass: 30 10% 15% / 0.06;
     --cg-glass-border: 30 10% 15% / 0.1;
 
-    /* Content section background for light mode */
-    --content-bg: 40 20% 94%;
-
     --sidebar-background: 40 15% 98%;
     --sidebar-foreground: 30 10% 15%;
     --sidebar-primary: 0 72% 51%;
@@ -57,50 +54,47 @@
     --sidebar-ring: 0 72% 51%;
   }
 
-  /* Dark mode - Deep cinematic black */
+  /* Dark mode - Deep cinematic black throughout */
   .dark {
-    --background: 0 0% 3%;
+    --background: 0 0% 4%;
     --foreground: 0 0% 96%;
 
-    --card: 0 0% 5%;
+    --card: 0 0% 6%;
     --card-foreground: 0 0% 96%;
 
-    --popover: 0 0% 5%;
+    --popover: 0 0% 8%;
     --popover-foreground: 0 0% 96%;
 
     --primary: 0 72% 51%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 10%;
+    --secondary: 0 0% 12%;
     --secondary-foreground: 0 0% 96%;
 
-    --muted: 0 0% 12%;
-    --muted-foreground: 0 0% 65%;
+    --muted: 0 0% 14%;
+    --muted-foreground: 0 0% 60%;
 
-    --accent: 0 0% 10%;
+    --accent: 0 0% 12%;
     --accent-foreground: 0 0% 96%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 14%;
-    --input: 0 0% 14%;
+    --border: 0 0% 16%;
+    --input: 0 0% 16%;
     --ring: 0 72% 51%;
 
     /* Ceniverse custom tokens - dark mode */
     --cg-glass: 0 0% 100% / 0.05;
-    --cg-glass-border: 0 0% 100% / 0.08;
+    --cg-glass-border: 0 0% 100% / 0.1;
 
-    /* Content section background for dark mode */
-    --content-bg: 0 0% 3%;
-
-    --sidebar-background: 0 0% 4%;
+    --sidebar-background: 0 0% 5%;
     --sidebar-foreground: 0 0% 90%;
     --sidebar-primary: 0 72% 51%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 10%;
+    --sidebar-accent: 0 0% 12%;
     --sidebar-accent-foreground: 0 0% 96%;
-    --sidebar-border: 0 0% 14%;
+    --sidebar-border: 0 0% 16%;
     --sidebar-ring: 0 72% 51%;
   }
 
@@ -174,8 +168,8 @@
   .hero-gradient-bottom {
     background: linear-gradient(
       to top,
-      rgba(0, 0, 0, 0.95) 0%,
-      rgba(0, 0, 0, 0.6) 40%,
+      hsl(var(--background)) 0%,
+      hsl(var(--background) / 0.8) 20%,
       transparent 100%
     );
   }
@@ -209,6 +203,11 @@
   /* Add padding to main content for mobile bottom nav */
   .mobile-nav-spacing {
     @apply pb-20 md:pb-0;
+  }
+
+  /* Theme toggle with red ring in dark mode */
+  .dark .theme-toggle-ring {
+    @apply ring-2 ring-primary ring-offset-1 ring-offset-background;
   }
 }
 
