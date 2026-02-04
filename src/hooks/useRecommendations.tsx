@@ -33,7 +33,7 @@ export function useRecommendations(limit = 10) {
       const watchedMovieIds = new Set(historyData.map((h) => h.movie_id));
       const categories = [...new Set(
         historyData
-          .map((h) => (h.movie as Movie)?.category)
+          .flatMap((h) => (h.movie as Movie)?.category || [])
           .filter(Boolean)
       )];
       const directors = [...new Set(
@@ -50,9 +50,9 @@ export function useRecommendations(limit = 10) {
 
       // Filter by category or director
       if (categories.length > 0 && directors.length > 0) {
-        query = query.or(`category.in.(${categories.join(',')}),director.in.(${directors.join(',')})`);
+        query = query.or(`category.ov.{${categories.join(',')}},director.in.(${directors.join(',')})`);
       } else if (categories.length > 0) {
-        query = query.in('category', categories);
+        query = query.overlaps('category', categories);
       }
 
       const { data: recommendations, error: recError } = await query;
@@ -68,7 +68,11 @@ export function useRecommendations(limit = 10) {
         if (results.length >= limit) break;
 
         let reason = '';
-        if (movie.category === baseMovie?.category) {
+        const movieCategories = (movie.category as string[]) || [];
+        const baseCategories = baseMovie?.category || [];
+        const hasCommonCategory = movieCategories.some(c => baseCategories.includes(c));
+        
+        if (hasCommonCategory) {
           reason = `Similar to ${baseMovie.title}`;
         } else if (movie.director === baseMovie?.director) {
           reason = `Also directed by ${movie.director}`;
@@ -91,16 +95,17 @@ export function useRecommendations(limit = 10) {
 }
 
 // Get related movies for a specific movie
-export function useRelatedMovies(movieId: string, category?: string, limit = 10) {
+export function useRelatedMovies(movieId: string, category?: string[], limit = 10) {
   return useQuery({
     queryKey: ['related-movies', movieId, category, limit],
     queryFn: async (): Promise<Movie[]> => {
-      if (!category) return [];
+      if (!category || category.length === 0) return [];
 
+      // category is now an array, use overlaps to find movies with any matching category
       const { data, error } = await supabase
         .from('movies')
         .select('*')
-        .eq('category', category)
+        .overlaps('category', category)
         .neq('id', movieId)
         .limit(limit);
 

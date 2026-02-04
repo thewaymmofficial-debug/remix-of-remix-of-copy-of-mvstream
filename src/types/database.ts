@@ -26,7 +26,7 @@ export interface Movie {
   director: string | null;
   actors: string[];
   year: number | null;
-  category: string;
+  category: string[];
   resolution: string | null;
   file_size: string | null;
   poster_url: string | null;
@@ -49,7 +49,7 @@ export interface MovieInsert {
   director?: string | null;
   actors?: string[];
   year?: number | null;
-  category?: string;
+  category?: string[];
   resolution?: string | null;
   file_size?: string | null;
   poster_url?: string | null;

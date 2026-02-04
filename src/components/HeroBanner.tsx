@@ -152,7 +152,7 @@ export function HeroBanner({ movies, onPlay, onMoreInfo }: HeroBannerProps) {
   // Build meta info string
   const metaParts: string[] = [];
   if (currentMovie.year) metaParts.push(currentMovie.year.toString());
-  if (currentMovie.category) metaParts.push(currentMovie.category);
+  if (currentMovie.category && currentMovie.category.length > 0) metaParts.push(currentMovie.category.join(' • '));
   if (currentMovie.resolution) metaParts.push(currentMovie.resolution);
   if (currentMovie.director) metaParts.push(`Dir. ${currentMovie.director}`);
 
