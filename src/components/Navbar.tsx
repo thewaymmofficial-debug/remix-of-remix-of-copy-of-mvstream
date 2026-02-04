@@ -1,6 +1,7 @@
 import { useState, ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, LogOut, Settings, Crown, Sun, Moon, Search } from 'lucide-react';
+import cineverseLogo from '@/assets/cineverse-logo.png';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,10 +60,7 @@ export function Navbar({ children, categories = [], years = [] }: NavbarProps) {
         <div className="flex items-center justify-between px-4 md:px-6 h-14 max-w-[1920px] mx-auto">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 flex-shrink-0">
-            <span className="text-xl font-bold text-gradient">Cineverse</span>
-            <span className="text-[10px] font-semibold px-1.5 py-0.5 premium-badge rounded text-black hidden sm:inline">
-              PREMIUM
-            </span>
+            <img src={cineverseLogo} alt="Cineverse" className="h-8 w-auto" />
           </Link>
 
           {/* Desktop: Search and Filters */}
