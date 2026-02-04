@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { Plus, Edit, Trash2, Crown, Search } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Plus, Edit, Trash2, Crown, Search, Upload, Loader2, X } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -80,6 +81,10 @@ export default function MoviesAdmin() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [movieToDelete, setMovieToDelete] = useState<Movie | null>(null);
   const [actorsInput, setActorsInput] = useState('');
+  const [uploadingPoster, setUploadingPoster] = useState(false);
+  const [uploadingBackdrop, setUploadingBackdrop] = useState(false);
+  const posterInputRef = useRef<HTMLInputElement>(null);
+  const backdropInputRef = useRef<HTMLInputElement>(null);
 
   const filteredMovies = movies?.filter(
     (movie) =>
@@ -115,6 +120,65 @@ export default function MoviesAdmin() {
     });
     setActorsInput(movie.actors?.join(', ') || '');
     setShowModal(true);
+  };
+
+  const uploadImage = async (file: File, type: 'poster' | 'backdrop') => {
+    const setUploading = type === 'poster' ? setUploadingPoster : setUploadingBackdrop;
+    setUploading(true);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${type}-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `${type}s/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('movie-posters')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('movie-posters')
+        .getPublicUrl(filePath);
+
+      if (type === 'poster') {
+        setFormData(prev => ({ ...prev, poster_url: publicUrl }));
+      } else {
+        setFormData(prev => ({ ...prev, backdrop_url: publicUrl }));
+      }
+
+      toast.success(`${type === 'poster' ? 'Poster' : 'Backdrop'} uploaded successfully`);
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error(`Failed to upload ${type}`);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'poster' | 'backdrop') => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('File size must be less than 5MB');
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        toast.error('Only image files are allowed');
+        return;
+      }
+      uploadImage(file, type);
+    }
+  };
+
+  const clearImage = (type: 'poster' | 'backdrop') => {
+    if (type === 'poster') {
+      setFormData(prev => ({ ...prev, poster_url: '' }));
+      if (posterInputRef.current) posterInputRef.current.value = '';
+    } else {
+      setFormData(prev => ({ ...prev, backdrop_url: '' }));
+      if (backdropInputRef.current) backdropInputRef.current.value = '';
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -378,32 +442,127 @@ export default function MoviesAdmin() {
               />
             </div>
 
+            {/* Image Upload Section */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Poster Upload */}
               <div className="space-y-2">
-                <Label htmlFor="poster_url">Poster URL</Label>
-                <Input
-                  id="poster_url"
-                  value={formData.poster_url || ''}
-                  onChange={(e) =>
-                    setFormData({ ...formData, poster_url: e.target.value })
-                  }
-                  placeholder="https://..."
-                  className="bg-muted"
-                />
+                <Label>Poster Image</Label>
+                <div className="space-y-2">
+                  {formData.poster_url ? (
+                    <div className="relative inline-block">
+                      <img
+                        src={formData.poster_url}
+                        alt="Poster preview"
+                        className="w-24 h-36 object-cover rounded border border-border"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute -top-2 -right-2 w-6 h-6"
+                        onClick={() => clearImage('poster')}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ) : null}
+                  <div className="flex gap-2">
+                    <input
+                      type="file"
+                      ref={posterInputRef}
+                      accept="image/*"
+                      onChange={(e) => handleFileChange(e, 'poster')}
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => posterInputRef.current?.click()}
+                      disabled={uploadingPoster}
+                      className="gap-2"
+                    >
+                      {uploadingPoster ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Upload className="w-4 h-4" />
+                      )}
+                      Upload Poster
+                    </Button>
+                  </div>
+                  <Input
+                    id="poster_url"
+                    value={formData.poster_url || ''}
+                    onChange={(e) =>
+                      setFormData({ ...formData, poster_url: e.target.value })
+                    }
+                    placeholder="Or paste image URL..."
+                    className="bg-muted text-xs"
+                  />
+                </div>
               </div>
 
+              {/* Backdrop Upload */}
               <div className="space-y-2">
-                <Label htmlFor="backdrop_url">Backdrop URL</Label>
-                <Input
-                  id="backdrop_url"
-                  value={formData.backdrop_url || ''}
-                  onChange={(e) =>
-                    setFormData({ ...formData, backdrop_url: e.target.value })
-                  }
-                  placeholder="https://..."
-                  className="bg-muted"
-                />
+                <Label>Backdrop Image</Label>
+                <div className="space-y-2">
+                  {formData.backdrop_url ? (
+                    <div className="relative inline-block">
+                      <img
+                        src={formData.backdrop_url}
+                        alt="Backdrop preview"
+                        className="w-36 h-20 object-cover rounded border border-border"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute -top-2 -right-2 w-6 h-6"
+                        onClick={() => clearImage('backdrop')}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ) : null}
+                  <div className="flex gap-2">
+                    <input
+                      type="file"
+                      ref={backdropInputRef}
+                      accept="image/*"
+                      onChange={(e) => handleFileChange(e, 'backdrop')}
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => backdropInputRef.current?.click()}
+                      disabled={uploadingBackdrop}
+                      className="gap-2"
+                    >
+                      {uploadingBackdrop ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Upload className="w-4 h-4" />
+                      )}
+                      Upload Backdrop
+                    </Button>
+                  </div>
+                  <Input
+                    id="backdrop_url"
+                    value={formData.backdrop_url || ''}
+                    onChange={(e) =>
+                      setFormData({ ...formData, backdrop_url: e.target.value })
+                    }
+                    placeholder="Or paste image URL..."
+                    className="bg-muted text-xs"
+                  />
+                </div>
               </div>
+            </div>
+
+            {/* Other URLs */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
               <div className="space-y-2">
                 <Label htmlFor="stream_url">Stream URL</Label>
