@@ -1,5 +1,5 @@
 import { useNavigate, Outlet, Link, useLocation } from 'react-router-dom';
-import { Film, Users, LayoutDashboard, ArrowLeft } from 'lucide-react';
+import { Film, Users, LayoutDashboard, ArrowLeft, Tags } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Navbar } from '@/components/Navbar';
 import { useAuth } from '@/hooks/useAuth';
@@ -29,6 +29,7 @@ export default function AdminLayout() {
   const navItems = [
     { path: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
     { path: '/admin/movies', label: 'Movies', icon: Film },
+    { path: '/admin/categories', label: 'Categories', icon: Tags },
     { path: '/admin/users', label: 'Users', icon: Users },
   ];
 
