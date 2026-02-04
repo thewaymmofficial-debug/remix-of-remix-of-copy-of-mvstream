@@ -17,6 +17,7 @@ import MoviesAdmin from "./pages/admin/MoviesAdmin";
 import SeriesAdmin from "./pages/admin/SeriesAdmin";
 import CategoriesAdmin from "./pages/admin/CategoriesAdmin";
 import UsersAdmin from "./pages/admin/UsersAdmin";
+import SettingsAdmin from "./pages/admin/SettingsAdmin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +43,7 @@ const App = () => (
                   <Route path="series/:movieId" element={<SeriesAdmin />} />
                   <Route path="categories" element={<CategoriesAdmin />} />
                   <Route path="users" element={<UsersAdmin />} />
+                  <Route path="settings" element={<SettingsAdmin />} />
                 </Route>
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
