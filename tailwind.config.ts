@@ -99,6 +99,10 @@ export default {
         shimmer: {
           "100%": { transform: "translateX(100%)" },
         },
+        marquee: {
+          "0%": { transform: "translateX(0%)" },
+          "100%": { transform: "translateX(-100%)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -107,6 +111,9 @@ export default {
         "fade-up": "fade-up 0.4s ease-out",
         "scale-in": "scale-in 0.2s ease-out",
         shimmer: "shimmer 2s infinite",
+        marquee: "marquee 20s linear infinite",
+        "marquee-slow": "marquee 30s linear infinite",
+        "marquee-fast": "marquee 10s linear infinite",
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],

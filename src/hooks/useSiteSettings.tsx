@@ -20,6 +20,14 @@ export interface SubscriptionPrices {
   lifetime: SubscriptionPrice;
 }
 
+export interface AnnouncementSettings {
+  enabled: boolean;
+  text: string;
+  bgColor: string;
+  textColor: string;
+  speed: 'slow' | 'normal' | 'fast';
+}
+
 export function useSiteSettings() {
   return useQuery({
     queryKey: ['site-settings'],
@@ -38,6 +46,7 @@ export function useSiteSettings() {
       return {
         adminContacts: settings['admin_contacts'] as AdminContacts | undefined,
         subscriptionPrices: settings['subscription_prices'] as SubscriptionPrices | undefined,
+        announcement: settings['announcement'] as AnnouncementSettings | undefined,
       };
     },
   });
