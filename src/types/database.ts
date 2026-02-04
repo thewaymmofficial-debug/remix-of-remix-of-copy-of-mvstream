@@ -1,4 +1,4 @@
-// Custom types for CineGeek database entities
+// Custom types for Ceniverse database entities
 
 export type AppRole = 'admin' | 'premium' | 'free_user';
 
