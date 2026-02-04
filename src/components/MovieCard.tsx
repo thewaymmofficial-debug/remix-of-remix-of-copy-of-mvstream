@@ -10,7 +10,7 @@ export function MovieCard({ movie, onClick }: MovieCardProps) {
   return (
     <button
       onClick={onClick}
-      className="movie-card group relative flex-shrink-0 w-[150px] sm:w-[170px] md:w-[180px] aspect-[2/3] bg-card focus:outline-none tv-focus"
+      className="movie-card group relative flex-shrink-0 w-[calc(33.333%-8px)] min-w-[105px] max-w-[140px] sm:w-[140px] sm:max-w-none md:w-[160px] aspect-[2/3] bg-card focus:outline-none tv-focus"
     >
       {/* Poster Image */}
       {movie.poster_url ? (

@@ -5,6 +5,7 @@ import { HeroBanner } from '@/components/HeroBanner';
 import { MovieRow } from '@/components/MovieRow';
 import { LoginModal } from '@/components/LoginModal';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
+import { MovieQuickPreview } from '@/components/MovieQuickPreview';
 import { useAuth } from '@/hooks/useAuth';
 import { useFeaturedMovies, useMoviesByCategory, useWatchlist } from '@/hooks/useMovies';
 import { useFilter } from '@/contexts/FilterContext';
@@ -17,6 +18,7 @@ const Index = () => {
   const { data: moviesByCategory, isLoading } = useMoviesByCategory();
   const { data: watchlistData } = useWatchlist();
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [previewMovie, setPreviewMovie] = useState<Movie | null>(null);
   const { searchQuery, selectedCategory, selectedYear } = useFilter();
 
   // Get all unique categories and years for filters
@@ -79,7 +81,7 @@ const Index = () => {
     if (!user) {
       setShowLoginModal(true);
     } else {
-      navigate(`/movie/${movie.id}`);
+      setPreviewMovie(movie);
     }
   };
 
@@ -147,7 +149,7 @@ const Index = () => {
                   <div className="h-6 w-32 bg-muted rounded mb-4" />
                   <div className="flex gap-3 overflow-hidden">
                     {[1, 2, 3, 4, 5].map((j) => (
-                      <div key={j} className="flex-shrink-0 w-[150px] aspect-[2/3] bg-muted rounded-lg" />
+                      <div key={j} className="flex-shrink-0 w-[calc(33.333%-8px)] min-w-[105px] max-w-[140px] sm:w-[140px] sm:max-w-none aspect-[2/3] bg-muted rounded-lg" />
                     ))}
                   </div>
                 </div>
@@ -196,6 +198,11 @@ const Index = () => {
 
       <MobileBottomNav />
       <LoginModal open={showLoginModal} onOpenChange={setShowLoginModal} />
+      <MovieQuickPreview 
+        movie={previewMovie} 
+        open={!!previewMovie} 
+        onOpenChange={(open) => !open && setPreviewMovie(null)} 
+      />
     </div>
   );
 };
