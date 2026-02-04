@@ -158,9 +158,9 @@
   .hero-gradient {
     background: linear-gradient(
       to right,
-      hsl(var(--background)) 0%,
-      hsl(var(--background) / 0.8) 30%,
-      hsl(var(--background) / 0.4) 60%,
+      rgba(0, 0, 0, 0.9) 0%,
+      rgba(0, 0, 0, 0.7) 30%,
+      rgba(0, 0, 0, 0.4) 60%,
       transparent 100%
     );
   }
@@ -168,8 +168,8 @@
   .hero-gradient-bottom {
     background: linear-gradient(
       to top,
-      hsl(var(--background)) 0%,
-      hsl(var(--background) / 0.6) 40%,
+      rgba(0, 0, 0, 0.95) 0%,
+      rgba(0, 0, 0, 0.6) 40%,
       transparent 100%
     );
   }
