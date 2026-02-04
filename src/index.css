@@ -194,6 +194,16 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  /* Safe area for mobile bottom nav */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  /* Add padding to main content for mobile bottom nav */
+  .mobile-nav-spacing {
+    @apply pb-20 md:pb-0;
+  }
 }
 
 @layer utilities {
