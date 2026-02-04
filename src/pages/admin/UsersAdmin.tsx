@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Crown, User, Shield } from 'lucide-react';
+import { Search, Crown, User, Shield, Clock, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -18,10 +18,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import type { AppRole } from '@/types/database';
+
+type PremiumDuration = 'monthly' | 'yearly' | 'lifetime';
 
 interface UserWithRole {
   user_id: string;
@@ -29,11 +39,17 @@ interface UserWithRole {
   created_at: string;
   email: string | null;
   display_name: string | null;
+  premium_type: string | null;
+  premium_started_at: string | null;
+  premium_expires_at: string | null;
 }
 
 export default function UsersAdmin() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
+  const [premiumDialogOpen, setPremiumDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
+  const [selectedDuration, setSelectedDuration] = useState<PremiumDuration>('monthly');
 
   const { data: users, isLoading } = useQuery({
     queryKey: ['admin', 'users'],
@@ -41,7 +57,7 @@ export default function UsersAdmin() {
       // Get all user roles with profile data
       const { data: roles, error: rolesError } = await supabase
         .from('user_roles')
-        .select('user_id, role, created_at');
+        .select('user_id, role, created_at, premium_type, premium_started_at, premium_expires_at');
 
       if (rolesError) throw rolesError;
 
@@ -61,6 +77,9 @@ export default function UsersAdmin() {
           created_at: role.created_at,
           email: profile?.email || null,
           display_name: profile?.display_name || null,
+          premium_type: role.premium_type,
+          premium_started_at: role.premium_started_at,
+          premium_expires_at: role.premium_expires_at,
         };
       });
 
@@ -70,12 +89,28 @@ export default function UsersAdmin() {
 
   const updateRole = useMutation({
     mutationFn: async ({ userId, newRole }: { userId: string; newRole: AppRole }) => {
-      const { error } = await supabase
-        .from('user_roles')
-        .update({ role: newRole })
-        .eq('user_id', userId);
+      // If downgrading from premium, clear premium fields
+      if (newRole === 'free_user') {
+        const { error } = await supabase
+          .from('user_roles')
+          .update({ 
+            role: newRole,
+            premium_type: null,
+            premium_started_at: null,
+            premium_expires_at: null,
+          })
+          .eq('user_id', userId);
 
-      if (error) throw error;
+        if (error) throw error;
+      } else if (newRole === 'admin') {
+        // Admin role - just update role
+        const { error } = await supabase
+          .from('user_roles')
+          .update({ role: newRole })
+          .eq('user_id', userId);
+
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
@@ -85,6 +120,59 @@ export default function UsersAdmin() {
       toast.error('Failed to update role: ' + error.message);
     },
   });
+
+  const grantPremium = useMutation({
+    mutationFn: async ({ userId, duration }: { userId: string; duration: PremiumDuration }) => {
+      const now = new Date();
+      let expiresAt: Date | null = null;
+
+      if (duration === 'monthly') {
+        expiresAt = new Date(now);
+        expiresAt.setMonth(expiresAt.getMonth() + 1);
+      } else if (duration === 'yearly') {
+        expiresAt = new Date(now);
+        expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+      }
+      // lifetime = null expires_at
+
+      const { error } = await supabase
+        .from('user_roles')
+        .update({
+          role: 'premium',
+          premium_type: duration,
+          premium_started_at: now.toISOString(),
+          premium_expires_at: expiresAt?.toISOString() || null,
+        })
+        .eq('user_id', userId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      setPremiumDialogOpen(false);
+      setSelectedUser(null);
+      toast.success('Premium access granted');
+    },
+    onError: (error) => {
+      toast.error('Failed to grant premium: ' + error.message);
+    },
+  });
+
+  const handleRoleChange = (user: UserWithRole, newRole: AppRole) => {
+    if (newRole === 'premium') {
+      // Open dialog to select duration
+      setSelectedUser(user);
+      setPremiumDialogOpen(true);
+    } else {
+      updateRole.mutate({ userId: user.user_id, newRole });
+    }
+  };
+
+  const handleGrantPremium = () => {
+    if (selectedUser) {
+      grantPremium.mutate({ userId: selectedUser.user_id, duration: selectedDuration });
+    }
+  };
 
   const filteredUsers = users?.filter(
     (user) =>
@@ -100,6 +188,51 @@ export default function UsersAdmin() {
         return <Crown className="w-4 h-4 text-cg-premium" />;
       default:
         return <User className="w-4 h-4 text-muted-foreground" />;
+    }
+  };
+
+  const getPremiumStatus = (user: UserWithRole) => {
+    if (user.role !== 'premium') return null;
+
+    if (user.premium_type === 'lifetime') {
+      return (
+        <span className="text-xs text-cg-gold flex items-center gap-1">
+          <Crown className="w-3 h-3" /> Lifetime
+        </span>
+      );
+    }
+
+    if (user.premium_expires_at) {
+      const expiresAt = new Date(user.premium_expires_at);
+      const isExpired = expiresAt < new Date();
+      const daysLeft = Math.ceil((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+
+      if (isExpired) {
+        return (
+          <span className="text-xs text-destructive flex items-center gap-1">
+            <Clock className="w-3 h-3" /> Expired
+          </span>
+        );
+      }
+
+      return (
+        <span className="text-xs text-muted-foreground flex items-center gap-1">
+          <Calendar className="w-3 h-3" /> {daysLeft} days left
+        </span>
+      );
+    }
+
+    return null;
+  };
+
+  const getDurationLabel = (duration: PremiumDuration) => {
+    switch (duration) {
+      case 'monthly':
+        return '1 Month';
+      case 'yearly':
+        return '1 Year';
+      case 'lifetime':
+        return 'Lifetime';
     }
   };
 
@@ -133,6 +266,7 @@ export default function UsersAdmin() {
                   <TableHead>Email</TableHead>
                   <TableHead>Joined</TableHead>
                   <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -166,12 +300,13 @@ export default function UsersAdmin() {
                           : 'Free User'}
                       </span>
                     </TableCell>
+                    <TableCell>
+                      {getPremiumStatus(user)}
+                    </TableCell>
                     <TableCell className="text-right">
                       <Select
                         value={user.role}
-                        onValueChange={(value: AppRole) =>
-                          updateRole.mutate({ userId: user.user_id, newRole: value })
-                        }
+                        onValueChange={(value: AppRole) => handleRoleChange(user, value)}
                       >
                         <SelectTrigger className="w-32">
                           <SelectValue />
@@ -194,6 +329,55 @@ export default function UsersAdmin() {
           )}
         </CardContent>
       </Card>
+
+      {/* Premium Duration Dialog */}
+      <Dialog open={premiumDialogOpen} onOpenChange={setPremiumDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Crown className="w-5 h-5 text-cg-gold" />
+              Grant Premium Access
+            </DialogTitle>
+            <DialogDescription>
+              Select the premium duration for {selectedUser?.display_name || selectedUser?.email || 'this user'}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-3 gap-3 my-4">
+            {(['monthly', 'yearly', 'lifetime'] as PremiumDuration[]).map((duration) => (
+              <button
+                key={duration}
+                onClick={() => setSelectedDuration(duration)}
+                className={`p-4 rounded-lg border-2 transition-all text-center ${
+                  selectedDuration === duration
+                    ? 'border-cg-gold bg-cg-gold/10'
+                    : 'border-border hover:border-muted-foreground'
+                }`}
+              >
+                <p className="font-semibold">{getDurationLabel(duration)}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {duration === 'monthly' && '30 days'}
+                  {duration === 'yearly' && '365 days'}
+                  {duration === 'lifetime' && 'Never expires'}
+                </p>
+              </button>
+            ))}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPremiumDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleGrantPremium}
+              disabled={grantPremium.isPending}
+              className="bg-cg-gold text-black hover:bg-cg-gold/90"
+            >
+              {grantPremium.isPending ? 'Granting...' : 'Grant Premium'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
