@@ -34,6 +34,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
 
+        // Clear user-specific cache when signing out
+        if (event === 'SIGNED_OUT') {
+          queryClient.removeQueries({ queryKey: ['watchlist'] });
+          queryClient.removeQueries({ queryKey: ['admin'] });
+        }
+        
+        // Refetch user-specific data when signing in
+        if (event === 'SIGNED_IN' && session?.user) {
+          queryClient.invalidateQueries({ queryKey: ['watchlist', session.user.id] });
+        }
+
         // Defer profile/role fetch to avoid deadlock
         if (session?.user) {
           setTimeout(() => {
