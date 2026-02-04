@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Ceniverse Premium - Cinematic Theme */
+/* Cineverse Premium - Cinematic Theme */
 
 @layer base {
   /* Light mode - Warm beige theme */
@@ -37,7 +37,7 @@
 
     --radius: 0.5rem;
 
-    /* Ceniverse custom tokens */
+    /* Cineverse custom tokens */
     --cg-gold: 45 93% 47%;
     --cg-premium: 280 100% 65%;
     --cg-success: 142 76% 36%;
@@ -84,7 +84,7 @@
     --input: 0 0% 16%;
     --ring: 0 72% 51%;
 
-    /* Ceniverse custom tokens - dark mode */
+    /* Cineverse custom tokens - dark mode */
     --cg-glass: 0 0% 100% / 0.05;
     --cg-glass-border: 0 0% 100% / 0.1;
 

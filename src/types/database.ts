@@ -1,4 +1,4 @@
-// Custom types for Ceniverse database entities
+// Custom types for Cineverse database entities
 
 export type AppRole = 'admin' | 'premium' | 'free_user';
 export type ContentType = 'movie' | 'series';
