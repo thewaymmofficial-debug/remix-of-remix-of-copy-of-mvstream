@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
 import { useSiteSettings, useUpdateSiteSettings, AdminContacts, SubscriptionPrices, AnnouncementSettings } from '@/hooks/useSiteSettings';
 import { TelegramIcon, ViberIcon } from '@/components/ContactIcons';
 import { Mail } from 'lucide-react';
@@ -35,6 +36,7 @@ export default function SettingsAdmin() {
     bgColor: '#e50914',
     textColor: '#ffffff',
     speed: 'normal',
+    opacity: 100,
   });
 
   // Load settings into form when fetched
@@ -200,6 +202,25 @@ export default function SettingsAdmin() {
               </div>
             </div>
 
+            {/* Opacity Slider */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="announcement-opacity">Background Opacity</Label>
+                <span className="text-sm text-muted-foreground">{announcement.opacity ?? 100}%</span>
+              </div>
+              <Slider
+                id="announcement-opacity"
+                value={[announcement.opacity ?? 100]}
+                onValueChange={(value) =>
+                  setAnnouncement({ ...announcement, opacity: value[0] })
+                }
+                min={10}
+                max={100}
+                step={5}
+                className="w-full"
+              />
+            </div>
+
             {/* Preview */}
             {announcement.text && (
               <div className="space-y-2">
@@ -208,7 +229,8 @@ export default function SettingsAdmin() {
                   className="overflow-hidden rounded-lg py-2"
                   style={{ 
                     backgroundColor: announcement.bgColor,
-                    color: announcement.textColor
+                    color: announcement.textColor,
+                    opacity: (announcement.opacity ?? 100) / 100
                   }}
                 >
                   <div className="whitespace-nowrap animate-marquee">
