@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Play, Info, Crown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Movie } from '@/types/database';
@@ -11,10 +11,13 @@ interface HeroBannerProps {
 }
 
 const AUTO_ROTATE_INTERVAL = 6000; // 6 seconds
+const SWIPE_THRESHOLD = 50; // Minimum swipe distance in pixels
 
 export function HeroBanner({ movies, onPlay, onMoreInfo }: HeroBannerProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
 
   const hasMovies = movies && movies.length > 0;
   const hasMultiple = movies && movies.length > 1;
@@ -34,6 +37,41 @@ export function HeroBanner({ movies, onPlay, onMoreInfo }: HeroBannerProps) {
     setCurrentIndex(index);
     setIsAutoPlaying(false);
     // Resume auto-play after 10 seconds of inactivity
+    setTimeout(() => setIsAutoPlaying(true), 10000);
+  };
+
+  // Touch handlers for swipe gestures
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchEndX.current = null;
+    setIsAutoPlaying(false);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current) {
+      setIsAutoPlaying(true);
+      return;
+    }
+
+    const swipeDistance = touchStartX.current - touchEndX.current;
+    const isLeftSwipe = swipeDistance > SWIPE_THRESHOLD;
+    const isRightSwipe = swipeDistance < -SWIPE_THRESHOLD;
+
+    if (isLeftSwipe) {
+      goToNext();
+    } else if (isRightSwipe) {
+      goToPrevious();
+    }
+
+    // Reset touch positions
+    touchStartX.current = null;
+    touchEndX.current = null;
+
+    // Resume auto-play after 10 seconds
     setTimeout(() => setIsAutoPlaying(true), 10000);
   };
 
@@ -69,9 +107,12 @@ export function HeroBanner({ movies, onPlay, onMoreInfo }: HeroBannerProps) {
 
   return (
     <div 
-      className="relative w-full h-[65vh] md:h-[85vh] overflow-hidden"
+      className="relative w-full h-[65vh] md:h-[85vh] overflow-hidden touch-pan-y"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
       {/* Backdrop Images - with transition */}
       {movies.map((movie, index) => (
