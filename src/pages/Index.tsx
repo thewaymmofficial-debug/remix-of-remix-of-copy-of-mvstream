@@ -140,7 +140,7 @@ const Index = () => {
       />
 
       {/* Movie Rows */}
-      <div className="py-8 -mt-20 relative z-10">
+      <div className="pt-6 pb-8 -mt-20 relative z-10">
         {isLoading ? (
           <div className="px-4 md:px-8">
             <div className="animate-pulse space-y-8">
