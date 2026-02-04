@@ -1,15 +1,55 @@
-import { Play, Info, Crown } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Play, Info, Crown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Movie } from '@/types/database';
+import { cn } from '@/lib/utils';
 
 interface HeroBannerProps {
-  movie: Movie | null;
-  onPlay: () => void;
-  onMoreInfo: () => void;
+  movies: Movie[];
+  onPlay: (movie: Movie) => void;
+  onMoreInfo: (movie: Movie) => void;
 }
 
-export function HeroBanner({ movie, onPlay, onMoreInfo }: HeroBannerProps) {
-  if (!movie) {
+const AUTO_ROTATE_INTERVAL = 6000; // 6 seconds
+
+export function HeroBanner({ movies, onPlay, onMoreInfo }: HeroBannerProps) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+
+  const hasMovies = movies && movies.length > 0;
+  const hasMultiple = movies && movies.length > 1;
+  const currentMovie = hasMovies ? movies[currentIndex] : null;
+
+  const goToNext = useCallback(() => {
+    if (!hasMultiple) return;
+    setCurrentIndex((prev) => (prev + 1) % movies.length);
+  }, [hasMultiple, movies?.length]);
+
+  const goToPrevious = useCallback(() => {
+    if (!hasMultiple) return;
+    setCurrentIndex((prev) => (prev - 1 + movies.length) % movies.length);
+  }, [hasMultiple, movies?.length]);
+
+  const goToSlide = (index: number) => {
+    setCurrentIndex(index);
+    setIsAutoPlaying(false);
+    // Resume auto-play after 10 seconds of inactivity
+    setTimeout(() => setIsAutoPlaying(true), 10000);
+  };
+
+  // Auto-rotate
+  useEffect(() => {
+    if (!isAutoPlaying || !hasMultiple) return;
+
+    const interval = setInterval(goToNext, AUTO_ROTATE_INTERVAL);
+    return () => clearInterval(interval);
+  }, [isAutoPlaying, hasMultiple, goToNext]);
+
+  // Pause on hover (for desktop)
+  const handleMouseEnter = () => setIsAutoPlaying(false);
+  const handleMouseLeave = () => setIsAutoPlaying(true);
+
+  if (!currentMovie) {
     return (
       <div className="relative w-full h-[60vh] md:h-[80vh] bg-gradient-to-b from-muted to-background flex items-center justify-center">
         <div className="text-center px-4">
@@ -22,50 +62,87 @@ export function HeroBanner({ movie, onPlay, onMoreInfo }: HeroBannerProps) {
 
   // Build meta info string
   const metaParts: string[] = [];
-  if (movie.year) metaParts.push(movie.year.toString());
-  if (movie.category) metaParts.push(movie.category);
-  if (movie.resolution) metaParts.push(movie.resolution);
-  if (movie.director) metaParts.push(`Dir. ${movie.director}`);
+  if (currentMovie.year) metaParts.push(currentMovie.year.toString());
+  if (currentMovie.category) metaParts.push(currentMovie.category);
+  if (currentMovie.resolution) metaParts.push(currentMovie.resolution);
+  if (currentMovie.director) metaParts.push(`Dir. ${currentMovie.director}`);
 
   return (
-    <div className="relative w-full h-[65vh] md:h-[85vh] overflow-hidden">
-      {/* Backdrop Image */}
-      {movie.backdrop_url ? (
-        <img
-          src={movie.backdrop_url}
-          alt={movie.title}
-          className="absolute inset-0 w-full h-full object-cover object-top"
-        />
-      ) : movie.poster_url ? (
-        <img
-          src={movie.poster_url}
-          alt={movie.title}
-          className="absolute inset-0 w-full h-full object-cover opacity-60 blur-sm scale-110"
-        />
-      ) : (
-        <div className="absolute inset-0 bg-gradient-to-br from-card to-background" />
-      )}
+    <div 
+      className="relative w-full h-[65vh] md:h-[85vh] overflow-hidden"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      {/* Backdrop Images - with transition */}
+      {movies.map((movie, index) => (
+        <div
+          key={movie.id}
+          className={cn(
+            "absolute inset-0 transition-opacity duration-700 ease-in-out",
+            index === currentIndex ? "opacity-100 z-10" : "opacity-0 z-0"
+          )}
+        >
+          {movie.backdrop_url ? (
+            <img
+              src={movie.backdrop_url}
+              alt={movie.title}
+              className="absolute inset-0 w-full h-full object-cover object-top"
+            />
+          ) : movie.poster_url ? (
+            <img
+              src={movie.poster_url}
+              alt={movie.title}
+              className="absolute inset-0 w-full h-full object-cover opacity-60 blur-sm scale-110"
+            />
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-card to-background" />
+          )}
+        </div>
+      ))}
 
       {/* Dark vignette overlay for better text contrast */}
-      <div className="absolute inset-0 bg-black/30" />
+      <div className="absolute inset-0 bg-black/30 z-20" />
       
       {/* Gradient overlays */}
-      <div className="hero-gradient absolute inset-0" />
-      <div className="hero-gradient-bottom absolute inset-0" />
+      <div className="hero-gradient absolute inset-0 z-20" />
+      <div className="hero-gradient-bottom absolute inset-0 z-20" />
+
+      {/* Navigation Arrows */}
+      {hasMultiple && (
+        <>
+          <button
+            onClick={goToPrevious}
+            className="absolute left-2 md:left-6 top-1/2 -translate-y-1/2 z-30 p-2 md:p-3 rounded-full bg-black/40 hover:bg-black/60 text-white transition-all backdrop-blur-sm border border-white/10 hover:scale-110"
+            aria-label="Previous movie"
+          >
+            <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
+          </button>
+          <button
+            onClick={goToNext}
+            className="absolute right-2 md:right-6 top-1/2 -translate-y-1/2 z-30 p-2 md:p-3 rounded-full bg-black/40 hover:bg-black/60 text-white transition-all backdrop-blur-sm border border-white/10 hover:scale-110"
+            aria-label="Next movie"
+          >
+            <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
+          </button>
+        </>
+      )}
 
       {/* Content */}
-      <div className="relative h-full flex flex-col justify-end pb-24 md:pb-32 px-4 md:px-8 lg:px-16 max-w-4xl">
+      <div className="relative h-full flex flex-col justify-end pb-24 md:pb-32 px-4 md:px-8 lg:px-16 max-w-4xl z-20">
         {/* Premium Badge */}
-        {movie.is_premium && (
+        {currentMovie.is_premium && (
           <div className="premium-badge inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full w-fit mb-5 shadow-lg">
             <Crown className="w-4 h-4 text-black" />
             <span className="text-xs font-bold text-black uppercase tracking-wide">Premium</span>
           </div>
         )}
 
-        {/* Title */}
-        <h1 className="text-4xl md:text-5xl lg:text-7xl font-bold text-white mb-4 animate-fade-up drop-shadow-2xl">
-          {movie.title}
+        {/* Title with fade animation */}
+        <h1 
+          key={currentMovie.id}
+          className="text-4xl md:text-5xl lg:text-7xl font-bold text-white mb-4 animate-fade-in drop-shadow-2xl"
+        >
+          {currentMovie.title}
         </h1>
 
         {/* Meta info - Year · Category · Resolution · Dir. Name */}
@@ -81,9 +158,9 @@ export function HeroBanner({ movie, onPlay, onMoreInfo }: HeroBannerProps) {
         )}
 
         {/* Description */}
-        {movie.description && (
+        {currentMovie.description && (
           <p className="text-base md:text-lg text-white/85 line-clamp-3 mb-8 max-w-2xl leading-relaxed drop-shadow">
-            {movie.description}
+            {currentMovie.description}
           </p>
         )}
 
@@ -92,7 +169,7 @@ export function HeroBanner({ movie, onPlay, onMoreInfo }: HeroBannerProps) {
           <Button
             size="lg"
             className="gap-2 text-base font-semibold tv-focus px-8 py-6 shadow-xl hover:shadow-primary/30"
-            onClick={onPlay}
+            onClick={() => onPlay(currentMovie)}
           >
             <Play className="w-5 h-5 fill-current" />
             Play Now
@@ -101,12 +178,31 @@ export function HeroBanner({ movie, onPlay, onMoreInfo }: HeroBannerProps) {
             size="lg"
             variant="outline"
             className="gap-2 text-base font-semibold tv-focus px-8 py-6 bg-white/10 border-white/30 text-white hover:bg-white/20 hover:text-white backdrop-blur-sm"
-            onClick={onMoreInfo}
+            onClick={() => onMoreInfo(currentMovie)}
           >
             <Info className="w-5 h-5" />
             More Info
           </Button>
         </div>
+
+        {/* Dot Indicators */}
+        {hasMultiple && (
+          <div className="flex items-center gap-2 mt-6">
+            {movies.map((movie, index) => (
+              <button
+                key={movie.id}
+                onClick={() => goToSlide(index)}
+                className={cn(
+                  "h-1.5 rounded-full transition-all duration-300",
+                  index === currentIndex 
+                    ? "w-8 bg-white" 
+                    : "w-1.5 bg-white/40 hover:bg-white/60"
+                )}
+                aria-label={`Go to ${movie.title}`}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

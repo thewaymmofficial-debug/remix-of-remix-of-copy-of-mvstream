@@ -39,6 +39,22 @@ export function useFeaturedMovie() {
   });
 }
 
+export function useFeaturedMovies() {
+  return useQuery({
+    queryKey: ['movies', 'featured-all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('movies')
+        .select('*')
+        .eq('is_featured', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data as Movie[];
+    },
+  });
+}
+
 export function useMovie(id: string) {
   return useQuery({
     queryKey: ['movie', id],
