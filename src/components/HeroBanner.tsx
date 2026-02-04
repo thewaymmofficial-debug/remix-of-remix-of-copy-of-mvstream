@@ -159,7 +159,7 @@ export function HeroBanner({ movies, onPlay, onMoreInfo }: HeroBannerProps) {
   return (
     <div 
       ref={bannerRef}
-      className="relative w-full h-[65vh] md:h-[85vh] overflow-hidden touch-pan-y"
+      className="relative w-full h-[55vh] md:h-[85vh] overflow-hidden touch-pan-y"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onTouchStart={handleTouchStart}
