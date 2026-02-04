@@ -96,19 +96,20 @@ export default function SettingsAdmin() {
   }
 
   return (
-    <div className="w-full max-w-full overflow-hidden">
+    <div className="w-full box-border">
       <h1 className="text-xl sm:text-3xl font-bold mb-4 sm:mb-8 flex items-center gap-2">
         <Settings className="w-5 h-5 sm:w-8 sm:h-8" />
         Site Settings
       </h1>
 
-      <div className="grid gap-3 w-full max-w-full">
+      <div className="space-y-3 w-full">
         {/* Announcement Banner - Collapsible */}
         <Collapsible 
           open={openSections.announcement} 
           onOpenChange={(open) => setOpenSections(prev => ({ ...prev, announcement: open }))}
+          className="w-full"
         >
-          <Card className="glass border-cineverse-red/30 overflow-hidden w-full max-w-full">
+          <Card className="glass border-cineverse-red/30 w-full box-border">
             <CollapsibleTrigger asChild>
               <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors px-3 py-3 sm:px-6 sm:py-4">
                 <CardTitle className="flex items-center justify-between text-base sm:text-lg">
@@ -283,8 +284,9 @@ export default function SettingsAdmin() {
         <Collapsible 
           open={openSections.contacts} 
           onOpenChange={(open) => setOpenSections(prev => ({ ...prev, contacts: open }))}
+          className="w-full"
         >
-          <Card className="glass overflow-hidden w-full max-w-full">
+          <Card className="glass w-full box-border">
             <CollapsibleTrigger asChild>
               <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors px-3 py-3 sm:px-6 sm:py-4">
                 <CardTitle className="flex items-center justify-between text-base sm:text-lg">
@@ -387,8 +389,9 @@ export default function SettingsAdmin() {
         <Collapsible 
           open={openSections.prices} 
           onOpenChange={(open) => setOpenSections(prev => ({ ...prev, prices: open }))}
+          className="w-full"
         >
-          <Card className="glass overflow-hidden w-full max-w-full">
+          <Card className="glass w-full box-border">
             <CollapsibleTrigger asChild>
               <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors px-3 py-3 sm:px-6 sm:py-4">
                 <CardTitle className="flex items-center justify-between text-base sm:text-lg">
