@@ -35,7 +35,7 @@ export function Navbar({ children }: NavbarProps) {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border/30">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center justify-between px-4 md:px-8 h-16 max-w-[1920px] mx-auto">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
@@ -47,12 +47,12 @@ export function Navbar({ children }: NavbarProps) {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-6">
-            <Link to="/" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
+            <Link to="/" className="text-sm font-medium text-white hover:text-primary transition-colors">
               Home
             </Link>
             {user && (
               <>
-                <Link to="/profile" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+                <Link to="/profile" className="text-sm font-medium text-white/70 hover:text-primary transition-colors">
                   My Profile
                 </Link>
                 {isAdmin && (
@@ -72,7 +72,7 @@ export function Navbar({ children }: NavbarProps) {
             </div>
 
             {/* Theme toggle */}
-            <Button variant="ghost" size="icon" onClick={toggleTheme} className="text-foreground">
+            <Button variant="ghost" size="icon" onClick={toggleTheme} className="text-white hover:bg-white/10">
               {theme === 'dark' ? (
                 <Sun className="w-5 h-5" />
               ) : (
@@ -84,7 +84,7 @@ export function Navbar({ children }: NavbarProps) {
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="relative">
+                  <Button variant="ghost" size="icon" className="relative text-white hover:bg-white/10">
                     <User className="w-5 h-5" />
                     {role === 'premium' && (
                       <Crown className="w-3 h-3 absolute -top-1 -right-1 text-cg-gold" />
@@ -143,11 +143,11 @@ export function Navbar({ children }: NavbarProps) {
 
         {/* Mobile menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden glass border-t border-border">
+          <div className="md:hidden bg-black/95 backdrop-blur-xl border-t border-white/10">
             <div className="flex flex-col p-4 space-y-3">
               <Link
                 to="/"
-                className="text-sm font-medium py-2"
+                className="text-sm font-medium py-2 text-white"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Home
@@ -156,7 +156,7 @@ export function Navbar({ children }: NavbarProps) {
                 <>
                   <Link
                     to="/profile"
-                    className="text-sm font-medium py-2 text-muted-foreground"
+                    className="text-sm font-medium py-2 text-white/70"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     My Profile
