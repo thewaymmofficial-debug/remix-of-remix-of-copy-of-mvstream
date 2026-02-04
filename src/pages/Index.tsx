@@ -6,14 +6,14 @@ import { MovieRow } from '@/components/MovieRow';
 import { LoginModal } from '@/components/LoginModal';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { useAuth } from '@/hooks/useAuth';
-import { useFeaturedMovie, useMoviesByCategory, useWatchlist } from '@/hooks/useMovies';
+import { useFeaturedMovies, useMoviesByCategory, useWatchlist } from '@/hooks/useMovies';
 import { useFilter } from '@/contexts/FilterContext';
 import type { Movie } from '@/types/database';
 
 const Index = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { data: featuredMovie } = useFeaturedMovie();
+  const { data: featuredMovies } = useFeaturedMovies();
   const { data: moviesByCategory, isLoading } = useMoviesByCategory();
   const { data: watchlistData } = useWatchlist();
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -83,19 +83,19 @@ const Index = () => {
     }
   };
 
-  const handlePlay = () => {
+  const handlePlay = (movie: Movie) => {
     if (!user) {
       setShowLoginModal(true);
-    } else if (featuredMovie) {
-      navigate(`/movie/${featuredMovie.id}`);
+    } else {
+      navigate(`/movie/${movie.id}`);
     }
   };
 
-  const handleMoreInfo = () => {
+  const handleMoreInfo = (movie: Movie) => {
     if (!user) {
       setShowLoginModal(true);
-    } else if (featuredMovie) {
-      navigate(`/movie/${featuredMovie.id}`);
+    } else {
+      navigate(`/movie/${movie.id}`);
     }
   };
 
@@ -132,7 +132,7 @@ const Index = () => {
 
       {/* Hero Section */}
       <HeroBanner
-        movie={featuredMovie || null}
+        movies={featuredMovies || []}
         onPlay={handlePlay}
         onMoreInfo={handleMoreInfo}
       />
