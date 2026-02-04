@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { HeroBanner } from '@/components/HeroBanner';
 import { MovieRow } from '@/components/MovieRow';
+import { MovieCard } from '@/components/MovieCard';
 import { LoginModal } from '@/components/LoginModal';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { MovieQuickPreview } from '@/components/MovieQuickPreview';
@@ -169,11 +170,20 @@ const Index = () => {
           <>
             {/* My Watchlist Row - Only show when logged in and has items */}
             {user && watchlistMovies.length > 0 && !isFiltering && (
-              <MovieRow
-                title="My Watchlist"
-                movies={watchlistMovies}
-                onMovieClick={handleMovieClick}
-              />
+              <section className="mb-10">
+                <div className="flex items-center justify-between mb-5 px-4 md:px-8">
+                  <h2 className="text-xl md:text-2xl font-bold text-foreground tracking-tight">My Watchlist</h2>
+                </div>
+                <div className="flex gap-3 overflow-x-auto pb-4 px-4 md:px-8 scrollbar-hide">
+                  {watchlistMovies.map((movie) => (
+                    <MovieCard
+                      key={movie.id}
+                      movie={movie}
+                      onClick={() => handleMovieClick(movie)}
+                    />
+                  ))}
+                </div>
+              </section>
             )}
 
             {/* Category Rows */}
