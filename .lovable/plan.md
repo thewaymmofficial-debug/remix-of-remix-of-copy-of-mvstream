@@ -1,411 +1,245 @@
 
-# Ceniverse Premium Enhancement Plan
 
-This plan covers implementing a comprehensive set of features across user engagement, UI/UX animations, content discovery, social sharing, and admin analytics.
+# Database Portability - Easy Supabase Project Switching
 
----
-
-## Phase 1: Database Schema Updates
-
-New tables and columns needed to support the features:
-
-### New Tables
-
-**`watch_history`** - Tracks viewing progress and history
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | Primary key |
-| user_id | uuid | References auth.users |
-| movie_id | uuid | References movies |
-| episode_id | uuid | References episodes (nullable) |
-| progress_seconds | integer | Current playback position |
-| duration_seconds | integer | Total duration |
-| completed | boolean | Whether finished watching |
-| watched_at | timestamp | Last watched time |
-
-**`movie_views`** - Aggregated view counts for trending
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | Primary key |
-| movie_id | uuid | References movies |
-| view_count | integer | Total views |
-| week_views | integer | Views this week |
-| last_updated | timestamp | When counts were updated |
-
-**`ratings`** - User ratings for movies
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | Primary key |
-| user_id | uuid | References auth.users |
-| movie_id | uuid | References movies |
-| rating | integer | 1-5 stars |
-| created_at | timestamp | When rated |
-
-**Movies Table Updates**
-- Add `average_rating` (decimal) column
-- Add `rating_count` (integer) column
+This plan enables you to easily switch to a new Supabase project and have all tables, functions, and configurations automatically created.
 
 ---
 
-## Phase 2: User Engagement Features
+## Current Situation
 
-### 2.1 Continue Watching & View History
-
-**New Hook: `src/hooks/useWatchHistory.tsx`**
-- `useWatchHistory()` - Fetch user's recent watch history
-- `useContinueWatching()` - Fetch incomplete movies with progress
-- `useUpdateProgress()` - Mutation to save playback position
-- `useMarkCompleted()` - Mark a movie as finished
-
-**Homepage Enhancement**
-- Add "Continue Watching" row at the top (above My Watchlist)
-- Display progress bar overlay on movie cards showing completion %
-- Show "Resume" button instead of "Play" for in-progress content
-
-**View History Page: `src/pages/History.tsx`**
-- Full history list with timestamps
-- "Clear History" option
-- Filter by date range
-
-### 2.2 Rating System
-
-**New Hook: `src/hooks/useRatings.tsx`**
-- `useMovieRating(movieId)` - Get average rating
-- `useUserRating(movieId)` - Get user's rating
-- `useRateMovie()` - Submit/update rating
-
-**New Component: `src/components/StarRating.tsx`**
-- Interactive 5-star rating component
-- Shows average rating with count
-- Allows user to rate (click stars)
-
-**Integration Points**
-- MovieCard: Show average rating badge
-- MovieDetails: Full rating UI with user's rating
-- MovieQuickPreview: Display rating
-
-### 2.3 Personalized Recommendations
-
-**New Hook: `src/hooks/useRecommendations.tsx`**
-- Fetch movies similar to user's watch history
-- Based on: same category, same director, same actors
-- "Because you watched X" personalization
-
-**Homepage Enhancement**
-- Add recommendations row after Continue Watching
-- Show "Because you watched [Movie Title]" label
+Your project has **10 migration files** in `supabase/migrations/` that define:
+- 11 database tables (profiles, user_roles, movies, watchlist, categories, seasons, episodes, site_settings, watch_history, movie_views, ratings)
+- 8 database functions (has_role, get_user_role, update_updated_at_column, handle_new_user, is_premium_active, validate_rating, update_movie_rating, increment_view_count, reset_weekly_views)
+- Multiple triggers and RLS policies
+- Storage bucket configuration
+- Default data (categories, site settings, sample movies)
 
 ---
 
-## Phase 3: UI/UX & Animations
+## Solution: Combined Migration Script + Admin Setup Tool
 
-### 3.1 Skeleton Loading (Shimmer Effect)
+### Phase 1: Create Master Migration File
 
-**New Component: `src/components/SkeletonCard.tsx`**
+Consolidate all migrations into a single comprehensive SQL file that can be run on any fresh Supabase project.
+
+**New File: `supabase/migrations/complete_schema.sql`**
+
+This file will contain:
+1. All table definitions in correct order (respecting dependencies)
+2. All enum types
+3. All functions and triggers
+4. All RLS policies
+5. Storage bucket setup
+6. Default seed data (categories, site settings)
+
+### Phase 2: Create Setup Documentation
+
+**New File: `docs/SUPABASE_SETUP.md`**
+
+Clear instructions for switching databases:
+1. Create new Supabase project
+2. Run the master migration via SQL Editor
+3. Update environment variables
+4. Create first admin user
+
+### Phase 3: Admin Database Setup Tool
+
+**New Component: `src/pages/admin/DatabaseSetup.tsx`**
+
+A protected admin page that:
+- Shows current database status (which tables exist)
+- Displays missing tables/functions
+- Provides one-click setup for missing components
+- Validates the database is properly configured
+
+### Phase 4: Automatic Schema Validation
+
+**New Hook: `src/hooks/useDatabaseHealth.tsx`**
+
+Checks database connectivity and table existence on app load:
+- Verifies required tables exist
+- Shows helpful error if database isn't configured
+- Links to setup instructions
+
+---
+
+## Technical Implementation
+
+### File 1: Complete Schema Migration
+
 ```text
-+-------------------+
-|   ============   |  <- Shimmer animation
-|   ============   |
-|   ============   |
-|   ======         |  <- Title placeholder
-|   ===            |  <- Meta placeholder
-+-------------------+
+supabase/complete_schema.sql
 ```
 
-**Implementation**
-- Animated gradient shimmer using CSS
-- Replace gray boxes in loading states
-- Apply to MovieRow, MovieCard, MovieDetails
+Contains the consolidated SQL with sections:
+1. **Enums** - app_role type
+2. **Core Tables** - profiles, user_roles, movies, categories
+3. **Content Tables** - seasons, episodes, watchlist
+4. **Engagement Tables** - watch_history, movie_views, ratings
+5. **Settings Tables** - site_settings
+6. **Functions** - All utility functions
+7. **Triggers** - Updated_at triggers, rating triggers, user creation
+8. **RLS Policies** - All row-level security
+9. **Storage** - Bucket creation
+10. **Seed Data** - Default categories and settings
 
-**CSS Addition to `tailwind.config.ts`**
-- Add shimmer keyframe animation (already exists, will enhance)
-- Create `.skeleton-shimmer` utility class
+### File 2: Setup Documentation
 
-### 3.2 Page Transitions
-
-**Implementation using React Router**
-- Wrap routes with transition container
-- Fade-out/fade-in between pages
-- Slide animations for detail pages
-
-**New Component: `src/components/PageTransition.tsx`**
-- AnimatePresence wrapper
-- Uses existing Tailwind animation classes
-- Smooth 300ms transitions
-
-### 3.3 Parallax Hero Banner
-
-**HeroBanner Enhancement**
-- Track scroll position with `useEffect`
-- Apply `translateY` transform to backdrop based on scroll
-- Subtle parallax effect (slower backdrop movement)
-
-### 3.4 Enhanced Movie Card Hover
-
-**MovieCard Enhancements**
 ```text
-Normal State:          Hover State:
-+--------+            +----------+
-| Poster |   ->       | Poster   |
-| Title  |            | Rating   |
-+--------+            | + Actions|
-                      +----------+
+docs/SUPABASE_SETUP.md
 ```
 
-- Scale up smoothly (already exists)
-- Show rating stars on hover
-- Quick action buttons (Play, Watchlist, Info)
-- Delayed tooltip with description
+Step-by-step guide:
+- Prerequisites (Supabase account)
+- Creating a new project
+- Running the migration
+- Updating .env file
+- Testing the connection
+- Creating the first admin
 
-### 3.5 Pull-to-Refresh (Mobile)
+### File 3: Database Health Hook
 
-**New Hook: `src/hooks/usePullToRefresh.tsx`**
-- Detect pull-down gesture on mobile
-- Show refresh indicator
-- Trigger data refetch
-
-**Homepage Integration**
-- Add pull-to-refresh to main content area
-- Visual pull indicator with animation
-
-### 3.6 Infinite Scroll
-
-**MovieRow Enhancement**
-- Detect when user scrolls near end
-- Load more movies in category
-- Add pagination to `useMoviesByCategory`
-
----
-
-## Phase 4: Content Discovery
-
-### 4.1 Advanced Search
-
-**FilterContext Enhancement**
-- Add: `selectedDirector`, `selectedActor`, `ratingRange`
-- Add: `sortBy` (newest, oldest, popular, rating)
-
-**Navbar/Search Enhancement**
-- Add sort dropdown
-- Add advanced filter panel (expandable)
-- Actor/Director autocomplete search
-
-### 4.2 Related Content Section
-
-**New Component: `src/components/RelatedMovies.tsx`**
-- Fetch movies with same category
-- Exclude current movie
-- Display as horizontal scroll row
-
-**MovieDetails Enhancement**
-- Add "You Might Also Like" section below episodes
-
-### 4.3 Trending Section
-
-**New Hook: `src/hooks/useTrending.tsx`**
-- Fetch movies sorted by weekly view count
-- Update view counts when movie is watched
-
-**Homepage Enhancement**
-- Add "Trending This Week" row
-- Show view count or fire icon indicator
-
-### 4.4 New Arrivals Badge
-
-**MovieCard Enhancement**
-- Check if `created_at` is within last 7 days
-- Show animated "NEW" badge
-- Distinct styling from Premium badge
-
----
-
-## Phase 5: Social Features
-
-### 5.1 Share Content
-
-**New Component: `src/components/ShareButton.tsx`**
-- Copy link to clipboard
-- Share to social media (Twitter, Facebook, WhatsApp)
-- Native share API on mobile
-
-**Integration Points**
-- MovieDetails page
-- MovieQuickPreview modal
-- Mobile bottom sheet option
-
----
-
-## Phase 6: Admin Analytics
-
-### 6.1 View Analytics Dashboard
-
-**New Page: `src/pages/admin/Analytics.tsx`**
-- Most viewed movies (bar chart)
-- Views over time (line chart)
-- Popular categories (pie chart)
-- Peak viewing times (heatmap)
-
-**Using Recharts (already installed)**
-- BarChart for top movies
-- LineChart for trends
-- PieChart for categories
-
-### 6.2 User Engagement Dashboard
-
-**Dashboard Enhancement**
-- Active users (last 7 days, 30 days)
-- Average watch time per user
-- Retention metrics
-- New vs returning users
-
-### 6.3 Bulk Import
-
-**New Component: `src/components/admin/BulkImport.tsx`**
-- CSV/Excel file upload
-- Column mapping interface
-- Preview before import
-- Progress indicator
-
-**Required Fields Mapping**
-```text
-CSV Column      ->  Database Field
-title           ->  title
-description     ->  description
-category        ->  category
-year            ->  year
-poster_url      ->  poster_url
-stream_url      ->  stream_url
-...
+```typescript
+// src/hooks/useDatabaseHealth.tsx
+- Query to check if core tables exist
+- Returns { isReady, missingTables, error }
+- Used by App.tsx to show setup message if needed
 ```
 
+### File 4: Environment Configuration
+
+```text
+.env.example
+```
+
+Template file showing required variables:
+- VITE_SUPABASE_URL
+- VITE_SUPABASE_PUBLISHABLE_KEY
+
 ---
 
-## Technical Implementation Details
+## Switching Process (After Implementation)
 
-### New Files to Create
+When you want to use a new Supabase database:
+
+1. **Create New Supabase Project**
+   - Go to supabase.com and create project
+   - Note the project URL and anon key
+
+2. **Run Schema Migration**
+   - Open SQL Editor in Supabase dashboard
+   - Paste contents of `complete_schema.sql`
+   - Execute the migration
+
+3. **Update Environment Variables**
+   - Edit `.env` file with new credentials
+   - Restart the development server
+
+4. **Create Admin User**
+   - Sign up with your email
+   - Run SQL to promote to admin:
+   ```sql
+   UPDATE public.user_roles 
+   SET role = 'admin' 
+   WHERE user_id = (SELECT id FROM auth.users WHERE email = 'your@email.com');
+   ```
+
+5. **Verify**
+   - Check admin panel access
+   - Import your content
+
+---
+
+## Files to Create
 
 | File | Purpose |
 |------|---------|
-| `src/hooks/useWatchHistory.tsx` | Watch history and continue watching |
-| `src/hooks/useRatings.tsx` | Movie ratings |
-| `src/hooks/useRecommendations.tsx` | Personalized suggestions |
-| `src/hooks/useTrending.tsx` | Trending movies |
-| `src/hooks/usePullToRefresh.tsx` | Mobile refresh gesture |
-| `src/components/SkeletonCard.tsx` | Shimmer loading placeholder |
-| `src/components/StarRating.tsx` | Interactive rating component |
-| `src/components/RelatedMovies.tsx` | Similar content section |
-| `src/components/ShareButton.tsx` | Social sharing |
-| `src/components/PageTransition.tsx` | Route animations |
-| `src/components/admin/BulkImport.tsx` | CSV import |
-| `src/components/admin/AnalyticsCharts.tsx` | Dashboard charts |
-| `src/pages/History.tsx` | Watch history page |
-| `src/pages/admin/Analytics.tsx` | Analytics dashboard |
+| `supabase/complete_schema.sql` | Master migration with all schema |
+| `docs/SUPABASE_SETUP.md` | Step-by-step setup guide |
+| `.env.example` | Template for environment variables |
+| `src/hooks/useDatabaseHealth.tsx` | Connection and schema validator |
+| `src/components/DatabaseSetupGuide.tsx` | UI for setup instructions |
 
-### Files to Modify
+## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/pages/Index.tsx` | Add Continue Watching, Trending, Recommendations rows |
-| `src/components/MovieCard.tsx` | Rating badge, NEW badge, enhanced hover |
-| `src/components/HeroBanner.tsx` | Parallax scroll effect |
-| `src/components/MovieRow.tsx` | Infinite scroll, skeleton loading |
-| `src/pages/MovieDetails.tsx` | Rating UI, Related Movies, Share button |
-| `src/contexts/FilterContext.tsx` | Advanced filter state |
-| `src/components/Navbar.tsx` | Sort options, advanced filters |
-| `src/pages/admin/Dashboard.tsx` | Analytics widgets |
-| `src/pages/admin/AdminLayout.tsx` | Analytics nav link |
-| `src/App.tsx` | New routes, page transitions |
-| `tailwind.config.ts` | Enhanced animations |
-| `src/index.css` | Shimmer and transition styles |
+| `src/App.tsx` | Add database health check on startup |
 
-### Database Migration
+---
+
+## Master Schema SQL Structure
+
+The complete_schema.sql will be organized as:
 
 ```sql
--- Watch History
-CREATE TABLE watch_history (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES auth.users NOT NULL,
-  movie_id uuid REFERENCES movies NOT NULL,
-  episode_id uuid REFERENCES episodes,
-  progress_seconds integer DEFAULT 0,
-  duration_seconds integer,
-  completed boolean DEFAULT false,
-  watched_at timestamp with time zone DEFAULT now(),
-  UNIQUE(user_id, movie_id, episode_id)
-);
+-- ============================================
+-- CENIVERSE DATABASE SCHEMA
+-- Run this SQL on a fresh Supabase project
+-- ============================================
 
--- Movie Views for Trending
-CREATE TABLE movie_views (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  movie_id uuid REFERENCES movies UNIQUE NOT NULL,
-  view_count integer DEFAULT 0,
-  week_views integer DEFAULT 0,
-  last_updated timestamp with time zone DEFAULT now()
-);
+-- 1. ENUMS
+CREATE TYPE public.app_role AS ENUM ('admin', 'premium', 'free_user');
 
--- Ratings
-CREATE TABLE ratings (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES auth.users NOT NULL,
-  movie_id uuid REFERENCES movies NOT NULL,
-  rating integer CHECK (rating >= 1 AND rating <= 5),
-  created_at timestamp with time zone DEFAULT now(),
-  UNIQUE(user_id, movie_id)
-);
+-- 2. CORE TABLES
+CREATE TABLE public.profiles (...);
+CREATE TABLE public.user_roles (...);
+CREATE TABLE public.movies (...);
+CREATE TABLE public.categories (...);
 
--- Add rating columns to movies
-ALTER TABLE movies ADD COLUMN average_rating decimal(2,1) DEFAULT 0;
-ALTER TABLE movies ADD COLUMN rating_count integer DEFAULT 0;
+-- 3. CONTENT TABLES
+CREATE TABLE public.seasons (...);
+CREATE TABLE public.episodes (...);
+CREATE TABLE public.watchlist (...);
 
--- RLS Policies
-ALTER TABLE watch_history ENABLE ROW LEVEL SECURITY;
-ALTER TABLE movie_views ENABLE ROW LEVEL SECURITY;
-ALTER TABLE ratings ENABLE ROW LEVEL SECURITY;
+-- 4. ENGAGEMENT TABLES
+CREATE TABLE public.watch_history (...);
+CREATE TABLE public.movie_views (...);
+CREATE TABLE public.ratings (...);
 
--- Watch history: users can manage their own
-CREATE POLICY "Users can view own history" ON watch_history 
-  FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can insert own history" ON watch_history 
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Users can update own history" ON watch_history 
-  FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY "Users can delete own history" ON watch_history 
-  FOR DELETE USING (auth.uid() = user_id);
+-- 5. SETTINGS
+CREATE TABLE public.site_settings (...);
 
--- Movie views: anyone can read, system updates
-CREATE POLICY "Anyone can view counts" ON movie_views 
-  FOR SELECT USING (true);
-CREATE POLICY "Admins can manage views" ON movie_views 
-  FOR ALL USING (has_role(auth.uid(), 'admin'));
+-- 6. FUNCTIONS
+CREATE OR REPLACE FUNCTION public.has_role(...);
+CREATE OR REPLACE FUNCTION public.get_user_role(...);
+-- ... more functions
 
--- Ratings: users manage own, anyone can read
-CREATE POLICY "Anyone can view ratings" ON ratings 
-  FOR SELECT USING (true);
-CREATE POLICY "Users can rate" ON ratings 
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Users can update own rating" ON ratings 
-  FOR UPDATE USING (auth.uid() = user_id);
+-- 7. TRIGGERS
+CREATE TRIGGER on_auth_user_created ...;
+-- ... more triggers
+
+-- 8. RLS POLICIES
+-- All table policies...
+
+-- 9. STORAGE
+INSERT INTO storage.buckets (...);
+
+-- 10. SEED DATA
+INSERT INTO public.categories (...);
+INSERT INTO public.site_settings (...);
 ```
 
 ---
 
-## Implementation Order
+## Benefits
 
-1. **Database Migration** - Create tables and RLS policies
-2. **Core Hooks** - Watch history, ratings, trending
-3. **UI Components** - Skeleton, StarRating, ShareButton
-4. **Page Updates** - Homepage rows, MovieDetails sections
-5. **Animations** - Shimmer, transitions, parallax
-6. **Admin Features** - Analytics, bulk import
-7. **Polish** - Pull-to-refresh, infinite scroll, NEW badges
+- **One-Command Setup**: Copy-paste single SQL file to set up entire database
+- **Version Controlled**: Schema file stays in your repository
+- **Self-Documenting**: Clear documentation for future reference
+- **Validation**: App checks database health on startup
+- **Flexibility**: Easy to move between Supabase projects
 
 ---
 
-## Estimated Scope
+## Important Notes
 
-- **Database**: 1 migration file with 3 new tables
-- **New Components**: 8-10 new files
-- **Modified Files**: 12-15 existing files
-- **New Pages**: 2 (History, Analytics)
+1. **Data Migration**: This setup is for **schema only**. Your actual content (movies, users, etc.) will not transfer automatically. You would need to export/import data separately.
 
-This comprehensive enhancement will transform Ceniverse into a fully-featured streaming platform with modern engagement features, smooth animations, and powerful admin tools.
+2. **Auth Trigger**: The `on_auth_user_created` trigger uses `auth.users` table which is managed by Supabase. This will work automatically on any Supabase project.
+
+3. **Storage Policies**: Storage bucket policies reference the same bucket name, so they'll work on any project.
+
+4. **Environment Security**: Never commit actual credentials to `.env` - only the `.env.example` template.
+
