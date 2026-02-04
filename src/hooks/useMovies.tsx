@@ -139,3 +139,101 @@ export function useDeleteMovie() {
     },
   });
 }
+
+// Watchlist hooks
+export function useWatchlist() {
+  return useQuery({
+    queryKey: ['watchlist'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const { data, error } = await supabase
+        .from('watchlist')
+        .select(`
+          id,
+          movie_id,
+          created_at,
+          movie:movies(*)
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data as Array<{
+        id: string;
+        movie_id: string;
+        created_at: string;
+        movie: Movie;
+      }>;
+    },
+  });
+}
+
+export function useIsInWatchlist(movieId: string) {
+  return useQuery({
+    queryKey: ['watchlist', movieId],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return false;
+
+      const { data, error } = await supabase
+        .from('watchlist')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('movie_id', movieId)
+        .maybeSingle();
+
+      if (error) throw error;
+      return !!data;
+    },
+    enabled: !!movieId,
+  });
+}
+
+export function useAddToWatchlist() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (movieId: string) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase
+        .from('watchlist')
+        .insert({ user_id: user.id, movie_id: movieId })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, movieId) => {
+      queryClient.invalidateQueries({ queryKey: ['watchlist'] });
+      queryClient.invalidateQueries({ queryKey: ['watchlist', movieId] });
+    },
+  });
+}
+
+export function useRemoveFromWatchlist() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (movieId: string) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { error } = await supabase
+        .from('watchlist')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('movie_id', movieId);
+
+      if (error) throw error;
+    },
+    onSuccess: (_, movieId) => {
+      queryClient.invalidateQueries({ queryKey: ['watchlist'] });
+      queryClient.invalidateQueries({ queryKey: ['watchlist', movieId] });
+    },
+  });
+}
