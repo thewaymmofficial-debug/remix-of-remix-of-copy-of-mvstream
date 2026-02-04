@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, User, Menu, X, LogOut, Settings, Crown, Sun, Moon } from 'lucide-react';
+import { User, Menu, X, LogOut, Settings, Crown, Sun, Moon } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,7 +12,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/hooks/useAuth';
 import { LoginModal } from './LoginModal';
-export function Navbar() {
+
+interface NavbarProps {
+  children?: ReactNode;
+}
+
+export function Navbar({ children }: NavbarProps) {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const { user, profile, role, isAdmin, signOut } = useAuth();
@@ -30,7 +35,7 @@ export function Navbar() {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-50 glass">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50">
         <div className="flex items-center justify-between px-4 md:px-8 h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
@@ -60,19 +65,19 @@ export function Navbar() {
           </div>
 
           {/* Right side */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-3">
+            {/* Search bar slot */}
+            <div className="hidden md:block">
+              {children}
+            </div>
+
             {/* Theme toggle */}
-            <Button variant="ghost" size="icon" onClick={toggleTheme}>
+            <Button variant="ghost" size="icon" onClick={toggleTheme} className="text-foreground">
               {theme === 'dark' ? (
                 <Sun className="w-5 h-5" />
               ) : (
                 <Moon className="w-5 h-5" />
               )}
-            </Button>
-
-            {/* Search button */}
-            <Button variant="ghost" size="icon" className="hidden md:flex">
-              <Search className="w-5 h-5" />
             </Button>
 
             {/* User menu or Sign In */}

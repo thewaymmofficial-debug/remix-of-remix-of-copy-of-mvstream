@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { HeroBanner } from '@/components/HeroBanner';
 import { MovieRow } from '@/components/MovieRow';
 import { LoginModal } from '@/components/LoginModal';
+import { SearchBar } from '@/components/SearchBar';
 import { useAuth } from '@/hooks/useAuth';
 import { useFeaturedMovie, useMoviesByCategory } from '@/hooks/useMovies';
 import type { Movie } from '@/types/database';
@@ -14,6 +15,12 @@ const Index = () => {
   const { data: featuredMovie } = useFeaturedMovie();
   const { data: moviesByCategory, isLoading } = useMoviesByCategory();
   const [showLoginModal, setShowLoginModal] = useState(false);
+
+  // Flatten all movies for search
+  const allMovies = useMemo(() => {
+    if (!moviesByCategory) return [];
+    return Object.values(moviesByCategory).flat();
+  }, [moviesByCategory]);
 
   const handleMovieClick = (movie: Movie) => {
     if (!user) {
@@ -67,7 +74,9 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
+      <Navbar>
+        <SearchBar movies={allMovies} onMovieClick={handleMovieClick} />
+      </Navbar>
 
       {/* Hero Section */}
       <HeroBanner

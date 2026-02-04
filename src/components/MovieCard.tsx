@@ -46,15 +46,15 @@ export function MovieCard({ movie, onClick }: MovieCardProps) {
 
       {/* Info */}
       <div className="absolute bottom-0 left-0 right-0 p-3 text-left">
-        <h3 className="text-sm font-semibold text-white line-clamp-2 group-hover:text-primary transition-colors">
+        <h3 className="text-sm font-semibold text-white line-clamp-2 group-hover:text-primary transition-colors drop-shadow-lg">
           {movie.title}
         </h3>
         <div className="flex items-center gap-2 mt-1">
           {movie.year && (
-            <span className="text-xs text-muted-foreground">{movie.year}</span>
+            <span className="text-xs text-white/80 drop-shadow">{movie.year}</span>
           )}
           {movie.resolution && (
-            <span className="text-[10px] px-1.5 py-0.5 bg-muted rounded text-muted-foreground font-medium">
+            <span className="text-[10px] px-1.5 py-0.5 bg-black/60 backdrop-blur-sm rounded text-white/90 font-medium">
               {movie.resolution}
             </span>
           )}
