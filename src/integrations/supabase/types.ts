@@ -125,7 +125,7 @@ export type Database = {
           actors: string[] | null
           average_rating: number | null
           backdrop_url: string | null
-          category: string
+          category: string[]
           content_type: string
           created_at: string
           description: string | null
@@ -148,7 +148,7 @@ export type Database = {
           actors?: string[] | null
           average_rating?: number | null
           backdrop_url?: string | null
-          category?: string
+          category?: string[]
           content_type?: string
           created_at?: string
           description?: string | null
@@ -171,7 +171,7 @@ export type Database = {
           actors?: string[] | null
           average_rating?: number | null
           backdrop_url?: string | null
-          category?: string
+          category?: string[]
           content_type?: string
           created_at?: string
           description?: string | null

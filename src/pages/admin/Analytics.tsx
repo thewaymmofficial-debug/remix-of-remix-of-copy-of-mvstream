@@ -54,12 +54,15 @@ export default function Analytics() {
 
   // Calculate category distribution
   const categoryData = allMovies?.reduce((acc, movie) => {
-    const existing = acc.find(c => c.name === movie.category);
-    if (existing) {
-      existing.value += 1;
-    } else {
-      acc.push({ name: movie.category, value: 1 });
-    }
+    const categories = movie.category || [];
+    categories.forEach((cat: string) => {
+      const existing = acc.find(c => c.name === cat);
+      if (existing) {
+        existing.value += 1;
+      } else {
+        acc.push({ name: cat, value: 1 });
+      }
+    });
     return acc;
   }, [] as { name: string; value: number }[]) || [];
 

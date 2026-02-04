@@ -43,7 +43,7 @@ const defaultMovie: MovieInsert = {
   director: '',
   actors: [],
   year: new Date().getFullYear(),
-  category: 'Action',
+  category: ['Action'],
   resolution: '1080p',
   file_size: '',
   poster_url: '',
@@ -80,7 +80,7 @@ export default function MoviesAdmin() {
   const filteredMovies = movies?.filter(
     (movie) =>
       movie.title.toLowerCase().includes(search.toLowerCase()) ||
-      movie.category.toLowerCase().includes(search.toLowerCase())
+      movie.category.some(cat => cat.toLowerCase().includes(search.toLowerCase()))
   );
 
   const openCreateModal = () => {
@@ -278,7 +278,9 @@ export default function MoviesAdmin() {
                         )}
                       </span>
                     </TableCell>
-                    <TableCell>{movie.category}</TableCell>
+                    <TableCell>
+                      <span className="text-sm">{movie.category.join(', ')}</span>
+                    </TableCell>
                     <TableCell>{movie.year}</TableCell>
                     <TableCell>
                       {movie.is_premium && (
@@ -403,21 +405,38 @@ export default function MoviesAdmin() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <select
-                  id="category"
-                  value={formData.category}
-                  onChange={(e) =>
-                    setFormData({ ...formData, category: e.target.value })
-                  }
-                  className="w-full h-10 px-3 rounded-md bg-muted border border-border"
-                >
-                  {categories?.map((cat) => (
-                    <option key={cat.id} value={cat.name}>
-                      {cat.name}
-                    </option>
-                  ))}
-                </select>
+                <Label>Categories</Label>
+                <div className="flex flex-wrap gap-2 p-3 bg-muted rounded-md border border-border min-h-[80px]">
+                  {categories?.map((cat) => {
+                    const isSelected = formData.category?.includes(cat.name);
+                    return (
+                      <label
+                        key={cat.id}
+                        className={`px-3 py-1.5 rounded-full text-sm cursor-pointer transition-colors ${
+                          isSelected
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-card border border-border hover:bg-accent'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="sr-only"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            const current = formData.category || [];
+                            if (e.target.checked) {
+                              setFormData({ ...formData, category: [...current, cat.name] });
+                            } else {
+                              setFormData({ ...formData, category: current.filter(c => c !== cat.name) });
+                            }
+                          }}
+                        />
+                        {cat.name}
+                      </label>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-muted-foreground">Select one or more categories</p>
               </div>
 
               <div className="space-y-2">

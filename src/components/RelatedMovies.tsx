@@ -7,7 +7,7 @@ import type { Movie } from '@/types/database';
 
 interface RelatedMoviesProps {
   movieId: string;
-  category?: string;
+  category?: string[];
   onMovieClick: (movie: Movie) => void;
 }
 
@@ -25,7 +25,7 @@ export function RelatedMovies({ movieId, category, onMovieClick }: RelatedMovies
     }
   };
 
-  if (!category) return null;
+  if (!category || category.length === 0) return null;
   if (!isLoading && (!relatedMovies || relatedMovies.length === 0)) return null;
 
   return (

@@ -13,7 +13,7 @@ export function useMovies(category?: string) {
         .order('created_at', { ascending: false });
 
       if (category) {
-        query = query.eq('category', category);
+        query = query.contains('category', [category]);
       }
 
       const { data, error } = await query;
@@ -84,11 +84,13 @@ export function useMoviesByCategory() {
 
       if (error) throw error;
 
-      // Group by category
+      // Group by category (movies can appear in multiple categories)
       const grouped = (data as Movie[]).reduce((acc, movie) => {
-        const cat = movie.category || 'Other';
-        if (!acc[cat]) acc[cat] = [];
-        acc[cat].push(movie);
+        const categories = movie.category && movie.category.length > 0 ? movie.category : ['Other'];
+        categories.forEach(cat => {
+          if (!acc[cat]) acc[cat] = [];
+          acc[cat].push(movie);
+        });
         return acc;
       }, {} as Record<string, Movie[]>);
 

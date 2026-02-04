@@ -142,7 +142,7 @@ export function BulkImport() {
             director: movie.director || null,
             actors: movie.actors ? movie.actors.split('|').map(a => a.trim()) : [],
             year: movie.year ? parseInt(movie.year) : null,
-            category: movie.category || 'Action',
+            category: movie.category ? movie.category.split('|').map(c => c.trim()) : ['Action'],
             resolution: movie.resolution || '1080p',
             file_size: movie.file_size || null,
             poster_url: movie.poster_url || null,
@@ -224,7 +224,7 @@ export function BulkImport() {
             </p>
             <div className="text-xs text-muted-foreground mb-4">
               Required columns: <strong>title</strong><br />
-              Optional: description, director, actors (pipe-separated), year, category, resolution, 
+              Optional: description, director, actors (pipe-separated), year, category (pipe-separated for multiple), resolution, 
               file_size, poster_url, backdrop_url, stream_url, telegram_url, mega_url, is_premium, is_featured, content_type
             </div>
             <label>
