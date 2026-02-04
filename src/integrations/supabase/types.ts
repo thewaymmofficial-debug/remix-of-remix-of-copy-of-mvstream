@@ -14,11 +14,65 @@ export type Database = {
   }
   public: {
     Tables: {
+      episodes: {
+        Row: {
+          air_date: string | null
+          created_at: string
+          description: string | null
+          duration: string | null
+          episode_number: number
+          id: string
+          mega_url: string | null
+          season_id: string
+          stream_url: string | null
+          telegram_url: string | null
+          thumbnail_url: string | null
+          title: string
+        }
+        Insert: {
+          air_date?: string | null
+          created_at?: string
+          description?: string | null
+          duration?: string | null
+          episode_number: number
+          id?: string
+          mega_url?: string | null
+          season_id: string
+          stream_url?: string | null
+          telegram_url?: string | null
+          thumbnail_url?: string | null
+          title: string
+        }
+        Update: {
+          air_date?: string | null
+          created_at?: string
+          description?: string | null
+          duration?: string | null
+          episode_number?: number
+          id?: string
+          mega_url?: string | null
+          season_id?: string
+          stream_url?: string | null
+          telegram_url?: string | null
+          thumbnail_url?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "episodes_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       movies: {
         Row: {
           actors: string[] | null
           backdrop_url: string | null
           category: string
+          content_type: string
           created_at: string
           description: string | null
           director: string | null
@@ -39,6 +93,7 @@ export type Database = {
           actors?: string[] | null
           backdrop_url?: string | null
           category?: string
+          content_type?: string
           created_at?: string
           description?: string | null
           director?: string | null
@@ -59,6 +114,7 @@ export type Database = {
           actors?: string[] | null
           backdrop_url?: string | null
           category?: string
+          content_type?: string
           created_at?: string
           description?: string | null
           director?: string | null
@@ -103,6 +159,38 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      seasons: {
+        Row: {
+          created_at: string
+          id: string
+          movie_id: string
+          season_number: number
+          title: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          movie_id: string
+          season_number: number
+          title?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          movie_id?: string
+          season_number?: number
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seasons_movie_id_fkey"
+            columns: ["movie_id"]
+            isOneToOne: false
+            referencedRelation: "movies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
