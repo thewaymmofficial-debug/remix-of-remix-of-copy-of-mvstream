@@ -31,14 +31,11 @@ export function ShareButton({
   const { toast } = useToast();
 
   const shareUrl = url || (typeof window !== 'undefined' ? window.location.href : '');
-  const shareText = description ? `${title} - ${description}` : title;
 
   const handleNativeShare = async () => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title,
-          text: description,
           url: shareUrl,
         });
       } catch (error) {
@@ -69,7 +66,7 @@ export function ShareButton({
   };
 
   const shareToTwitter = () => {
-    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+    const twitterUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}`;
     window.open(twitterUrl, '_blank', 'noopener,noreferrer');
   };
 
@@ -79,7 +76,7 @@ export function ShareButton({
   };
 
   const shareToWhatsApp = () => {
-    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(`${shareText} ${shareUrl}`)}`;
+    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareUrl)}`;
     window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
   };
 
