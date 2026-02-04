@@ -1,54 +1,188 @@
-import { Home, Bookmark, Crown, User } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { useState } from 'react';
+import { Home, Bookmark, Crown, User, LogOut, Settings } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
+import { LoginModal } from './LoginModal';
 
 export function MobileBottomNav() {
   const location = useLocation();
-  const { user, isAdmin } = useAuth();
+  const navigate = useNavigate();
+  const { user, profile, role, isAdmin, signOut } = useAuth();
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [profileSheetOpen, setProfileSheetOpen] = useState(false);
+
+  const handleSignOut = async () => {
+    await signOut();
+    setProfileSheetOpen(false);
+    navigate('/');
+  };
 
   const navItems = [
     { icon: Home, label: 'Home', path: '/', show: true },
     { icon: Bookmark, label: 'Watchlist', path: '/watchlist', show: !!user },
     { icon: Crown, label: 'Admin', path: '/admin', show: isAdmin },
-    { icon: User, label: user ? 'Profile' : 'Login', path: user ? '/profile' : '/auth', show: true },
   ].filter(item => item.show);
 
+  const isActive = (path: string) => 
+    location.pathname === path || 
+    (path === '/admin' && location.pathname.startsWith('/admin'));
+
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-xl border-t border-border safe-area-bottom">
-      <div className="flex items-center justify-around h-16 px-2">
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.path || 
-            (item.path === '/admin' && location.pathname.startsWith('/admin'));
-          
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={cn(
-                "flex flex-col items-center justify-center gap-1 py-2 px-4 rounded-lg transition-all",
-                isActive 
-                  ? "text-primary" 
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <item.icon 
+    <>
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-xl border-t border-border safe-area-bottom">
+        <div className="flex items-center justify-around h-16 px-2">
+          {navItems.map((item) => {
+            const active = isActive(item.path);
+            
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
                 className={cn(
-                  "w-5 h-5 transition-all",
-                  isActive && "fill-primary"
-                )} 
-                fill={isActive ? "currentColor" : "none"}
-              />
-              <span className={cn(
-                "text-xs font-medium",
-                isActive && "text-primary"
-              )}>
-                {item.label}
-              </span>
-            </Link>
-          );
-        })}
-      </div>
-    </nav>
+                  "flex flex-col items-center justify-center gap-1 py-2 px-4 rounded-lg transition-all",
+                  active 
+                    ? "text-primary" 
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <item.icon 
+                  className={cn(
+                    "w-5 h-5 transition-all",
+                    active && "fill-primary"
+                  )} 
+                  fill={active ? "currentColor" : "none"}
+                />
+                <span className={cn(
+                  "text-xs font-medium",
+                  active && "text-primary"
+                )}>
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+
+          {/* Profile Button with Sheet */}
+          {user ? (
+            <Sheet open={profileSheetOpen} onOpenChange={setProfileSheetOpen}>
+              <SheetTrigger asChild>
+                <button
+                  className={cn(
+                    "flex flex-col items-center justify-center gap-1 py-2 px-4 rounded-lg transition-all",
+                    (location.pathname === '/profile') 
+                      ? "text-primary" 
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <User 
+                    className={cn(
+                      "w-5 h-5 transition-all",
+                      location.pathname === '/profile' && "fill-primary"
+                    )} 
+                    fill={location.pathname === '/profile' ? "currentColor" : "none"}
+                  />
+                  <span className={cn(
+                    "text-xs font-medium",
+                    location.pathname === '/profile' && "text-primary"
+                  )}>
+                    Profile
+                  </span>
+                </button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="rounded-t-xl">
+                <SheetHeader className="text-left pb-4">
+                  <SheetTitle>Account</SheetTitle>
+                </SheetHeader>
+                <div className="space-y-2">
+                  {/* User Info */}
+                  <div className="flex items-center gap-3 p-3 bg-muted rounded-lg mb-4">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      {profile?.avatar_url ? (
+                        <img
+                          src={profile.avatar_url}
+                          alt={profile.display_name || 'Avatar'}
+                          className="w-full h-full rounded-full object-cover"
+                        />
+                      ) : (
+                        <User className="w-5 h-5 text-primary" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{profile?.display_name || 'User'}</p>
+                      <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                    </div>
+                    <span className={cn(
+                      "text-xs px-2 py-1 rounded-full flex-shrink-0",
+                      role === 'admin' ? 'bg-cg-gold/20 text-cg-gold' :
+                      role === 'premium' ? 'bg-cg-premium/20 text-cg-premium' :
+                      'bg-muted-foreground/20 text-muted-foreground'
+                    )}>
+                      {role === 'admin' ? 'Admin' : role === 'premium' ? 'Premium' : 'Free'}
+                    </span>
+                  </div>
+
+                  {/* Menu Items */}
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start gap-3 h-12"
+                    onClick={() => {
+                      setProfileSheetOpen(false);
+                      navigate('/profile');
+                    }}
+                  >
+                    <User className="w-5 h-5" />
+                    My Profile
+                  </Button>
+
+                  {isAdmin && (
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start gap-3 h-12"
+                      onClick={() => {
+                        setProfileSheetOpen(false);
+                        navigate('/admin');
+                      }}
+                    >
+                      <Settings className="w-5 h-5" />
+                      Admin Dashboard
+                    </Button>
+                  )}
+
+                  <div className="border-t border-border my-2" />
+
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start gap-3 h-12 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={handleSignOut}
+                  >
+                    <LogOut className="w-5 h-5" />
+                    Sign Out
+                  </Button>
+                </div>
+              </SheetContent>
+            </Sheet>
+          ) : (
+            <button
+              onClick={() => setShowLoginModal(true)}
+              className="flex flex-col items-center justify-center gap-1 py-2 px-4 rounded-lg transition-all text-muted-foreground hover:text-foreground"
+            >
+              <User className="w-5 h-5" />
+              <span className="text-xs font-medium">Login</span>
+            </button>
+          )}
+        </div>
+      </nav>
+
+      <LoginModal open={showLoginModal} onOpenChange={setShowLoginModal} />
+    </>
   );
 }

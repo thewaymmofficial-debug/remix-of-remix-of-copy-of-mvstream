@@ -126,54 +126,56 @@ export function Navbar({ children, categories = [], years = [] }: NavbarProps) {
               )}
             </Button>
 
-            {/* User menu or Sign In */}
-            {user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="relative text-white hover:bg-white/10 h-9 w-9">
-                    <User className="w-4 h-4" />
-                    {role === 'premium' && (
-                      <Crown className="w-2.5 h-2.5 absolute -top-0.5 -right-0.5 text-cg-gold" />
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 bg-popover border-border">
-                  <div className="px-2 py-1.5">
-                    <p className="text-sm font-medium">{profile?.display_name || 'User'}</p>
-                    <p className="text-xs text-muted-foreground">{user.email}</p>
-                    <div className="mt-1">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        role === 'admin' ? 'bg-cg-gold/20 text-cg-gold' :
-                        role === 'premium' ? 'bg-cg-premium/20 text-cg-premium' :
-                        'bg-muted text-muted-foreground'
-                      }`}>
-                        {role === 'admin' ? 'Admin' : role === 'premium' ? 'Premium' : 'Free'}
-                      </span>
+            {/* Desktop: User menu or Sign In */}
+            <div className="hidden md:block">
+              {user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="relative text-white hover:bg-white/10 h-9 w-9">
+                      <User className="w-4 h-4" />
+                      {role === 'premium' && (
+                        <Crown className="w-2.5 h-2.5 absolute -top-0.5 -right-0.5 text-cg-gold" />
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 bg-popover border-border">
+                    <div className="px-2 py-1.5">
+                      <p className="text-sm font-medium">{profile?.display_name || 'User'}</p>
+                      <p className="text-xs text-muted-foreground">{user.email}</p>
+                      <div className="mt-1">
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          role === 'admin' ? 'bg-cg-gold/20 text-cg-gold' :
+                          role === 'premium' ? 'bg-cg-premium/20 text-cg-premium' :
+                          'bg-muted text-muted-foreground'
+                        }`}>
+                          {role === 'admin' ? 'Admin' : role === 'premium' ? 'Premium' : 'Free'}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate('/profile')}>
-                    <User className="w-4 h-4 mr-2" />
-                    Profile
-                  </DropdownMenuItem>
-                  {isAdmin && (
-                    <DropdownMenuItem onClick={() => navigate('/admin')}>
-                      <Settings className="w-4 h-4 mr-2" />
-                      Admin Dashboard
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate('/profile')}>
+                      <User className="w-4 h-4 mr-2" />
+                      Profile
                     </DropdownMenuItem>
-                  )}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut}>
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Sign Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <Button onClick={() => setShowLoginModal(true)} size="sm" className="h-8 text-xs">
-                Sign In
-              </Button>
-            )}
+                    {isAdmin && (
+                      <DropdownMenuItem onClick={() => navigate('/admin')}>
+                        <Settings className="w-4 h-4 mr-2" />
+                        Admin Dashboard
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut}>
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Sign Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button onClick={() => setShowLoginModal(true)} size="sm" className="h-8 text-xs">
+                  Sign In
+                </Button>
+              )}
+            </div>
 
             {/* Mobile menu button */}
             <Button
