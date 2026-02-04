@@ -183,6 +183,8 @@ export function useWatchlist() {
         movie: Movie;
       }>;
     },
+    staleTime: 0, // Always refetch to ensure fresh data
+    gcTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
 }
 
