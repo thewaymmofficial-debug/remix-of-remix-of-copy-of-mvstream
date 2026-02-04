@@ -14,16 +14,136 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      movies: {
+        Row: {
+          actors: string[] | null
+          backdrop_url: string | null
+          category: string
+          created_at: string
+          description: string | null
+          director: string | null
+          file_size: string | null
+          id: string
+          is_featured: boolean
+          is_premium: boolean
+          mega_url: string | null
+          poster_url: string | null
+          resolution: string | null
+          stream_url: string | null
+          telegram_url: string | null
+          title: string
+          updated_at: string
+          year: number | null
+        }
+        Insert: {
+          actors?: string[] | null
+          backdrop_url?: string | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          director?: string | null
+          file_size?: string | null
+          id?: string
+          is_featured?: boolean
+          is_premium?: boolean
+          mega_url?: string | null
+          poster_url?: string | null
+          resolution?: string | null
+          stream_url?: string | null
+          telegram_url?: string | null
+          title: string
+          updated_at?: string
+          year?: number | null
+        }
+        Update: {
+          actors?: string[] | null
+          backdrop_url?: string | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          director?: string | null
+          file_size?: string | null
+          id?: string
+          is_featured?: boolean
+          is_premium?: boolean
+          mega_url?: string | null
+          poster_url?: string | null
+          resolution?: string | null
+          stream_url?: string | null
+          telegram_url?: string | null
+          title?: string
+          updated_at?: string
+          year?: number | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          email: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "premium" | "free_user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +270,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "premium", "free_user"],
+    },
   },
 } as const
