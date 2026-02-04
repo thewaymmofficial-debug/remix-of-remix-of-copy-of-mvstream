@@ -33,6 +33,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useMovies, useCreateMovie, useUpdateMovie, useDeleteMovie } from '@/hooks/useMovies';
+import { useCategories } from '@/hooks/useCategories';
 import type { Movie, MovieInsert, MovieUpdate } from '@/types/database';
 import { toast } from 'sonner';
 
@@ -55,24 +56,11 @@ const defaultMovie: MovieInsert = {
   content_type: 'movie',
 };
 
-const categories = [
-  'Action',
-  'K-Drama',
-  'Hollywood',
-  'Thriller',
-  'Comedy',
-  'Romance',
-  'Horror',
-  'Sci-Fi',
-  'Documentary',
-  'Animation',
-  'Drama',
-  'Latest',
-];
 
 export default function MoviesAdmin() {
   const navigate = useNavigate();
   const { data: movies, isLoading } = useMovies();
+  const { data: categories } = useCategories();
   const createMovie = useCreateMovie();
   const updateMovie = useUpdateMovie();
   const deleteMovie = useDeleteMovie();
@@ -424,9 +412,9 @@ export default function MoviesAdmin() {
                   }
                   className="w-full h-10 px-3 rounded-md bg-muted border border-border"
                 >
-                  {categories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
+                  {categories?.map((cat) => (
+                    <option key={cat.id} value={cat.name}>
+                      {cat.name}
                     </option>
                   ))}
                 </select>

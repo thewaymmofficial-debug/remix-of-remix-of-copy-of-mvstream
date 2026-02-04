@@ -15,6 +15,7 @@ import AdminLayout from "./pages/admin/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
 import MoviesAdmin from "./pages/admin/MoviesAdmin";
 import SeriesAdmin from "./pages/admin/SeriesAdmin";
+import CategoriesAdmin from "./pages/admin/CategoriesAdmin";
 import UsersAdmin from "./pages/admin/UsersAdmin";
 import NotFound from "./pages/NotFound";
 
@@ -39,6 +40,7 @@ const App = () => (
                   <Route index element={<Dashboard />} />
                   <Route path="movies" element={<MoviesAdmin />} />
                   <Route path="series/:movieId" element={<SeriesAdmin />} />
+                  <Route path="categories" element={<CategoriesAdmin />} />
                   <Route path="users" element={<UsersAdmin />} />
                 </Route>
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
