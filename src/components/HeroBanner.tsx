@@ -201,22 +201,22 @@ export function HeroBanner({ movies, onPlay, onMoreInfo }: HeroBannerProps) {
       <div className="hero-gradient absolute inset-0 z-20" />
       <div className="hero-gradient-bottom absolute inset-0 z-20" />
 
-      {/* Navigation Arrows */}
+      {/* Navigation Arrows - Hidden on mobile, positioned higher on desktop */}
       {hasMultiple && (
         <>
           <button
             onClick={goToPrevious}
-            className="absolute left-2 md:left-6 top-1/2 -translate-y-1/2 z-30 p-2 md:p-3 rounded-full bg-black/40 hover:bg-black/60 text-white transition-all backdrop-blur-sm border border-white/10 hover:scale-110"
+            className="hidden md:flex absolute left-6 top-1/3 -translate-y-1/2 z-30 p-3 rounded-full bg-black/40 hover:bg-black/60 text-white transition-all backdrop-blur-sm border border-white/10 hover:scale-110"
             aria-label="Previous movie"
           >
-            <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
+            <ChevronLeft className="w-6 h-6" />
           </button>
           <button
             onClick={goToNext}
-            className="absolute right-2 md:right-6 top-1/2 -translate-y-1/2 z-30 p-2 md:p-3 rounded-full bg-black/40 hover:bg-black/60 text-white transition-all backdrop-blur-sm border border-white/10 hover:scale-110"
+            className="hidden md:flex absolute right-6 top-1/3 -translate-y-1/2 z-30 p-3 rounded-full bg-black/40 hover:bg-black/60 text-white transition-all backdrop-blur-sm border border-white/10 hover:scale-110"
             aria-label="Next movie"
           >
-            <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
+            <ChevronRight className="w-6 h-6" />
           </button>
         </>
       )}
