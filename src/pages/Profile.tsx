@@ -175,51 +175,31 @@ export default function Profile() {
                   🎬 Upgrade to Premium to unlock all content!
                 </p>
                 <p className="text-xs text-muted-foreground mb-4">
-                  Contact us through any of these channels:
+                  Contact us:
                 </p>
-                <div className="flex flex-col gap-3">
-                  {/* Telegram */}
+                <div className="flex items-center justify-center gap-4">
                   <a
                     href="https://t.me/onedove"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-3 bg-[#0088cc]/10 hover:bg-[#0088cc]/20 rounded-lg transition-colors group"
+                    className="w-12 h-12 rounded-full bg-[#0088cc] flex items-center justify-center hover:scale-110 transition-transform"
+                    title="Telegram"
                   >
-                    <div className="w-10 h-10 rounded-full bg-[#0088cc] flex items-center justify-center">
-                      <TelegramIcon className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground group-hover:text-[#0088cc] transition-colors">Telegram</p>
-                      <p className="text-xs text-muted-foreground">@onedove</p>
-                    </div>
+                    <TelegramIcon className="w-6 h-6 text-white" />
                   </a>
-
-                  {/* Viber */}
                   <a
                     href="viber://chat?number=09883249943"
-                    className="flex items-center gap-3 p-3 bg-[#7360f2]/10 hover:bg-[#7360f2]/20 rounded-lg transition-colors group"
+                    className="w-12 h-12 rounded-full bg-[#7360f2] flex items-center justify-center hover:scale-110 transition-transform"
+                    title="Viber"
                   >
-                    <div className="w-10 h-10 rounded-full bg-[#7360f2] flex items-center justify-center">
-                      <ViberIcon className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground group-hover:text-[#7360f2] transition-colors">Viber</p>
-                      <p className="text-xs text-muted-foreground">09883249943</p>
-                    </div>
+                    <ViberIcon className="w-6 h-6 text-white" />
                   </a>
-
-                  {/* Gmail */}
                   <a
                     href="mailto:thewaymmofficial@gmail.com?subject=Premium%20Subscription%20Inquiry"
-                    className="flex items-center gap-3 p-3 bg-[#EA4335]/10 hover:bg-[#EA4335]/20 rounded-lg transition-colors group"
+                    className="w-12 h-12 rounded-full bg-[#EA4335] flex items-center justify-center hover:scale-110 transition-transform"
+                    title="Gmail"
                   >
-                    <div className="w-10 h-10 rounded-full bg-[#EA4335] flex items-center justify-center">
-                      <Mail className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground group-hover:text-[#EA4335] transition-colors">Gmail</p>
-                      <p className="text-xs text-muted-foreground">thewaymmofficial@gmail.com</p>
-                    </div>
+                    <Mail className="w-6 h-6 text-white" />
                   </a>
                 </div>
               </div>
