@@ -136,10 +136,10 @@ export default function SettingsAdmin() {
               />
             </div>
 
-            {/* Colors and Speed */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Colors - Stack on mobile */}
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="announcement-bg">Background Color</Label>
+                <Label htmlFor="announcement-bg" className="text-sm">Background Color</Label>
                 <div className="flex gap-2">
                   <Input
                     id="announcement-bg"
@@ -148,20 +148,20 @@ export default function SettingsAdmin() {
                     onChange={(e) =>
                       setAnnouncement({ ...announcement, bgColor: e.target.value })
                     }
-                    className="w-12 h-10 p-1 cursor-pointer"
+                    className="w-10 h-10 p-1 cursor-pointer shrink-0"
                   />
                   <Input
                     value={announcement.bgColor}
                     onChange={(e) =>
                       setAnnouncement({ ...announcement, bgColor: e.target.value })
                     }
-                    className="flex-1"
+                    className="flex-1 min-w-0"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="announcement-text-color">Text Color</Label>
+                <Label htmlFor="announcement-text-color" className="text-sm">Text Color</Label>
                 <div className="flex gap-2">
                   <Input
                     id="announcement-text-color"
@@ -170,36 +170,37 @@ export default function SettingsAdmin() {
                     onChange={(e) =>
                       setAnnouncement({ ...announcement, textColor: e.target.value })
                     }
-                    className="w-12 h-10 p-1 cursor-pointer"
+                    className="w-10 h-10 p-1 cursor-pointer shrink-0"
                   />
                   <Input
                     value={announcement.textColor}
                     onChange={(e) =>
                       setAnnouncement({ ...announcement, textColor: e.target.value })
                     }
-                    className="flex-1"
+                    className="flex-1 min-w-0"
                   />
                 </div>
               </div>
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="announcement-speed">Scroll Speed</Label>
-                <Select
-                  value={announcement.speed}
-                  onValueChange={(value: 'slow' | 'normal' | 'fast') =>
-                    setAnnouncement({ ...announcement, speed: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Speed" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="slow">Slow</SelectItem>
-                    <SelectItem value="normal">Normal</SelectItem>
-                    <SelectItem value="fast">Fast</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            {/* Speed */}
+            <div className="space-y-2">
+              <Label htmlFor="announcement-speed">Scroll Speed</Label>
+              <Select
+                value={announcement.speed}
+                onValueChange={(value: 'slow' | 'normal' | 'fast') =>
+                  setAnnouncement({ ...announcement, speed: value })
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Speed" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover">
+                  <SelectItem value="slow">Slow</SelectItem>
+                  <SelectItem value="normal">Normal</SelectItem>
+                  <SelectItem value="fast">Fast</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Opacity Slider */}
