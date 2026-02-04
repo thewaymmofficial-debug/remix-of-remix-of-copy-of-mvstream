@@ -5,9 +5,9 @@
 /* Ceniverse Premium - Dark Cinematic Theme */
 
 @layer base {
-  /* Light mode - Clean and bright */
+  /* Light mode - Light content with cinematic hero */
   :root {
-    --background: 0 0% 98%;
+    --background: 0 0% 96%;
     --foreground: 220 15% 15%;
 
     --card: 0 0% 100%;
@@ -19,20 +19,20 @@
     --primary: 0 72% 51%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 10% 94%;
+    --secondary: 220 10% 92%;
     --secondary-foreground: 220 15% 20%;
 
-    --muted: 220 10% 92%;
-    --muted-foreground: 220 10% 45%;
+    --muted: 220 10% 90%;
+    --muted-foreground: 220 10% 40%;
 
-    --accent: 220 10% 94%;
+    --accent: 220 10% 92%;
     --accent-foreground: 220 15% 15%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 10% 88%;
-    --input: 220 10% 88%;
+    --border: 220 10% 85%;
+    --input: 220 10% 85%;
     --ring: 0 72% 51%;
 
     --radius: 0.5rem;
@@ -41,16 +41,16 @@
     --cg-gold: 45 93% 47%;
     --cg-premium: 280 100% 65%;
     --cg-success: 142 76% 36%;
-    --cg-glass: 220 15% 15% / 0.04;
-    --cg-glass-border: 220 15% 15% / 0.08;
+    --cg-glass: 220 15% 15% / 0.06;
+    --cg-glass-border: 220 15% 15% / 0.1;
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 220 15% 15%;
     --sidebar-primary: 0 72% 51%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 10% 94%;
+    --sidebar-accent: 220 10% 92%;
     --sidebar-accent-foreground: 220 15% 15%;
-    --sidebar-border: 220 10% 88%;
+    --sidebar-border: 220 10% 85%;
     --sidebar-ring: 0 72% 51%;
   }
 
