@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { User, Mail, Calendar, Crown, ArrowLeft, LogOut } from 'lucide-react';
+import { User, Mail, Calendar, Crown, ArrowLeft, LogOut, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Navbar } from '@/components/Navbar';
@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { user, profile, role, isLoading, signOut } = useAuth();
+  const { user, profile, role, premiumExpiresAt, premiumType, isLoading, signOut } = useAuth();
   const { data: settings } = useSiteSettings();
   const contacts = settings?.adminContacts;
   const prices = settings?.subscriptionPrices;
@@ -159,6 +159,44 @@ export default function Profile() {
                 </span>
               </div>
             </div>
+
+            {/* Premium days left */}
+            {role === 'premium' && premiumType !== 'lifetime' && premiumExpiresAt && (
+              <div className="mt-4 p-3 bg-cg-premium/10 rounded-lg border border-cg-premium/20">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-cg-premium" />
+                  <span className="text-sm font-medium">
+                    {(() => {
+                      const expiresDate = new Date(premiumExpiresAt);
+                      const now = new Date();
+                      const daysLeft = Math.ceil((expiresDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                      if (daysLeft <= 0) return 'Subscription expired';
+                      return `${daysLeft} day${daysLeft !== 1 ? 's' : ''} remaining`;
+                    })()}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Expires on {new Date(premiumExpiresAt).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                </p>
+              </div>
+            )}
+
+            {/* Lifetime premium indicator */}
+            {role === 'premium' && premiumType === 'lifetime' && (
+              <div className="mt-4 p-3 bg-cg-gold/10 rounded-lg border border-cg-gold/20">
+                <div className="flex items-center gap-2">
+                  <Crown className="w-4 h-4 text-cg-gold" />
+                  <span className="text-sm font-medium text-cg-gold">Lifetime Premium</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Unlimited access forever
+                </p>
+              </div>
+            )}
 
             {role === 'free_user' && (
               <div className="mt-4 p-4 bg-gradient-to-r from-cg-gold/10 to-cg-premium/10 rounded-lg border border-cg-gold/20">
