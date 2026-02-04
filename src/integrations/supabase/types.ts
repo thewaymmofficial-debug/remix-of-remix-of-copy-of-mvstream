@@ -88,9 +88,42 @@ export type Database = {
           },
         ]
       }
+      movie_views: {
+        Row: {
+          id: string
+          last_updated: string | null
+          movie_id: string
+          view_count: number | null
+          week_views: number | null
+        }
+        Insert: {
+          id?: string
+          last_updated?: string | null
+          movie_id: string
+          view_count?: number | null
+          week_views?: number | null
+        }
+        Update: {
+          id?: string
+          last_updated?: string | null
+          movie_id?: string
+          view_count?: number | null
+          week_views?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "movie_views_movie_id_fkey"
+            columns: ["movie_id"]
+            isOneToOne: true
+            referencedRelation: "movies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       movies: {
         Row: {
           actors: string[] | null
+          average_rating: number | null
           backdrop_url: string | null
           category: string
           content_type: string
@@ -103,6 +136,7 @@ export type Database = {
           is_premium: boolean
           mega_url: string | null
           poster_url: string | null
+          rating_count: number | null
           resolution: string | null
           stream_url: string | null
           telegram_url: string | null
@@ -112,6 +146,7 @@ export type Database = {
         }
         Insert: {
           actors?: string[] | null
+          average_rating?: number | null
           backdrop_url?: string | null
           category?: string
           content_type?: string
@@ -124,6 +159,7 @@ export type Database = {
           is_premium?: boolean
           mega_url?: string | null
           poster_url?: string | null
+          rating_count?: number | null
           resolution?: string | null
           stream_url?: string | null
           telegram_url?: string | null
@@ -133,6 +169,7 @@ export type Database = {
         }
         Update: {
           actors?: string[] | null
+          average_rating?: number | null
           backdrop_url?: string | null
           category?: string
           content_type?: string
@@ -145,6 +182,7 @@ export type Database = {
           is_premium?: boolean
           mega_url?: string | null
           poster_url?: string | null
+          rating_count?: number | null
           resolution?: string | null
           stream_url?: string | null
           telegram_url?: string | null
@@ -180,6 +218,38 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      ratings: {
+        Row: {
+          created_at: string | null
+          id: string
+          movie_id: string
+          rating: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          movie_id: string
+          rating: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          movie_id?: string
+          rating?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ratings_movie_id_fkey"
+            columns: ["movie_id"]
+            isOneToOne: false
+            referencedRelation: "movies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       seasons: {
         Row: {
@@ -267,6 +337,57 @@ export type Database = {
         }
         Relationships: []
       }
+      watch_history: {
+        Row: {
+          completed: boolean | null
+          created_at: string | null
+          duration_seconds: number | null
+          episode_id: string | null
+          id: string
+          movie_id: string
+          progress_seconds: number | null
+          user_id: string
+          watched_at: string | null
+        }
+        Insert: {
+          completed?: boolean | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          episode_id?: string | null
+          id?: string
+          movie_id: string
+          progress_seconds?: number | null
+          user_id: string
+          watched_at?: string | null
+        }
+        Update: {
+          completed?: boolean | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          episode_id?: string | null
+          id?: string
+          movie_id?: string
+          progress_seconds?: number | null
+          user_id?: string
+          watched_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "watch_history_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "watch_history_movie_id_fkey"
+            columns: ["movie_id"]
+            isOneToOne: false
+            referencedRelation: "movies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       watchlist: {
         Row: {
           created_at: string
@@ -312,7 +433,9 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_view_count: { Args: { p_movie_id: string }; Returns: undefined }
       is_premium_active: { Args: { _user_id: string }; Returns: boolean }
+      reset_weekly_views: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "premium" | "free_user"

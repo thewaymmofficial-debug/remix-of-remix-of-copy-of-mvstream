@@ -17,10 +17,14 @@ import { Navbar } from '@/components/Navbar';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { PremiumModal } from '@/components/PremiumModal';
 import { SeasonEpisodeList } from '@/components/SeasonEpisodeList';
+import { StarRating } from '@/components/StarRating';
+import { ShareButton } from '@/components/ShareButton';
+import { RelatedMovies } from '@/components/RelatedMovies';
 import { useAuth } from '@/hooks/useAuth';
 import { useMovie, useIsInWatchlist, useAddToWatchlist, useRemoveFromWatchlist } from '@/hooks/useMovies';
+import { useUpdateProgress } from '@/hooks/useWatchHistory';
 import { useToast } from '@/hooks/use-toast';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function MovieDetails() {
   const { id } = useParams<{ id: string }>();
@@ -30,8 +34,20 @@ export default function MovieDetails() {
   const { data: isInWatchlist, isLoading: watchlistLoading } = useIsInWatchlist(id || '');
   const addToWatchlist = useAddToWatchlist();
   const removeFromWatchlist = useRemoveFromWatchlist();
+  const updateProgress = useUpdateProgress();
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const { toast } = useToast();
+
+  // Track view when page loads
+  useEffect(() => {
+    if (id && user) {
+      updateProgress.mutate({
+        movieId: id,
+        progressSeconds: 0,
+        durationSeconds: undefined,
+      });
+    }
+  }, [id, user]);
 
   // Redirect if not logged in
   if (!authLoading && !user) {
@@ -181,6 +197,18 @@ export default function MovieDetails() {
                 {movie.title}
               </h1>
 
+              {/* Rating */}
+              <div className="mb-4">
+                <StarRating
+                  movieId={movie.id}
+                  averageRating={movie.average_rating}
+                  ratingCount={movie.rating_count}
+                  size="lg"
+                  interactive={true}
+                  showCount={true}
+                />
+              </div>
+
               {/* Meta info */}
               <div className="flex flex-wrap items-center gap-4 mb-6 text-sm text-muted-foreground">
                 {movie.year && (
@@ -258,6 +286,13 @@ export default function MovieDetails() {
                   )}
                 </Button>
 
+                {/* Share Button */}
+                <ShareButton
+                  title={movie.title}
+                  description={movie.description || undefined}
+                  size="lg"
+                />
+
                 {movie.telegram_url && (
                   <Button
                     size="lg"
@@ -294,6 +329,13 @@ export default function MovieDetails() {
               onPremiumRequired={() => setShowPremiumModal(true)}
             />
           )}
+
+          {/* Related Movies */}
+          <RelatedMovies
+            movieId={movie.id}
+            category={movie.category}
+            onMovieClick={(relatedMovie) => navigate(`/movie/${relatedMovie.id}`)}
+          />
         </div>
       </div>
 

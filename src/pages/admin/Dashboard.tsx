@@ -1,4 +1,4 @@
-import { Film, Users, Crown, TrendingUp, ToggleLeft, ToggleRight, Loader2 } from 'lucide-react';
+import { Film, Users, Crown, TrendingUp, Loader2, BarChart3 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -6,6 +6,8 @@ import { useMovies } from '@/hooks/useMovies';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
+import { BulkImport } from '@/components/admin/BulkImport';
+import { Link } from 'react-router-dom';
 
 export default function AdminDashboard() {
   const { data: movies } = useMovies();
@@ -147,14 +149,14 @@ export default function AdminDashboard() {
       </Card>
 
       {/* Quick Actions */}
-      <Card className="glass">
+      <Card className="glass mb-8">
         <CardHeader>
           <CardTitle>Quick Actions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <a
-              href="/admin/movies"
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Link
+              to="/admin/movies"
               className="p-4 bg-muted rounded-lg hover:bg-muted/80 transition-colors"
             >
               <Film className="w-8 h-8 text-primary mb-2" />
@@ -162,9 +164,9 @@ export default function AdminDashboard() {
               <p className="text-sm text-muted-foreground">
                 Add, edit, or delete movies
               </p>
-            </a>
-            <a
-              href="/admin/users"
+            </Link>
+            <Link
+              to="/admin/users"
               className="p-4 bg-muted rounded-lg hover:bg-muted/80 transition-colors"
             >
               <Users className="w-8 h-8 text-accent-foreground mb-2" />
@@ -172,10 +174,23 @@ export default function AdminDashboard() {
               <p className="text-sm text-muted-foreground">
                 View and upgrade user accounts
               </p>
-            </a>
+            </Link>
+            <Link
+              to="/admin/analytics"
+              className="p-4 bg-muted rounded-lg hover:bg-muted/80 transition-colors"
+            >
+              <BarChart3 className="w-8 h-8 text-cg-premium mb-2" />
+              <h3 className="font-semibold">View Analytics</h3>
+              <p className="text-sm text-muted-foreground">
+                Track views and engagement
+              </p>
+            </Link>
           </div>
         </CardContent>
       </Card>
+
+      {/* Bulk Import */}
+      <BulkImport />
     </div>
   );
 }

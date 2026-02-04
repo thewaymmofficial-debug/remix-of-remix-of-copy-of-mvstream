@@ -1,12 +1,23 @@
-import { Crown, Play } from 'lucide-react';
+import { Crown, Play, Star } from 'lucide-react';
 import type { Movie } from '@/types/database';
+import { cn } from '@/lib/utils';
 
 interface MovieCardProps {
   movie: Movie;
   onClick?: () => void;
 }
 
+// Check if movie was added in the last 7 days
+function isNewArrival(createdAt: string): boolean {
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  return new Date(createdAt) > sevenDaysAgo;
+}
+
 export function MovieCard({ movie, onClick }: MovieCardProps) {
+  const isNew = isNewArrival(movie.created_at);
+  const hasRating = movie.average_rating > 0;
+
   return (
     <button
       onClick={onClick}
@@ -29,9 +40,19 @@ export function MovieCard({ movie, onClick }: MovieCardProps) {
       {/* Gradient overlay - always dark for readability */}
       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent rounded-lg opacity-80 group-hover:opacity-100 transition-opacity" />
 
+      {/* NEW badge */}
+      {isNew && !movie.is_premium && (
+        <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-cg-success text-white text-[10px] font-bold uppercase animate-pulse">
+          NEW
+        </div>
+      )}
+
       {/* Premium badge */}
       {movie.is_premium && (
-        <div className="absolute top-2 right-2 premium-badge px-2 py-1 rounded-md flex items-center gap-1">
+        <div className={cn(
+          "absolute top-2 premium-badge px-2 py-1 rounded-md flex items-center gap-1",
+          isNew ? "right-2" : "right-2"
+        )}>
           <Crown className="w-3 h-3 text-black" />
           <span className="text-[10px] font-bold text-black uppercase">Premium</span>
         </div>
@@ -46,6 +67,16 @@ export function MovieCard({ movie, onClick }: MovieCardProps) {
 
       {/* Info */}
       <div className="absolute bottom-0 left-0 right-0 p-2.5 text-left">
+        {/* Rating on hover */}
+        {hasRating && (
+          <div className="flex items-center gap-1 mb-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Star className="w-3 h-3 fill-cg-gold text-cg-gold" />
+            <span className="text-[11px] text-cg-gold font-medium">
+              {movie.average_rating.toFixed(1)}
+            </span>
+          </div>
+        )}
+        
         <h3 className="text-sm font-semibold text-white line-clamp-2 group-hover:text-primary transition-colors drop-shadow-lg">
           {movie.title}
         </h3>

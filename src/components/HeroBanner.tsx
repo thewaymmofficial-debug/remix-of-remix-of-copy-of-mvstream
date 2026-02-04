@@ -17,9 +17,27 @@ export function HeroBanner({ movies, onPlay, onMoreInfo }: HeroBannerProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [progress, setProgress] = useState(0);
+  const [scrollY, setScrollY] = useState(0);
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
   const progressInterval = useRef<NodeJS.Timeout | null>(null);
+  const bannerRef = useRef<HTMLDivElement>(null);
+
+  // Parallax scroll effect
+  useEffect(() => {
+    const handleScroll = () => {
+      if (bannerRef.current) {
+        const rect = bannerRef.current.getBoundingClientRect();
+        // Only apply parallax when banner is visible
+        if (rect.bottom > 0) {
+          setScrollY(window.scrollY * 0.3);
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const hasMovies = movies && movies.length > 0;
   const hasMultiple = movies && movies.length > 1;
@@ -140,6 +158,7 @@ export function HeroBanner({ movies, onPlay, onMoreInfo }: HeroBannerProps) {
 
   return (
     <div 
+      ref={bannerRef}
       className="relative w-full h-[65vh] md:h-[85vh] overflow-hidden touch-pan-y"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -147,7 +166,7 @@ export function HeroBanner({ movies, onPlay, onMoreInfo }: HeroBannerProps) {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Backdrop Images - with transition */}
+      {/* Backdrop Images - with transition and parallax */}
       {movies.map((movie, index) => (
         <div
           key={movie.id}
@@ -155,12 +174,13 @@ export function HeroBanner({ movies, onPlay, onMoreInfo }: HeroBannerProps) {
             "absolute inset-0 transition-opacity duration-700 ease-in-out",
             index === currentIndex ? "opacity-100 z-10" : "opacity-0 z-0"
           )}
+          style={{ transform: `translateY(${scrollY}px)` }}
         >
           {movie.backdrop_url ? (
             <img
               src={movie.backdrop_url}
               alt={movie.title}
-              className="absolute inset-0 w-full h-full object-cover object-top"
+              className="absolute inset-0 w-full h-full object-cover object-top scale-110"
             />
           ) : movie.poster_url ? (
             <img

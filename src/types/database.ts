@@ -37,6 +37,8 @@ export interface Movie {
   is_premium: boolean;
   is_featured: boolean;
   content_type: ContentType;
+  average_rating: number;
+  rating_count: number;
   created_at: string;
   updated_at: string;
 }
