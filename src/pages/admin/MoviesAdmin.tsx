@@ -348,14 +348,14 @@ export default function MoviesAdmin() {
 
       {/* Create/Edit Modal */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto glass">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col glass">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>
               {editingMovie ? 'Edit Movie' : 'Add New Movie'}
             </DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto space-y-4 mt-4 pb-4">
             {/* Content Type Selection */}
             <div className="space-y-2">
               <Label>Content Type</Label>
@@ -700,17 +700,19 @@ export default function MoviesAdmin() {
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-4">
+            <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 sticky bottom-0 bg-background/95 backdrop-blur-sm pb-2 -mx-2 px-2 border-t border-border mt-6">
               <Button
                 type="button"
                 variant="secondary"
                 onClick={() => setShowModal(false)}
+                className="w-full sm:w-auto"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={createMovie.isPending || updateMovie.isPending}
+                className="w-full sm:w-auto"
               >
                 {createMovie.isPending || updateMovie.isPending
                   ? 'Saving...'
