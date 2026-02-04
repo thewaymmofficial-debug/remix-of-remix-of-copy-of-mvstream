@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Navbar } from '@/components/Navbar';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { PremiumModal } from '@/components/PremiumModal';
+import { SeasonEpisodeList } from '@/components/SeasonEpisodeList';
 import { useAuth } from '@/hooks/useAuth';
 import { useMovie, useIsInWatchlist, useAddToWatchlist, useRemoveFromWatchlist } from '@/hooks/useMovies';
 import { useToast } from '@/hooks/use-toast';
@@ -279,6 +280,16 @@ export default function MovieDetails() {
               </div>
             </div>
           </div>
+
+          {/* Seasons and Episodes for Series */}
+          {movie.content_type === 'series' && (
+            <SeasonEpisodeList
+              movieId={movie.id}
+              isPremium={movie.is_premium}
+              userIsPremium={isPremium}
+              onPremiumRequired={() => setShowPremiumModal(true)}
+            />
+          )}
         </div>
       </div>
 

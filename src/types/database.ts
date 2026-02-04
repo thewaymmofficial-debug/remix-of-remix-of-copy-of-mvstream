@@ -1,6 +1,7 @@
 // Custom types for Ceniverse database entities
 
 export type AppRole = 'admin' | 'premium' | 'free_user';
+export type ContentType = 'movie' | 'series';
 
 export interface Profile {
   id: string;
@@ -35,6 +36,7 @@ export interface Movie {
   mega_url: string | null;
   is_premium: boolean;
   is_featured: boolean;
+  content_type: ContentType;
   created_at: string;
   updated_at: string;
 }
@@ -55,6 +57,64 @@ export interface MovieInsert {
   mega_url?: string | null;
   is_premium?: boolean;
   is_featured?: boolean;
+  content_type?: ContentType;
 }
 
 export interface MovieUpdate extends Partial<MovieInsert> {}
+
+// Season types
+export interface Season {
+  id: string;
+  movie_id: string;
+  season_number: number;
+  title: string | null;
+  created_at: string;
+}
+
+export interface SeasonInsert {
+  movie_id: string;
+  season_number: number;
+  title?: string | null;
+}
+
+export interface SeasonUpdate extends Partial<Omit<SeasonInsert, 'movie_id'>> {}
+
+// Episode types
+export interface Episode {
+  id: string;
+  season_id: string;
+  episode_number: number;
+  title: string;
+  description: string | null;
+  duration: string | null;
+  air_date: string | null;
+  thumbnail_url: string | null;
+  stream_url: string | null;
+  telegram_url: string | null;
+  mega_url: string | null;
+  created_at: string;
+}
+
+export interface EpisodeInsert {
+  season_id: string;
+  episode_number: number;
+  title: string;
+  description?: string | null;
+  duration?: string | null;
+  air_date?: string | null;
+  thumbnail_url?: string | null;
+  stream_url?: string | null;
+  telegram_url?: string | null;
+  mega_url?: string | null;
+}
+
+export interface EpisodeUpdate extends Partial<Omit<EpisodeInsert, 'season_id'>> {}
+
+// Extended types with relations
+export interface SeasonWithEpisodes extends Season {
+  episodes: Episode[];
+}
+
+export interface MovieWithSeasons extends Movie {
+  seasons: SeasonWithEpisodes[];
+}

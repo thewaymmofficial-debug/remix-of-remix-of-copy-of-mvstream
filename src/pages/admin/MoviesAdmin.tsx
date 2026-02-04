@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
-import { Plus, Edit, Trash2, Crown, Search, Upload, Loader2, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Edit, Trash2, Crown, Search, Upload, Loader2, X, Film, Tv } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,6 +52,7 @@ const defaultMovie: MovieInsert = {
   mega_url: '',
   is_premium: false,
   is_featured: false,
+  content_type: 'movie',
 };
 
 const categories = [
@@ -69,6 +71,7 @@ const categories = [
 ];
 
 export default function MoviesAdmin() {
+  const navigate = useNavigate();
   const { data: movies, isLoading } = useMovies();
   const createMovie = useCreateMovie();
   const updateMovie = useUpdateMovie();
@@ -117,6 +120,7 @@ export default function MoviesAdmin() {
       mega_url: movie.mega_url || '',
       is_premium: movie.is_premium,
       is_featured: movie.is_featured,
+      content_type: movie.content_type || 'movie',
     });
     setActorsInput(movie.actors?.join(', ') || '');
     setShowModal(true);
@@ -247,9 +251,9 @@ export default function MoviesAdmin() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Title</TableHead>
+                  <TableHead>Type</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Year</TableHead>
-                  <TableHead>Resolution</TableHead>
                   <TableHead>Premium</TableHead>
                   <TableHead>Featured</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -267,12 +271,27 @@ export default function MoviesAdmin() {
                             className="w-10 h-14 rounded object-cover"
                           />
                         )}
-                        {movie.title}
+                        <div>
+                          <div>{movie.title}</div>
+                          <div className="text-xs text-muted-foreground">{movie.resolution}</div>
+                        </div>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
+                        movie.content_type === 'series' 
+                          ? 'bg-blue-500/20 text-blue-400' 
+                          : 'bg-muted text-muted-foreground'
+                      }`}>
+                        {movie.content_type === 'series' ? (
+                          <><Tv className="w-3 h-3" /> Series</>
+                        ) : (
+                          <><Film className="w-3 h-3" /> Movie</>
+                        )}
+                      </span>
                     </TableCell>
                     <TableCell>{movie.category}</TableCell>
                     <TableCell>{movie.year}</TableCell>
-                    <TableCell>{movie.resolution}</TableCell>
                     <TableCell>
                       {movie.is_premium && (
                         <Crown className="w-4 h-4 text-cg-gold" />
@@ -287,6 +306,15 @@ export default function MoviesAdmin() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
+                        {movie.content_type === 'series' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => navigate(`/admin/series/${movie.id}`)}
+                          >
+                            Episodes
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -328,6 +356,50 @@ export default function MoviesAdmin() {
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+            {/* Content Type Selection */}
+            <div className="space-y-2">
+              <Label>Content Type</Label>
+              <div className="flex gap-4">
+                <label className={`flex items-center gap-2 px-4 py-2 rounded-lg border cursor-pointer transition-colors ${
+                  formData.content_type === 'movie' 
+                    ? 'border-primary bg-primary/10 text-primary' 
+                    : 'border-border hover:bg-muted'
+                }`}>
+                  <input
+                    type="radio"
+                    name="content_type"
+                    value="movie"
+                    checked={formData.content_type === 'movie'}
+                    onChange={() => setFormData({ ...formData, content_type: 'movie' })}
+                    className="sr-only"
+                  />
+                  <Film className="w-4 h-4" />
+                  <span className="font-medium">Movie</span>
+                </label>
+                <label className={`flex items-center gap-2 px-4 py-2 rounded-lg border cursor-pointer transition-colors ${
+                  formData.content_type === 'series' 
+                    ? 'border-primary bg-primary/10 text-primary' 
+                    : 'border-border hover:bg-muted'
+                }`}>
+                  <input
+                    type="radio"
+                    name="content_type"
+                    value="series"
+                    checked={formData.content_type === 'series'}
+                    onChange={() => setFormData({ ...formData, content_type: 'series' })}
+                    className="sr-only"
+                  />
+                  <Tv className="w-4 h-4" />
+                  <span className="font-medium">Series</span>
+                </label>
+              </div>
+              {formData.content_type === 'series' && (
+                <p className="text-xs text-muted-foreground">
+                  After creating, use the "Episodes" button to add seasons and episodes.
+                </p>
+              )}
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="title">Title *</Label>
