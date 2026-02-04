@@ -2,11 +2,14 @@ import { ArrowLeft, Bookmark } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
+import { MovieCard } from '@/components/MovieCard';
 import { useAuth } from '@/hooks/useAuth';
+import { useWatchlist } from '@/hooks/useMovies';
 
 const Watchlist = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { data: watchlist, isLoading } = useWatchlist();
 
   if (!user) {
     return (
@@ -37,25 +40,45 @@ const Watchlist = () => {
             <Bookmark className="w-6 h-6 text-primary" />
             <div>
               <h1 className="text-2xl md:text-3xl font-bold">My Watchlist</h1>
-              <p className="text-sm text-muted-foreground">0 movies saved</p>
+              <p className="text-sm text-muted-foreground">
+                {watchlist?.length || 0} movie{watchlist?.length !== 1 ? 's' : ''} saved
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Empty State */}
-        <div className="text-center py-20">
-          <Bookmark className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Your watchlist is empty</h2>
-          <p className="text-muted-foreground mb-6">
-            Start adding movies you want to watch later
-          </p>
-          <Link 
-            to="/" 
-            className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            Browse Movies
-          </Link>
-        </div>
+        {/* Content */}
+        {isLoading ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="aspect-[2/3] bg-muted rounded-lg animate-pulse" />
+            ))}
+          </div>
+        ) : watchlist && watchlist.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {watchlist.map((item) => (
+              <MovieCard
+                key={item.id}
+                movie={item.movie}
+                onClick={() => navigate(`/movie/${item.movie.id}`)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-20">
+            <Bookmark className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
+            <h2 className="text-xl font-semibold mb-2">Your watchlist is empty</h2>
+            <p className="text-muted-foreground mb-6">
+              Start adding movies you want to watch later
+            </p>
+            <Link 
+              to="/" 
+              className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              Browse Movies
+            </Link>
+          </div>
+        )}
       </main>
 
       <MobileBottomNav />

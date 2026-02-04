@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Play,
@@ -11,22 +10,26 @@ import {
   ArrowLeft,
   Bookmark,
   BookmarkCheck,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Navbar } from '@/components/Navbar';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { PremiumModal } from '@/components/PremiumModal';
 import { useAuth } from '@/hooks/useAuth';
-import { useMovie } from '@/hooks/useMovies';
+import { useMovie, useIsInWatchlist, useAddToWatchlist, useRemoveFromWatchlist } from '@/hooks/useMovies';
 import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
 
 export default function MovieDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, isPremium, isLoading: authLoading } = useAuth();
   const { data: movie, isLoading } = useMovie(id || '');
+  const { data: isInWatchlist, isLoading: watchlistLoading } = useIsInWatchlist(id || '');
+  const addToWatchlist = useAddToWatchlist();
+  const removeFromWatchlist = useRemoveFromWatchlist();
   const [showPremiumModal, setShowPremiumModal] = useState(false);
-  const [isInWatchlist, setIsInWatchlist] = useState(false);
   const { toast } = useToast();
 
   // Redirect if not logged in
@@ -74,15 +77,33 @@ export default function MovieDetails() {
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
-  const toggleWatchlist = () => {
-    setIsInWatchlist(!isInWatchlist);
-    toast({
-      title: isInWatchlist ? "Removed from Watchlist" : "Added to Watchlist",
-      description: isInWatchlist 
-        ? `${movie.title} has been removed from your watchlist.`
-        : `${movie.title} has been added to your watchlist.`,
-    });
+  const toggleWatchlist = async () => {
+    if (!id) return;
+    
+    try {
+      if (isInWatchlist) {
+        await removeFromWatchlist.mutateAsync(id);
+        toast({
+          title: "Removed from Watchlist",
+          description: `${movie.title} has been removed from your watchlist.`,
+        });
+      } else {
+        await addToWatchlist.mutateAsync(id);
+        toast({
+          title: "Added to Watchlist",
+          description: `${movie.title} has been added to your watchlist.`,
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update watchlist. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
+
+  const isWatchlistMutating = addToWatchlist.isPending || removeFromWatchlist.isPending;
 
   return (
     <div className="min-h-screen bg-background mobile-nav-spacing">
@@ -221,8 +242,11 @@ export default function MovieDetails() {
                   variant={isInWatchlist ? "default" : "secondary"}
                   className="gap-2"
                   onClick={toggleWatchlist}
+                  disabled={isWatchlistMutating || watchlistLoading}
                 >
-                  {isInWatchlist ? (
+                  {isWatchlistMutating ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : isInWatchlist ? (
                     <BookmarkCheck className="w-5 h-5" />
                   ) : (
                     <Bookmark className="w-5 h-5" />
