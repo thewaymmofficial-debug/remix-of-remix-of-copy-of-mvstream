@@ -4,13 +4,20 @@ import { Navbar } from '@/components/Navbar';
 import { HeroBanner } from '@/components/HeroBanner';
 import { MovieRow } from '@/components/MovieRow';
 import { MovieCard } from '@/components/MovieCard';
+import { ContinueWatchingCard } from '@/components/ContinueWatchingCard';
 import { LoginModal } from '@/components/LoginModal';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { MovieQuickPreview } from '@/components/MovieQuickPreview';
+import { SkeletonRow } from '@/components/SkeletonCard';
 import { useAuth } from '@/hooks/useAuth';
 import { useFeaturedMovies, useMoviesByCategory, useWatchlist } from '@/hooks/useMovies';
+import { useContinueWatching, useRemoveFromHistory } from '@/hooks/useWatchHistory';
+import { useTrendingMovies } from '@/hooks/useTrending';
+import { useRecommendations } from '@/hooks/useRecommendations';
 import { useFilter } from '@/contexts/FilterContext';
+import { ChevronLeft, ChevronRight, Flame, Sparkles } from 'lucide-react';
 import type { Movie } from '@/types/database';
+import { useRef } from 'react';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -18,9 +25,14 @@ const Index = () => {
   const { data: featuredMovies } = useFeaturedMovies();
   const { data: moviesByCategory, isLoading } = useMoviesByCategory();
   const { data: watchlistData } = useWatchlist();
+  const { data: continueWatching } = useContinueWatching();
+  const { data: trendingMovies } = useTrendingMovies();
+  const { data: recommendations } = useRecommendations();
+  const removeFromHistory = useRemoveFromHistory();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [previewMovie, setPreviewMovie] = useState<Movie | null>(null);
   const { searchQuery, selectedCategory, selectedYear } = useFilter();
+  const continueWatchingRef = useRef<HTMLDivElement>(null);
 
   // Get all unique categories and years for filters
   const { categories, years } = useMemo(() => {
@@ -102,6 +114,16 @@ const Index = () => {
     }
   };
 
+  const scrollContinueWatching = (direction: 'left' | 'right') => {
+    if (continueWatchingRef.current) {
+      const scrollAmount = 400;
+      continueWatchingRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth',
+      });
+    }
+  };
+
   // Define category display order
   const categoryOrder = [
     'Latest',
@@ -144,18 +166,9 @@ const Index = () => {
       <div className="py-8 relative z-30 bg-background">
         {isLoading ? (
           <div className="px-4 md:px-8">
-            <div className="animate-pulse space-y-8">
-              {[1, 2, 3].map((i) => (
-                <div key={i}>
-                  <div className="h-6 w-32 bg-muted rounded mb-4" />
-                  <div className="flex gap-3 overflow-hidden">
-                    {[1, 2, 3, 4, 5].map((j) => (
-                      <div key={j} className="flex-shrink-0 w-[calc(33.333%-8px)] min-w-[105px] max-w-[140px] sm:w-[140px] sm:max-w-none aspect-[2/3] bg-muted rounded-lg" />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <SkeletonRow />
+            <SkeletonRow />
+            <SkeletonRow />
           </div>
         ) : hasNoResults ? (
           <div className="text-center py-20">
@@ -168,7 +181,75 @@ const Index = () => {
           </div>
         ) : (
           <>
-            {/* My Watchlist Row - Only show when logged in and has items */}
+            {/* Continue Watching Row */}
+            {user && continueWatching && continueWatching.length > 0 && !isFiltering && (
+              <section className="mb-10">
+                <div className="flex items-center justify-between mb-5 px-4 md:px-8">
+                  <h2 className="text-xl md:text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
+                    Continue Watching
+                  </h2>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => scrollContinueWatching('left')}
+                      className="p-2.5 rounded-full bg-card/80 hover:bg-card border border-border/50 transition-all hover:scale-105"
+                      aria-label="Scroll left"
+                    >
+                      <ChevronLeft className="w-5 h-5 text-foreground" />
+                    </button>
+                    <button
+                      onClick={() => scrollContinueWatching('right')}
+                      className="p-2.5 rounded-full bg-card/80 hover:bg-card border border-border/50 transition-all hover:scale-105"
+                      aria-label="Scroll right"
+                    >
+                      <ChevronRight className="w-5 h-5 text-foreground" />
+                    </button>
+                  </div>
+                </div>
+                <div ref={continueWatchingRef} className="scroll-row px-4 md:px-8">
+                  {continueWatching.map((item) => (
+                    <ContinueWatchingCard
+                      key={item.id}
+                      movie={item.movie}
+                      progressPercent={item.progress_percent}
+                      onResume={() => navigate(`/movie/${item.movie_id}`)}
+                      onRemove={() => removeFromHistory.mutate(item.id)}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Trending This Week */}
+            {trendingMovies && trendingMovies.length > 0 && !isFiltering && (
+              <MovieRow
+                title="🔥 Trending This Week"
+                movies={trendingMovies}
+                onMovieClick={handleMovieClick}
+              />
+            )}
+
+            {/* Personalized Recommendations */}
+            {user && recommendations && recommendations.length > 0 && !isFiltering && (
+              <section className="mb-10">
+                <div className="flex items-center justify-between mb-5 px-4 md:px-8">
+                  <h2 className="text-xl md:text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-cg-gold" />
+                    Because You Watched {recommendations[0]?.basedOnTitle}
+                  </h2>
+                </div>
+                <div className="flex gap-3 overflow-x-auto pb-4 px-4 md:px-8 scrollbar-hide">
+                  {recommendations.map((rec) => (
+                    <MovieCard
+                      key={rec.movie.id}
+                      movie={rec.movie}
+                      onClick={() => handleMovieClick(rec.movie)}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* My Watchlist Row */}
             {user && watchlistMovies.length > 0 && !isFiltering && (
               <section className="mb-10">
                 <div className="flex items-center justify-between mb-5 px-4 md:px-8">
