@@ -177,8 +177,10 @@ export default function AdminLayout() {
         </div>
 
         {/* Main content */}
-        <main className="flex-1 md:ml-64 p-3 md:p-8 mt-12 md:mt-0 overflow-x-hidden w-full min-w-0">
-          <Outlet />
+        <main className="flex-1 md:ml-64 p-3 md:p-8 mt-12 md:mt-0 overflow-x-hidden w-full min-w-0 max-w-full box-border">
+          <div className="w-full min-w-0 max-w-full overflow-hidden">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>
