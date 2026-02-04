@@ -96,21 +96,21 @@ export default function SettingsAdmin() {
   }
 
   return (
-    <div>
-      <h1 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8 flex items-center gap-2">
-        <Settings className="w-6 h-6 sm:w-8 sm:h-8" />
+    <div className="w-full max-w-full overflow-hidden">
+      <h1 className="text-xl sm:text-3xl font-bold mb-4 sm:mb-8 flex items-center gap-2">
+        <Settings className="w-5 h-5 sm:w-8 sm:h-8" />
         Site Settings
       </h1>
 
-      <div className="grid gap-4">
+      <div className="grid gap-3 w-full max-w-full">
         {/* Announcement Banner - Collapsible */}
         <Collapsible 
           open={openSections.announcement} 
           onOpenChange={(open) => setOpenSections(prev => ({ ...prev, announcement: open }))}
         >
-          <Card className="glass border-cineverse-red/30">
+          <Card className="glass border-cineverse-red/30 overflow-hidden w-full max-w-full">
             <CollapsibleTrigger asChild>
-              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors px-3 py-3 sm:px-6 sm:py-4">
                 <CardTitle className="flex items-center justify-between text-base sm:text-lg">
                   <div className="flex items-center gap-2">
                     <Megaphone className="w-5 h-5 text-cineverse-red" />
@@ -121,7 +121,7 @@ export default function SettingsAdmin() {
               </CardHeader>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <CardContent className="space-y-4 pt-0">
+              <CardContent className="space-y-4 pt-0 px-3 sm:px-6">
                 {/* Enable/Disable Toggle */}
                 <div className="flex items-center justify-between gap-4">
                   <div className="min-w-0 flex-1">
@@ -284,9 +284,9 @@ export default function SettingsAdmin() {
           open={openSections.contacts} 
           onOpenChange={(open) => setOpenSections(prev => ({ ...prev, contacts: open }))}
         >
-          <Card className="glass">
+          <Card className="glass overflow-hidden w-full max-w-full">
             <CollapsibleTrigger asChild>
-              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors px-3 py-3 sm:px-6 sm:py-4">
                 <CardTitle className="flex items-center justify-between text-base sm:text-lg">
                   <div className="flex items-center gap-2">
                     <Phone className="w-5 h-5" />
@@ -297,7 +297,7 @@ export default function SettingsAdmin() {
               </CardHeader>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <CardContent className="space-y-4 pt-0">
+              <CardContent className="space-y-4 pt-0 px-3 sm:px-6">
                 {/* Telegram */}
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-[#0088cc] flex items-center justify-center shrink-0">
@@ -388,9 +388,9 @@ export default function SettingsAdmin() {
           open={openSections.prices} 
           onOpenChange={(open) => setOpenSections(prev => ({ ...prev, prices: open }))}
         >
-          <Card className="glass">
+          <Card className="glass overflow-hidden w-full max-w-full">
             <CollapsibleTrigger asChild>
-              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors px-3 py-3 sm:px-6 sm:py-4">
                 <CardTitle className="flex items-center justify-between text-base sm:text-lg">
                   <div className="flex items-center gap-2">
                     <CreditCard className="w-5 h-5" />
@@ -401,12 +401,12 @@ export default function SettingsAdmin() {
               </CardHeader>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <CardContent className="space-y-4 pt-0">
+              <CardContent className="space-y-4 pt-0 px-3 sm:px-6">
                 {/* Monthly */}
-                <div className="p-3 bg-muted rounded-lg space-y-3">
+                <div className="p-3 bg-muted rounded-lg space-y-3 overflow-hidden">
                   <h3 className="font-medium text-sm">Monthly</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1 min-w-0">
                       <Label htmlFor="monthly-mmk" className="text-xs">MMK</Label>
                       <Input
                         id="monthly-mmk"
@@ -418,10 +418,10 @@ export default function SettingsAdmin() {
                             monthly: { ...prices.monthly, mmk: Number(e.target.value) },
                           })
                         }
-                        className="text-sm h-9"
+                        className="text-sm h-9 w-full"
                       />
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1 min-w-0">
                       <Label htmlFor="monthly-usd" className="text-xs">USD</Label>
                       <Input
                         id="monthly-usd"
@@ -434,17 +434,17 @@ export default function SettingsAdmin() {
                             monthly: { ...prices.monthly, usd: Number(e.target.value) },
                           })
                         }
-                        className="text-sm h-9"
+                        className="text-sm h-9 w-full"
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* Yearly */}
-                <div className="p-3 bg-muted rounded-lg space-y-3">
+                <div className="p-3 bg-muted rounded-lg space-y-3 overflow-hidden">
                   <h3 className="font-medium text-sm">Yearly</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1 min-w-0">
                       <Label htmlFor="yearly-mmk" className="text-xs">MMK</Label>
                       <Input
                         id="yearly-mmk"
@@ -456,10 +456,10 @@ export default function SettingsAdmin() {
                             yearly: { ...prices.yearly, mmk: Number(e.target.value) },
                           })
                         }
-                        className="text-sm h-9"
+                        className="text-sm h-9 w-full"
                       />
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1 min-w-0">
                       <Label htmlFor="yearly-usd" className="text-xs">USD</Label>
                       <Input
                         id="yearly-usd"
@@ -472,17 +472,17 @@ export default function SettingsAdmin() {
                             yearly: { ...prices.yearly, usd: Number(e.target.value) },
                           })
                         }
-                        className="text-sm h-9"
+                        className="text-sm h-9 w-full"
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* Lifetime */}
-                <div className="p-3 bg-muted rounded-lg space-y-3">
+                <div className="p-3 bg-muted rounded-lg space-y-3 overflow-hidden">
                   <h3 className="font-medium text-sm">Lifetime</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1 min-w-0">
                       <Label htmlFor="lifetime-mmk" className="text-xs">MMK</Label>
                       <Input
                         id="lifetime-mmk"
@@ -494,10 +494,10 @@ export default function SettingsAdmin() {
                             lifetime: { ...prices.lifetime, mmk: Number(e.target.value) },
                           })
                         }
-                        className="text-sm h-9"
+                        className="text-sm h-9 w-full"
                       />
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1 min-w-0">
                       <Label htmlFor="lifetime-usd" className="text-xs">USD</Label>
                       <Input
                         id="lifetime-usd"
@@ -510,7 +510,7 @@ export default function SettingsAdmin() {
                             lifetime: { ...prices.lifetime, usd: Number(e.target.value) },
                           })
                         }
-                        className="text-sm h-9"
+                        className="text-sm h-9 w-full"
                       />
                     </div>
                   </div>
