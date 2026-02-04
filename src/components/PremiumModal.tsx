@@ -7,6 +7,8 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { ContactIcons } from '@/components/ContactIcons';
+import { useSiteSettings } from '@/hooks/useSiteSettings';
 
 interface PremiumModalProps {
   open: boolean;
@@ -14,6 +16,10 @@ interface PremiumModalProps {
 }
 
 export function PremiumModal({ open, onOpenChange }: PremiumModalProps) {
+  const { data: settings } = useSiteSettings();
+  const contacts = settings?.adminContacts;
+  const prices = settings?.subscriptionPrices;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md glass border-border text-center">
@@ -34,6 +40,27 @@ export function PremiumModal({ open, onOpenChange }: PremiumModalProps) {
         </DialogHeader>
 
         <div className="mt-6 space-y-4">
+          {/* Pricing */}
+          {prices && (
+            <div className="grid grid-cols-3 gap-2">
+              <div className="p-3 bg-muted rounded-lg text-center">
+                <p className="text-xs text-muted-foreground">{prices.monthly.label}</p>
+                <p className="text-lg font-bold text-cg-gold">{prices.monthly.mmk.toLocaleString()} MMK</p>
+                <p className="text-xs text-muted-foreground">${prices.monthly.usd}</p>
+              </div>
+              <div className="p-3 bg-muted rounded-lg text-center border-2 border-cg-gold">
+                <p className="text-xs text-muted-foreground">{prices.yearly.label}</p>
+                <p className="text-lg font-bold text-cg-gold">{prices.yearly.mmk.toLocaleString()} MMK</p>
+                <p className="text-xs text-muted-foreground">${prices.yearly.usd}</p>
+              </div>
+              <div className="p-3 bg-muted rounded-lg text-center">
+                <p className="text-xs text-muted-foreground">{prices.lifetime.label}</p>
+                <p className="text-lg font-bold text-cg-gold">{prices.lifetime.mmk.toLocaleString()} MMK</p>
+                <p className="text-xs text-muted-foreground">${prices.lifetime.usd}</p>
+              </div>
+            </div>
+          )}
+
           <div className="p-4 bg-muted rounded-lg">
             <p className="text-sm text-muted-foreground">
               Upgrade to Premium to unlock:
@@ -59,8 +86,15 @@ export function PremiumModal({ open, onOpenChange }: PremiumModalProps) {
           </div>
 
           <p className="text-xs text-muted-foreground">
-            Contact an admin to upgrade your account.
+            Contact us to upgrade:
           </p>
+
+          <ContactIcons
+            telegramUrl={contacts?.telegram.url}
+            viberUrl={contacts?.viber.url}
+            emailUrl={contacts?.email.url}
+            size="sm"
+          />
 
           <Button
             onClick={() => onOpenChange(false)}
