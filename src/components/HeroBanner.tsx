@@ -222,7 +222,7 @@ export function HeroBanner({ movies, onPlay, onMoreInfo }: HeroBannerProps) {
       )}
 
       {/* Content */}
-      <div className="relative h-full flex flex-col justify-end pb-24 md:pb-32 px-4 md:px-8 lg:px-16 max-w-4xl z-20">
+      <div className="relative h-full flex flex-col justify-end pb-8 md:pb-32 px-4 md:px-8 lg:px-16 max-w-4xl z-20">
         {/* Premium Badge */}
         {currentMovie.is_premium && (
           <div className="premium-badge inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full w-fit mb-5 shadow-lg">
@@ -251,9 +251,9 @@ export function HeroBanner({ movies, onPlay, onMoreInfo }: HeroBannerProps) {
           </div>
         )}
 
-        {/* Description - limited on mobile for better backdrop visibility */}
+        {/* Description */}
         {currentMovie.description && (
-          <p className="text-sm md:text-lg text-white/85 line-clamp-1 md:line-clamp-3 mb-4 md:mb-8 max-w-2xl leading-relaxed drop-shadow">
+          <p className="text-sm md:text-lg text-white/85 line-clamp-2 md:line-clamp-3 mb-4 md:mb-8 max-w-2xl leading-relaxed drop-shadow">
             {currentMovie.description}
           </p>
         )}
