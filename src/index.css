@@ -134,6 +134,15 @@
     border: 1px solid hsl(var(--cg-glass-border));
   }
 
+  /* Fix for admin settings mobile overflow */
+  [data-radix-collapsible-root],
+  [data-radix-collapsible-content] {
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+
   /* Premium badge gradient */
   .premium-badge {
     background: linear-gradient(135deg, hsl(var(--cg-gold)), hsl(var(--cg-premium)));
