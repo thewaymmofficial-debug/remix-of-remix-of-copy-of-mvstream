@@ -253,7 +253,7 @@ export function HeroBanner({ movies, onPlay, onMoreInfo }: HeroBannerProps) {
 
         {/* Description - limited on mobile for better backdrop visibility */}
         {currentMovie.description && (
-          <p className="text-sm md:text-lg text-white/85 line-clamp-2 md:line-clamp-3 mb-6 md:mb-8 max-w-2xl leading-relaxed drop-shadow">
+          <p className="text-sm md:text-lg text-white/85 line-clamp-1 md:line-clamp-3 mb-4 md:mb-8 max-w-2xl leading-relaxed drop-shadow">
             {currentMovie.description}
           </p>
         )}
