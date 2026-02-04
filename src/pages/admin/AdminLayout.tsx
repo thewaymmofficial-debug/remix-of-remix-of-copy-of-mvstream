@@ -98,14 +98,14 @@ export default function AdminLayout() {
         </aside>
 
         {/* Mobile Header with Navigation */}
-        <div className="md:hidden fixed top-20 left-0 right-0 z-30 bg-background/95 backdrop-blur-sm border-b border-border px-4 py-3">
+        <div className="md:hidden fixed top-16 left-0 right-0 z-30 bg-background border-b border-border px-3 py-2">
           <div className="flex items-center justify-between">
             {/* Current Page Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2 bg-card">
+                <Button variant="outline" size="sm" className="gap-2 bg-card">
                   <currentPage.icon className="w-4 h-4" />
-                  <span className="font-medium">{currentPage.label}</span>
+                  <span className="font-medium text-sm">{currentPage.label}</span>
                   <ChevronRight className="w-4 h-4 rotate-90" />
                 </Button>
               </DropdownMenuTrigger>
@@ -133,7 +133,7 @@ export default function AdminLayout() {
             {/* Full Menu Sheet */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="sm">
                   <Menu className="w-5 h-5" />
                 </Button>
               </SheetTrigger>
@@ -177,7 +177,7 @@ export default function AdminLayout() {
         </div>
 
         {/* Main content */}
-        <main className="flex-1 md:ml-64 p-4 md:p-8 pt-20 md:pt-4">
+        <main className="flex-1 md:ml-64 p-3 md:p-8 mt-12 md:mt-0">
           <Outlet />
         </main>
       </div>
