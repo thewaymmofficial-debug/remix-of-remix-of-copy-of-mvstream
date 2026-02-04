@@ -9,6 +9,8 @@ interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   role: AppRole | null;
+  premiumExpiresAt: string | null;
+  premiumType: string | null;
   isLoading: boolean;
   isAdmin: boolean;
   isPremium: boolean;
@@ -25,6 +27,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
+  const [premiumExpiresAt, setPremiumExpiresAt] = useState<string | null>(null);
+  const [premiumType, setPremiumType] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -53,6 +57,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           setProfile(null);
           setRole(null);
+          setPremiumExpiresAt(null);
+          setPremiumType(null);
           setIsLoading(false);
         }
       }
@@ -85,15 +91,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(profileData as Profile);
       }
 
-      // Fetch role
+      // Fetch role and premium info
       const { data: roleData } = await supabase
         .from('user_roles')
-        .select('role')
+        .select('role, premium_expires_at, premium_type')
         .eq('user_id', userId)
         .single();
 
       if (roleData) {
         setRole(roleData.role as AppRole);
+        setPremiumExpiresAt(roleData.premium_expires_at);
+        setPremiumType(roleData.premium_type);
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -137,6 +145,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
     setProfile(null);
     setRole(null);
+    setPremiumExpiresAt(null);
+    setPremiumType(null);
   };
 
   const isAdmin = role === 'admin';
@@ -149,6 +159,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session,
         profile,
         role,
+        premiumExpiresAt,
+        premiumType,
         isLoading,
         isAdmin,
         isPremium,
