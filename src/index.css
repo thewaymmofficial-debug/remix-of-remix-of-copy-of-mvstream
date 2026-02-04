@@ -5,34 +5,34 @@
 /* Ceniverse Premium - Dark Cinematic Theme */
 
 @layer base {
-  /* Light mode - Light content with cinematic hero */
+  /* Light mode - Light content with dark hero */
   :root {
-    --background: 0 0% 96%;
-    --foreground: 220 15% 15%;
+    --background: 40 20% 94%;
+    --foreground: 30 10% 15%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 220 15% 15%;
+    --card: 40 15% 98%;
+    --card-foreground: 30 10% 15%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 15% 15%;
+    --popover: 40 15% 98%;
+    --popover-foreground: 30 10% 15%;
 
     --primary: 0 72% 51%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 10% 92%;
-    --secondary-foreground: 220 15% 20%;
+    --secondary: 40 10% 88%;
+    --secondary-foreground: 30 10% 20%;
 
-    --muted: 220 10% 90%;
-    --muted-foreground: 220 10% 40%;
+    --muted: 40 10% 85%;
+    --muted-foreground: 30 10% 40%;
 
-    --accent: 220 10% 92%;
-    --accent-foreground: 220 15% 15%;
+    --accent: 40 10% 88%;
+    --accent-foreground: 30 10% 15%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 10% 85%;
-    --input: 220 10% 85%;
+    --border: 40 10% 80%;
+    --input: 40 10% 80%;
     --ring: 0 72% 51%;
 
     --radius: 0.5rem;
@@ -41,16 +41,19 @@
     --cg-gold: 45 93% 47%;
     --cg-premium: 280 100% 65%;
     --cg-success: 142 76% 36%;
-    --cg-glass: 220 15% 15% / 0.06;
-    --cg-glass-border: 220 15% 15% / 0.1;
+    --cg-glass: 30 10% 15% / 0.06;
+    --cg-glass-border: 30 10% 15% / 0.1;
 
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 220 15% 15%;
+    /* Content section background for light mode */
+    --content-bg: 40 20% 94%;
+
+    --sidebar-background: 40 15% 98%;
+    --sidebar-foreground: 30 10% 15%;
     --sidebar-primary: 0 72% 51%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 10% 92%;
-    --sidebar-accent-foreground: 220 15% 15%;
-    --sidebar-border: 220 10% 85%;
+    --sidebar-accent: 40 10% 88%;
+    --sidebar-accent-foreground: 30 10% 15%;
+    --sidebar-border: 40 10% 80%;
     --sidebar-ring: 0 72% 51%;
   }
 
@@ -87,6 +90,9 @@
     /* Ceniverse custom tokens - dark mode */
     --cg-glass: 0 0% 100% / 0.05;
     --cg-glass-border: 0 0% 100% / 0.08;
+
+    /* Content section background for dark mode */
+    --content-bg: 0 0% 3%;
 
     --sidebar-background: 0 0% 4%;
     --sidebar-foreground: 0 0% 90%;

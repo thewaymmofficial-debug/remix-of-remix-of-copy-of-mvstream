@@ -62,6 +62,7 @@ export default {
           premium: "hsl(var(--cg-premium))",
           success: "hsl(var(--cg-success))",
         },
+        "content-bg": "hsl(var(--content-bg))",
       },
       borderRadius: {
         lg: "var(--radius)",
