@@ -224,7 +224,23 @@ export function useAddToWatchlist() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (_, movieId) => {
+    onMutate: async (movieId) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['watchlist', movieId] });
+      
+      // Snapshot previous value
+      const previousValue = queryClient.getQueryData(['watchlist', movieId]);
+      
+      // Optimistically update to show in watchlist immediately
+      queryClient.setQueryData(['watchlist', movieId], true);
+      
+      return { previousValue };
+    },
+    onError: (err, movieId, context) => {
+      // Rollback on error
+      queryClient.setQueryData(['watchlist', movieId], context?.previousValue);
+    },
+    onSettled: (_, __, movieId) => {
       queryClient.invalidateQueries({ queryKey: ['watchlist'] });
       queryClient.invalidateQueries({ queryKey: ['watchlist', movieId] });
     },
@@ -247,7 +263,23 @@ export function useRemoveFromWatchlist() {
 
       if (error) throw error;
     },
-    onSuccess: (_, movieId) => {
+    onMutate: async (movieId) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['watchlist', movieId] });
+      
+      // Snapshot previous value
+      const previousValue = queryClient.getQueryData(['watchlist', movieId]);
+      
+      // Optimistically update to show removed immediately
+      queryClient.setQueryData(['watchlist', movieId], false);
+      
+      return { previousValue };
+    },
+    onError: (err, movieId, context) => {
+      // Rollback on error
+      queryClient.setQueryData(['watchlist', movieId], context?.previousValue);
+    },
+    onSettled: (_, __, movieId) => {
       queryClient.invalidateQueries({ queryKey: ['watchlist'] });
       queryClient.invalidateQueries({ queryKey: ['watchlist', movieId] });
     },
