@@ -1,5 +1,6 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { AppRole, Profile } from '@/types/database';
 
@@ -19,6 +20,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -110,7 +112,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    // Clear all React Query cache
+    queryClient.clear();
+    
+    // Clear localStorage items related to the app
+    localStorage.removeItem('sb-orvctyhsjefhxncxxsrb-auth-token');
+    
+    // Sign out from Supabase
     await supabase.auth.signOut();
+    
+    // Reset state
     setUser(null);
     setSession(null);
     setProfile(null);
