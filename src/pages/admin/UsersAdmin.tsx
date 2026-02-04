@@ -253,83 +253,119 @@ export default function UsersAdmin() {
         />
       </div>
 
-      {/* Users Table */}
+      {/* Users List - Card layout on mobile, Table on desktop */}
       <Card className="glass">
         <CardContent className="p-0">
           {isLoading ? (
             <div className="p-8 text-center text-muted-foreground">Loading...</div>
           ) : filteredUsers && filteredUsers.length > 0 ? (
-            <div className="overflow-x-auto -mx-3 px-3 md:mx-0 md:px-0">
-              <Table className="min-w-[550px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead className="hidden sm:table-cell">Joined</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead className="hidden sm:table-cell">Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredUsers.map((user) => (
-                    <TableRow key={user.user_id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          {getRoleIcon(user.role)}
-                          <span className="truncate max-w-[100px] sm:max-w-none">
-                            {user.display_name || 'Unknown'}
-                          </span>
+            <>
+              {/* Mobile Card Layout */}
+              <div className="md:hidden divide-y divide-border">
+                {filteredUsers.map((user) => (
+                  <div key={user.user_id} className="p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        {getRoleIcon(user.role)}
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium truncate">{user.display_name || 'Unknown'}</p>
+                          <p className="text-xs text-muted-foreground truncate">{user.email || 'N/A'}</p>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="truncate block max-w-[120px] sm:max-w-none">
-                          {user.email || 'N/A'}
-                        </span>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        {new Date(user.created_at).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                            user.role === 'admin'
-                              ? 'bg-cg-gold/20 text-cg-gold'
-                              : user.role === 'premium'
-                              ? 'bg-cg-premium/20 text-cg-premium'
-                              : 'bg-muted text-muted-foreground'
-                          }`}
-                        >
-                          {user.role === 'admin'
-                            ? 'Admin'
+                      </div>
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium shrink-0 ${
+                          user.role === 'admin'
+                            ? 'bg-cg-gold/20 text-cg-gold'
                             : user.role === 'premium'
-                            ? 'Premium'
-                            : 'Free'}
-                        </span>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        {getPremiumStatus(user)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Select
-                          value={user.role}
-                          onValueChange={(value: AppRole) => handleRoleChange(user, value)}
-                        >
-                          <SelectTrigger className="w-24 sm:w-32">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="free_user">Free</SelectItem>
-                            <SelectItem value="premium">Premium</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
+                            ? 'bg-cg-premium/20 text-cg-premium'
+                            : 'bg-muted text-muted-foreground'
+                        }`}
+                      >
+                        {user.role === 'admin' ? 'Admin' : user.role === 'premium' ? 'Premium' : 'Free'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between pt-2 border-t border-border">
+                      <div className="text-xs text-muted-foreground">
+                        Joined {new Date(user.created_at).toLocaleDateString()}
+                        {getPremiumStatus(user) && <span className="ml-2">{getPremiumStatus(user)}</span>}
+                      </div>
+                      <Select
+                        value={user.role}
+                        onValueChange={(value: AppRole) => handleRoleChange(user, value)}
+                      >
+                        <SelectTrigger className="w-28 h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover">
+                          <SelectItem value="free_user">Free</SelectItem>
+                          <SelectItem value="premium">Premium</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table Layout */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Joined</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers.map((user) => (
+                      <TableRow key={user.user_id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            {getRoleIcon(user.role)}
+                            <span>{user.display_name || 'Unknown'}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>{user.email || 'N/A'}</TableCell>
+                        <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                              user.role === 'admin'
+                                ? 'bg-cg-gold/20 text-cg-gold'
+                                : user.role === 'premium'
+                                ? 'bg-cg-premium/20 text-cg-premium'
+                                : 'bg-muted text-muted-foreground'
+                            }`}
+                          >
+                            {user.role === 'admin' ? 'Admin' : user.role === 'premium' ? 'Premium' : 'Free'}
+                          </span>
+                        </TableCell>
+                        <TableCell>{getPremiumStatus(user)}</TableCell>
+                        <TableCell className="text-right">
+                          <Select
+                            value={user.role}
+                            onValueChange={(value: AppRole) => handleRoleChange(user, value)}
+                          >
+                            <SelectTrigger className="w-32">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="bg-popover">
+                              <SelectItem value="free_user">Free</SelectItem>
+                              <SelectItem value="premium">Premium</SelectItem>
+                              <SelectItem value="admin">Admin</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           ) : (
             <div className="p-8 text-center text-muted-foreground">
               No users found.
