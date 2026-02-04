@@ -59,10 +59,10 @@ export default function AdminLayout() {
   const currentPage = navItems.find(item => isActive(item.path, item.exact)) || navItems[0];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <Navbar />
 
-      <div className="pt-20 flex">
+      <div className="pt-20 flex w-full max-w-full">
         {/* Desktop Sidebar */}
         <aside className="hidden md:flex flex-col w-64 h-[calc(100vh-5rem)] fixed left-0 top-20 glass border-r border-border p-4">
           <div className="mb-6">
@@ -177,7 +177,7 @@ export default function AdminLayout() {
         </div>
 
         {/* Main content */}
-        <main className="flex-1 md:ml-64 p-3 md:p-8 mt-12 md:mt-0">
+        <main className="flex-1 md:ml-64 p-3 md:p-8 mt-12 md:mt-0 overflow-x-hidden w-full min-w-0">
           <Outlet />
         </main>
       </div>

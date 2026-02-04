@@ -235,8 +235,8 @@ export default function MoviesAdmin() {
           {isLoading ? (
             <div className="p-8 text-center text-muted-foreground">Loading...</div>
           ) : filteredMovies && filteredMovies.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table className="min-w-[800px]">
+            <div className="overflow-x-auto -mx-3 px-3 md:mx-0 md:px-0">
+              <Table className="min-w-[600px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Title</TableHead>
