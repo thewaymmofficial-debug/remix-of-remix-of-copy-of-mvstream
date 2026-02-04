@@ -9,7 +9,7 @@ export function MobileBottomNav() {
 
   const navItems = [
     { icon: Home, label: 'Home', path: '/', show: true },
-    { icon: Bookmark, label: 'Watchlist', path: '/profile', show: !!user },
+    { icon: Bookmark, label: 'Watchlist', path: '/watchlist', show: !!user },
     { icon: Crown, label: 'Admin', path: '/admin', show: isAdmin },
     { icon: User, label: user ? 'Profile' : 'Login', path: user ? '/profile' : '/auth', show: true },
   ].filter(item => item.show);
