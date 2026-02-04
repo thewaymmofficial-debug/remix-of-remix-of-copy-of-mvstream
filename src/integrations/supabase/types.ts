@@ -241,18 +241,27 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          premium_expires_at: string | null
+          premium_started_at: string | null
+          premium_type: string | null
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
+          premium_expires_at?: string | null
+          premium_started_at?: string | null
+          premium_type?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
+          premium_expires_at?: string | null
+          premium_started_at?: string | null
+          premium_type?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
@@ -303,6 +312,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_premium_active: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "premium" | "free_user"
