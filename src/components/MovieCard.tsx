@@ -26,8 +26,8 @@ export function MovieCard({ movie, onClick }: MovieCardProps) {
         </div>
       )}
 
-      {/* Gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent rounded-lg opacity-60 group-hover:opacity-100 transition-opacity" />
+      {/* Gradient overlay - always dark for readability */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent rounded-lg opacity-80 group-hover:opacity-100 transition-opacity" />
 
       {/* Premium badge */}
       {movie.is_premium && (
