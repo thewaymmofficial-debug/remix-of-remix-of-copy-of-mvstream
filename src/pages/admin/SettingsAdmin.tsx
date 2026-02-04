@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Settings, Save, Loader2 } from 'lucide-react';
+import { Settings, Save, Loader2, Megaphone } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { useSiteSettings, useUpdateSiteSettings, AdminContacts, SubscriptionPrices } from '@/hooks/useSiteSettings';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useSiteSettings, useUpdateSiteSettings, AdminContacts, SubscriptionPrices, AnnouncementSettings } from '@/hooks/useSiteSettings';
 import { TelegramIcon, ViberIcon } from '@/components/ContactIcons';
 import { Mail } from 'lucide-react';
 
@@ -26,6 +28,15 @@ export default function SettingsAdmin() {
     lifetime: { mmk: 0, usd: 0, label: 'Lifetime' },
   });
 
+  // Announcement form state
+  const [announcement, setAnnouncement] = useState<AnnouncementSettings>({
+    enabled: false,
+    text: '',
+    bgColor: '#e50914',
+    textColor: '#ffffff',
+    speed: 'normal',
+  });
+
   // Load settings into form when fetched
   useEffect(() => {
     if (settings?.adminContacts) {
@@ -33,6 +44,9 @@ export default function SettingsAdmin() {
     }
     if (settings?.subscriptionPrices) {
       setPrices(settings.subscriptionPrices);
+    }
+    if (settings?.announcement) {
+      setAnnouncement(settings.announcement);
     }
   }, [settings]);
 
@@ -59,6 +73,10 @@ export default function SettingsAdmin() {
     updateSettings.mutate({ key: 'subscription_prices', value: prices });
   };
 
+  const handleSaveAnnouncement = () => {
+    updateSettings.mutate({ key: 'announcement', value: announcement });
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -75,6 +93,147 @@ export default function SettingsAdmin() {
       </h1>
 
       <div className="grid gap-6">
+        {/* Announcement Banner */}
+        <Card className="glass border-cineverse-red/30">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Megaphone className="w-5 h-5 text-cineverse-red" />
+              Announcement Banner
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Enable/Disable Toggle */}
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="announcement-enabled" className="text-base font-medium">
+                  Enable Banner
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Show scrolling announcement under the header
+                </p>
+              </div>
+              <Switch
+                id="announcement-enabled"
+                checked={announcement.enabled}
+                onCheckedChange={(checked) =>
+                  setAnnouncement({ ...announcement, enabled: checked })
+                }
+              />
+            </div>
+
+            {/* Announcement Text */}
+            <div className="space-y-2">
+              <Label htmlFor="announcement-text">Announcement Text</Label>
+              <Input
+                id="announcement-text"
+                value={announcement.text}
+                onChange={(e) =>
+                  setAnnouncement({ ...announcement, text: e.target.value })
+                }
+                placeholder="Enter your announcement message..."
+              />
+            </div>
+
+            {/* Colors and Speed */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="announcement-bg">Background Color</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="announcement-bg"
+                    type="color"
+                    value={announcement.bgColor}
+                    onChange={(e) =>
+                      setAnnouncement({ ...announcement, bgColor: e.target.value })
+                    }
+                    className="w-12 h-10 p-1 cursor-pointer"
+                  />
+                  <Input
+                    value={announcement.bgColor}
+                    onChange={(e) =>
+                      setAnnouncement({ ...announcement, bgColor: e.target.value })
+                    }
+                    className="flex-1"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="announcement-text-color">Text Color</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="announcement-text-color"
+                    type="color"
+                    value={announcement.textColor}
+                    onChange={(e) =>
+                      setAnnouncement({ ...announcement, textColor: e.target.value })
+                    }
+                    className="w-12 h-10 p-1 cursor-pointer"
+                  />
+                  <Input
+                    value={announcement.textColor}
+                    onChange={(e) =>
+                      setAnnouncement({ ...announcement, textColor: e.target.value })
+                    }
+                    className="flex-1"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="announcement-speed">Scroll Speed</Label>
+                <Select
+                  value={announcement.speed}
+                  onValueChange={(value: 'slow' | 'normal' | 'fast') =>
+                    setAnnouncement({ ...announcement, speed: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Speed" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="slow">Slow</SelectItem>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="fast">Fast</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Preview */}
+            {announcement.text && (
+              <div className="space-y-2">
+                <Label>Preview</Label>
+                <div 
+                  className="overflow-hidden rounded-lg py-2"
+                  style={{ 
+                    backgroundColor: announcement.bgColor,
+                    color: announcement.textColor
+                  }}
+                >
+                  <div className="whitespace-nowrap animate-marquee">
+                    <span className="mx-8 text-sm font-medium">{announcement.text}</span>
+                    <span className="mx-8 text-sm font-medium">{announcement.text}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <Button
+              onClick={handleSaveAnnouncement}
+              disabled={updateSettings.isPending}
+              className="w-full bg-cineverse-red hover:bg-cineverse-red/90"
+            >
+              {updateSettings.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
+              Save Announcement
+            </Button>
+          </CardContent>
+        </Card>
+
         {/* Admin Contacts */}
         <Card className="glass">
           <CardHeader>

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { HeroBanner } from '@/components/HeroBanner';
@@ -9,15 +9,15 @@ import { LoginModal } from '@/components/LoginModal';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { MovieQuickPreview } from '@/components/MovieQuickPreview';
 import { SkeletonRow } from '@/components/SkeletonCard';
+import { AnnouncementBanner } from '@/components/AnnouncementBanner';
 import { useAuth } from '@/hooks/useAuth';
 import { useFeaturedMovies, useMoviesByCategory, useWatchlist } from '@/hooks/useMovies';
 import { useContinueWatching, useRemoveFromHistory } from '@/hooks/useWatchHistory';
 import { useTrendingMovies } from '@/hooks/useTrending';
 import { useRecommendations } from '@/hooks/useRecommendations';
 import { useFilter } from '@/contexts/FilterContext';
-import { ChevronLeft, ChevronRight, Flame, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import type { Movie } from '@/types/database';
-import { useRef } from 'react';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -154,6 +154,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background mobile-nav-spacing">
       <Navbar categories={categories} years={years} />
+      <AnnouncementBanner />
 
       {/* Hero Section */}
       <HeroBanner
