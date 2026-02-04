@@ -32,7 +32,13 @@ export function MobileBottomNav() {
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <item.icon className={cn("w-5 h-5", isActive && "text-primary")} />
+              <item.icon 
+                className={cn(
+                  "w-5 h-5 transition-all",
+                  isActive && "fill-primary"
+                )} 
+                fill={isActive ? "currentColor" : "none"}
+              />
               <span className={cn(
                 "text-xs font-medium",
                 isActive && "text-primary"

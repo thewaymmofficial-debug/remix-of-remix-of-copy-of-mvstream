@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/hooks/useAuth";
+import { FilterProvider } from "@/contexts/FilterContext";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import MovieDetails from "./pages/MovieDetails";
@@ -22,26 +23,28 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
       <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/movie/:id" element={<MovieDetails />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/watchlist" element={<Watchlist />} />
-              <Route path="/admin" element={<AdminLayout />}>
-                <Route index element={<Dashboard />} />
-                <Route path="movies" element={<MoviesAdmin />} />
-                <Route path="users" element={<UsersAdmin />} />
-              </Route>
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
+        <FilterProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/movie/:id" element={<MovieDetails />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/watchlist" element={<Watchlist />} />
+                <Route path="/admin" element={<AdminLayout />}>
+                  <Route index element={<Dashboard />} />
+                  <Route path="movies" element={<MoviesAdmin />} />
+                  <Route path="users" element={<UsersAdmin />} />
+                </Route>
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </FilterProvider>
       </AuthProvider>
     </ThemeProvider>
   </QueryClientProvider>

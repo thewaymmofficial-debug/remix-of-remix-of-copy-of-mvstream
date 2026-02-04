@@ -20,6 +20,13 @@ export function HeroBanner({ movie, onPlay, onMoreInfo }: HeroBannerProps) {
     );
   }
 
+  // Build meta info string
+  const metaParts: string[] = [];
+  if (movie.year) metaParts.push(movie.year.toString());
+  if (movie.category) metaParts.push(movie.category);
+  if (movie.resolution) metaParts.push(movie.resolution);
+  if (movie.director) metaParts.push(`Dir. ${movie.director}`);
+
   return (
     <div className="relative w-full h-[65vh] md:h-[85vh] overflow-hidden">
       {/* Backdrop Image */}
@@ -47,7 +54,7 @@ export function HeroBanner({ movie, onPlay, onMoreInfo }: HeroBannerProps) {
       <div className="hero-gradient-bottom absolute inset-0" />
 
       {/* Content */}
-      <div className="relative h-full flex flex-col justify-end pb-20 md:pb-28 px-4 md:px-8 lg:px-16 max-w-4xl">
+      <div className="relative h-full flex flex-col justify-end pb-24 md:pb-32 px-4 md:px-8 lg:px-16 max-w-4xl">
         {/* Premium Badge */}
         {movie.is_premium && (
           <div className="premium-badge inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full w-fit mb-5 shadow-lg">
@@ -61,16 +68,17 @@ export function HeroBanner({ movie, onPlay, onMoreInfo }: HeroBannerProps) {
           {movie.title}
         </h1>
 
-        {/* Meta info */}
-        <div className="flex items-center gap-3 md:gap-4 mb-5 text-sm md:text-base">
-          {movie.year && <span className="text-white/90 font-medium">{movie.year}</span>}
-          {movie.resolution && (
-            <span className="px-2.5 py-1 bg-white/20 backdrop-blur-sm rounded text-xs font-bold text-white uppercase tracking-wide">
-              {movie.resolution}
-            </span>
-          )}
-          {movie.category && <span className="text-white/90 font-medium">{movie.category}</span>}
-        </div>
+        {/* Meta info - Year · Category · Resolution · Dir. Name */}
+        {metaParts.length > 0 && (
+          <div className="flex items-center flex-wrap gap-2 mb-5 text-sm md:text-base">
+            {metaParts.map((part, index) => (
+              <span key={index} className="flex items-center">
+                {index > 0 && <span className="text-white/40 mx-2">·</span>}
+                <span className="text-white/90 font-medium">{part}</span>
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* Description */}
         {movie.description && (
