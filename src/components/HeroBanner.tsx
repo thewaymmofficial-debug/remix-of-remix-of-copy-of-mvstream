@@ -16,8 +16,10 @@ const SWIPE_THRESHOLD = 50; // Minimum swipe distance in pixels
 export function HeroBanner({ movies, onPlay, onMoreInfo }: HeroBannerProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const [progress, setProgress] = useState(0);
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
+  const progressInterval = useRef<NodeJS.Timeout | null>(null);
 
   const hasMovies = movies && movies.length > 0;
   const hasMultiple = movies && movies.length > 1;
@@ -26,15 +28,18 @@ export function HeroBanner({ movies, onPlay, onMoreInfo }: HeroBannerProps) {
   const goToNext = useCallback(() => {
     if (!hasMultiple) return;
     setCurrentIndex((prev) => (prev + 1) % movies.length);
+    setProgress(0); // Reset progress on slide change
   }, [hasMultiple, movies?.length]);
 
   const goToPrevious = useCallback(() => {
     if (!hasMultiple) return;
     setCurrentIndex((prev) => (prev - 1 + movies.length) % movies.length);
+    setProgress(0); // Reset progress on slide change
   }, [hasMultiple, movies?.length]);
 
   const goToSlide = (index: number) => {
     setCurrentIndex(index);
+    setProgress(0); // Reset progress on manual slide change
     setIsAutoPlaying(false);
     // Resume auto-play after 10 seconds of inactivity
     setTimeout(() => setIsAutoPlaying(true), 10000);
@@ -75,13 +80,41 @@ export function HeroBanner({ movies, onPlay, onMoreInfo }: HeroBannerProps) {
     setTimeout(() => setIsAutoPlaying(true), 10000);
   };
 
-  // Auto-rotate
+  // Auto-rotate with progress tracking
   useEffect(() => {
-    if (!isAutoPlaying || !hasMultiple) return;
+    if (!isAutoPlaying || !hasMultiple) {
+      // Clear progress interval when not auto-playing
+      if (progressInterval.current) {
+        clearInterval(progressInterval.current);
+        progressInterval.current = null;
+      }
+      return;
+    }
 
-    const interval = setInterval(goToNext, AUTO_ROTATE_INTERVAL);
-    return () => clearInterval(interval);
-  }, [isAutoPlaying, hasMultiple, goToNext]);
+    // Reset progress when starting auto-play
+    setProgress(0);
+
+    // Update progress every 50ms for smooth animation
+    const progressStep = (50 / AUTO_ROTATE_INTERVAL) * 100;
+    progressInterval.current = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 100) {
+          return 0;
+        }
+        return prev + progressStep;
+      });
+    }, 50);
+
+    // Go to next slide when progress completes
+    const slideInterval = setInterval(goToNext, AUTO_ROTATE_INTERVAL);
+
+    return () => {
+      clearInterval(slideInterval);
+      if (progressInterval.current) {
+        clearInterval(progressInterval.current);
+      }
+    };
+  }, [isAutoPlaying, hasMultiple, goToNext, currentIndex]);
 
   // Pause on hover (for desktop)
   const handleMouseEnter = () => setIsAutoPlaying(false);
@@ -226,22 +259,33 @@ export function HeroBanner({ movies, onPlay, onMoreInfo }: HeroBannerProps) {
           </Button>
         </div>
 
-        {/* Dot Indicators */}
+        {/* Dot Indicators with Progress Bar */}
         {hasMultiple && (
-          <div className="flex items-center gap-2 mt-6">
-            {movies.map((movie, index) => (
-              <button
-                key={movie.id}
-                onClick={() => goToSlide(index)}
-                className={cn(
-                  "h-1.5 rounded-full transition-all duration-300",
-                  index === currentIndex 
-                    ? "w-8 bg-white" 
-                    : "w-1.5 bg-white/40 hover:bg-white/60"
-                )}
-                aria-label={`Go to ${movie.title}`}
+          <div className="flex flex-col gap-3 mt-6">
+            {/* Dots */}
+            <div className="flex items-center gap-2">
+              {movies.map((movie, index) => (
+                <button
+                  key={movie.id}
+                  onClick={() => goToSlide(index)}
+                  className={cn(
+                    "h-1.5 rounded-full transition-all duration-300",
+                    index === currentIndex 
+                      ? "w-8 bg-white" 
+                      : "w-1.5 bg-white/40 hover:bg-white/60"
+                  )}
+                  aria-label={`Go to ${movie.title}`}
+                />
+              ))}
+            </div>
+            
+            {/* Progress Bar */}
+            <div className="w-32 h-0.5 bg-white/20 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-white/80 rounded-full transition-all duration-75 ease-linear"
+                style={{ width: isAutoPlaying ? `${progress}%` : '0%' }}
               />
-            ))}
+            </div>
           </div>
         )}
       </div>
