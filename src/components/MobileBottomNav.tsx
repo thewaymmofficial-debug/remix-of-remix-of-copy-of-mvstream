@@ -50,20 +50,20 @@ export function MobileBottomNav() {
                 className={cn(
                   "flex flex-col items-center justify-center gap-1 py-2 px-4 rounded-lg transition-all",
                   active 
-                    ? "text-primary" 
-                    : "text-muted-foreground hover:text-foreground"
+                    ? "text-cineverse-red" 
+                    : "text-cineverse-gray hover:text-foreground"
                 )}
               >
                 <item.icon 
                   className={cn(
                     "w-5 h-5 transition-all",
-                    active && "fill-primary"
+                    active && "fill-cineverse-red"
                   )} 
                   fill={active ? "currentColor" : "none"}
                 />
                 <span className={cn(
                   "text-xs font-medium",
-                  active && "text-primary"
+                  active && "text-cineverse-red"
                 )}>
                   {item.label}
                 </span>
@@ -79,20 +79,20 @@ export function MobileBottomNav() {
                   className={cn(
                     "flex flex-col items-center justify-center gap-1 py-2 px-4 rounded-lg transition-all",
                     (location.pathname === '/profile') 
-                      ? "text-primary" 
-                      : "text-muted-foreground hover:text-foreground"
+                      ? "text-cineverse-red" 
+                      : "text-cineverse-gray hover:text-foreground"
                   )}
                 >
                   <User 
                     className={cn(
                       "w-5 h-5 transition-all",
-                      location.pathname === '/profile' && "fill-primary"
+                      location.pathname === '/profile' && "fill-cineverse-red"
                     )} 
                     fill={location.pathname === '/profile' ? "currentColor" : "none"}
                   />
                   <span className={cn(
                     "text-xs font-medium",
-                    location.pathname === '/profile' && "text-primary"
+                    location.pathname === '/profile' && "text-cineverse-red"
                   )}>
                     Profile
                   </span>
@@ -173,7 +173,7 @@ export function MobileBottomNav() {
           ) : (
             <button
               onClick={() => setShowLoginModal(true)}
-              className="flex flex-col items-center justify-center gap-1 py-2 px-4 rounded-lg transition-all text-muted-foreground hover:text-foreground"
+              className="flex flex-col items-center justify-center gap-1 py-2 px-4 rounded-lg transition-all text-cineverse-gray hover:text-foreground"
             >
               <User className="w-5 h-5" />
               <span className="text-xs font-medium">Login</span>
