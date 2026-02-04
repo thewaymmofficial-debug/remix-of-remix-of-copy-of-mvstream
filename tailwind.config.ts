@@ -64,6 +64,10 @@ export default {
           premium: "hsl(var(--cg-premium))",
           success: "hsl(var(--cg-success))",
         },
+        cineverse: {
+          red: "#e50914",
+          gray: "#9ca3af",
+        },
         "content-bg": "hsl(var(--content-bg))",
       },
       borderRadius: {

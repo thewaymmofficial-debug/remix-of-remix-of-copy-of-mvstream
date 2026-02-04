@@ -61,6 +61,7 @@ export function Navbar({ children, categories = [], years = [] }: NavbarProps) {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 flex-shrink-0">
             <img src={cineverseLogo} alt="Cineverse" className="h-8 w-auto" />
+            <span className="text-lg font-bold text-white tracking-wide">CINEVERSE</span>
           </Link>
 
           {/* Desktop: Search and Filters */}
