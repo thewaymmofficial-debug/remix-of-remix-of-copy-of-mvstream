@@ -5,6 +5,7 @@ import { HeroBanner } from '@/components/HeroBanner';
 import { MovieRow } from '@/components/MovieRow';
 import { LoginModal } from '@/components/LoginModal';
 import { SearchBar } from '@/components/SearchBar';
+import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { useAuth } from '@/hooks/useAuth';
 import { useFeaturedMovie, useMoviesByCategory } from '@/hooks/useMovies';
 import type { Movie } from '@/types/database';
@@ -73,7 +74,7 @@ const Index = () => {
     : [];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background mobile-nav-spacing">
       <Navbar>
         <SearchBar movies={allMovies} onMovieClick={handleMovieClick} />
       </Navbar>
@@ -132,6 +133,7 @@ const Index = () => {
         </div>
       </footer>
 
+      <MobileBottomNav />
       <LoginModal open={showLoginModal} onOpenChange={setShowLoginModal} />
     </div>
   );
