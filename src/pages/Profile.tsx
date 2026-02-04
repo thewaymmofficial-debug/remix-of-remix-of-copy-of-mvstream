@@ -1,13 +1,20 @@
 import { useNavigate } from 'react-router-dom';
-import { User, Mail, Calendar, Crown, ArrowLeft } from 'lucide-react';
+import { User, Mail, Calendar, Crown, ArrowLeft, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Navbar } from '@/components/Navbar';
 import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { user, profile, role, isLoading } = useAuth();
+  const { user, profile, role, isLoading, signOut } = useAuth();
+
+  const handleLogout = async () => {
+    await signOut();
+    toast.success('Logged out successfully');
+    navigate('/');
+  };
 
   // Redirect if not logged in
   if (!isLoading && !user) {
@@ -157,6 +164,17 @@ export default function Profile() {
             )}
           </CardContent>
         </Card>
+
+        {/* Logout Button */}
+        <Button
+          variant="destructive"
+          size="lg"
+          onClick={handleLogout}
+          className="w-full mt-6"
+        >
+          <LogOut className="w-4 h-4 mr-2" />
+          Log Out
+        </Button>
       </div>
     </div>
   );
