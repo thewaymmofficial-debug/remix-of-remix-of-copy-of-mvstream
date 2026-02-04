@@ -75,7 +75,11 @@ export default function MovieDetails() {
   };
 
   const openExternalLink = (url: string) => {
-    window.open(url, '_blank', 'noopener,noreferrer');
+    if (movie.is_premium && !isPremium) {
+      setShowPremiumModal(true);
+    } else {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
   };
 
   const toggleWatchlist = async () => {

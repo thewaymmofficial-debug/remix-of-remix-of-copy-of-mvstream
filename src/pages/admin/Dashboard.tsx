@@ -1,16 +1,20 @@
-import { Film, Users, Crown, TrendingUp } from 'lucide-react';
+import { Film, Users, Crown, TrendingUp, ToggleLeft, ToggleRight, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { useMovies } from '@/hooks/useMovies';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AdminDashboard() {
   const { data: movies } = useMovies();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: usersData } = useQuery({
     queryKey: ['admin', 'users-count'],
     queryFn: async () => {
-      // Get all user roles (admins can see all)
       const { data, error } = await supabase
         .from('user_roles')
         .select('role');
@@ -22,6 +26,36 @@ export default function AdminDashboard() {
       const admins = data?.filter(u => u.role === 'admin').length || 0;
 
       return { total, premium, admins };
+    },
+  });
+
+  // Check if all movies are currently free
+  const allMoviesFree = movies?.every(m => !m.is_premium) ?? false;
+
+  const toggleAllMoviesFree = useMutation({
+    mutationFn: async (makeFree: boolean) => {
+      const { error } = await supabase
+        .from('movies')
+        .update({ is_premium: !makeFree })
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Update all rows
+
+      if (error) throw error;
+    },
+    onSuccess: (_, makeFree) => {
+      queryClient.invalidateQueries({ queryKey: ['movies'] });
+      toast({
+        title: makeFree ? "All Movies Free" : "Premium Restored",
+        description: makeFree 
+          ? "All movies are now accessible to everyone." 
+          : "Movies premium status has been restored.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to update movies. Please try again.",
+        variant: "destructive",
+      });
     },
   });
 
@@ -78,6 +112,39 @@ export default function AdminDashboard() {
           </Card>
         ))}
       </div>
+
+      {/* Global Settings */}
+      <Card className="glass mb-8">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Crown className="w-5 h-5 text-cg-gold" />
+            Global Premium Settings
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+            <div className="space-y-1">
+              <Label htmlFor="all-free-toggle" className="text-base font-medium">
+                All Movies Free
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                When enabled, all content becomes accessible to free users
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              {toggleAllMoviesFree.isPending && (
+                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+              )}
+              <Switch
+                id="all-free-toggle"
+                checked={allMoviesFree}
+                onCheckedChange={(checked) => toggleAllMoviesFree.mutate(checked)}
+                disabled={toggleAllMoviesFree.isPending}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Quick Actions */}
       <Card className="glass">
