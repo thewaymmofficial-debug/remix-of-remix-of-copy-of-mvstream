@@ -83,7 +83,7 @@ export default function Auth() {
       <Card className="w-full max-w-md glass relative z-10">
         <CardHeader className="text-center">
           <div className="mb-4">
-            <span className="text-3xl font-bold text-gradient">Ceniverse</span>
+            <span className="text-3xl font-bold text-gradient">Cineverse</span>
             <span className="ml-2 text-xs font-semibold px-2 py-0.5 premium-badge rounded text-black">
               PREMIUM
             </span>
