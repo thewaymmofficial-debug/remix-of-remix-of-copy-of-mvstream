@@ -172,31 +172,31 @@ export default function MovieDetails() {
                 </div>
               )}
 
-              <h1 className="text-3xl md:text-5xl font-bold text-white mb-4">
+              <h1 className="text-3xl md:text-5xl font-bold text-white drop-shadow-lg mb-4">
                 {movie.title}
               </h1>
 
               {/* Meta info */}
-              <div className="flex flex-wrap items-center gap-4 mb-6 text-sm text-white/70">
+              <div className="flex flex-wrap items-center gap-4 mb-6 text-sm text-white/90">
                 {movie.year && (
                   <div className="flex items-center gap-1">
                     <Calendar className="w-4 h-4" />
-                    <span>{movie.year}</span>
+                    <span className="font-medium">{movie.year}</span>
                   </div>
                 )}
                 {movie.resolution && (
-                  <span className="px-2 py-0.5 bg-white/20 rounded text-xs font-medium">
+                  <span className="px-2 py-0.5 bg-white/20 backdrop-blur-sm rounded text-xs font-semibold">
                     {movie.resolution}
                   </span>
                 )}
                 {movie.file_size && (
                   <div className="flex items-center gap-1">
                     <Clock className="w-4 h-4" />
-                    <span>{movie.file_size}</span>
+                    <span className="font-medium">{movie.file_size}</span>
                   </div>
                 )}
                 {movie.category && (
-                  <span className="px-2 py-0.5 bg-primary/20 rounded text-xs font-medium text-primary">
+                  <span className="px-2 py-0.5 bg-primary rounded text-xs font-semibold text-primary-foreground">
                     {movie.category}
                   </span>
                 )}
@@ -205,20 +205,20 @@ export default function MovieDetails() {
               {/* Director & Actors */}
               {movie.director && (
                 <div className="mb-3">
-                  <span className="text-muted-foreground text-sm">Director: </span>
-                  <span className="text-foreground">{movie.director}</span>
+                  <span className="text-white/70 text-sm">Director: </span>
+                  <span className="text-white font-medium">{movie.director}</span>
                 </div>
               )}
               {movie.actors && movie.actors.length > 0 && (
                 <div className="mb-4 flex items-start gap-2">
-                  <Users className="w-4 h-4 text-muted-foreground mt-1 flex-shrink-0" />
-                  <span className="text-foreground">{movie.actors.join(', ')}</span>
+                  <Users className="w-4 h-4 text-white/70 mt-1 flex-shrink-0" />
+                  <span className="text-white/90">{movie.actors.join(', ')}</span>
                 </div>
               )}
 
               {/* Description */}
               {movie.description && (
-                <p className="text-muted-foreground mb-6 max-w-2xl">
+                <p className="text-white/80 mb-6 max-w-2xl leading-relaxed">
                   {movie.description}
                 </p>
               )}
