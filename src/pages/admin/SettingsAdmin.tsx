@@ -89,8 +89,8 @@ export default function SettingsAdmin() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold mb-8 flex items-center gap-2">
-        <Settings className="w-8 h-8" />
+      <h1 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8 flex items-center gap-2">
+        <Settings className="w-6 h-6 sm:w-8 sm:h-8" />
         Site Settings
       </h1>
 
@@ -98,7 +98,7 @@ export default function SettingsAdmin() {
         {/* Announcement Banner */}
         <Card className="glass border-cineverse-red/30">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
               <Megaphone className="w-5 h-5 text-cineverse-red" />
               Announcement Banner
             </CardTitle>
@@ -107,10 +107,10 @@ export default function SettingsAdmin() {
             {/* Enable/Disable Toggle */}
             <div className="flex items-center justify-between">
               <div>
-                <Label htmlFor="announcement-enabled" className="text-base font-medium">
+                <Label htmlFor="announcement-enabled" className="text-sm sm:text-base font-medium">
                   Enable Banner
                 </Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   Show scrolling announcement under the header
                 </p>
               </div>
@@ -137,7 +137,7 @@ export default function SettingsAdmin() {
             </div>
 
             {/* Colors and Speed */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="announcement-bg">Background Color</Label>
                 <div className="flex gap-2">

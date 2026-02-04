@@ -1,13 +1,29 @@
+import { useState } from 'react';
 import { useNavigate, Outlet, Link, useLocation } from 'react-router-dom';
-import { Film, Users, LayoutDashboard, ArrowLeft, Tags, Settings, BarChart3 } from 'lucide-react';
+import { Film, Users, LayoutDashboard, ArrowLeft, Tags, Settings, BarChart3, Menu, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Navbar } from '@/components/Navbar';
 import { useAuth } from '@/hooks/useAuth';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isAdmin, isLoading } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Redirect if not admin
   if (!isLoading && (!user || !isAdmin)) {
@@ -40,12 +56,14 @@ export default function AdminLayout() {
     return location.pathname.startsWith(path);
   };
 
+  const currentPage = navItems.find(item => isActive(item.path, item.exact)) || navItems[0];
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
 
       <div className="pt-20 flex">
-        {/* Sidebar */}
+        {/* Desktop Sidebar */}
         <aside className="hidden md:flex flex-col w-64 h-[calc(100vh-5rem)] fixed left-0 top-20 glass border-r border-border p-4">
           <div className="mb-6">
             <h2 className="text-lg font-bold text-cg-gold">Admin Dashboard</h2>
@@ -79,28 +97,87 @@ export default function AdminLayout() {
           </Button>
         </aside>
 
-        {/* Mobile Navigation */}
-        <div className="md:hidden fixed bottom-0 left-0 right-0 glass border-t border-border p-2 z-40">
-          <div className="flex justify-around">
-            {navItems.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg ${
-                  isActive(item.path, item.exact)
-                    ? 'text-primary'
-                    : 'text-muted-foreground'
-                }`}
-              >
-                <item.icon className="w-5 h-5" />
-                <span className="text-xs">{item.label}</span>
-              </Link>
-            ))}
+        {/* Mobile Header with Navigation */}
+        <div className="md:hidden fixed top-20 left-0 right-0 z-30 bg-background/95 backdrop-blur-sm border-b border-border px-4 py-3">
+          <div className="flex items-center justify-between">
+            {/* Current Page Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2 bg-card">
+                  <currentPage.icon className="w-4 h-4" />
+                  <span className="font-medium">{currentPage.label}</span>
+                  <ChevronRight className="w-4 h-4 rotate-90" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56 bg-popover">
+                {navItems.map((item) => (
+                  <DropdownMenuItem
+                    key={item.path}
+                    onClick={() => navigate(item.path)}
+                    className={`gap-3 cursor-pointer ${
+                      isActive(item.path, item.exact) ? 'bg-accent' : ''
+                    }`}
+                  >
+                    <item.icon className="w-4 h-4" />
+                    {item.label}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/')} className="gap-3 cursor-pointer">
+                  <ArrowLeft className="w-4 h-4" />
+                  Back to Site
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Full Menu Sheet */}
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Menu className="w-5 h-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-72 bg-background">
+                <SheetHeader>
+                  <SheetTitle className="text-cg-gold">Admin Panel</SheetTitle>
+                </SheetHeader>
+                <nav className="flex flex-col gap-2 mt-6">
+                  {navItems.map((item) => (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                        isActive(item.path, item.exact)
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-foreground hover:bg-muted'
+                      }`}
+                    >
+                      <item.icon className="w-5 h-5" />
+                      <span className="font-medium">{item.label}</span>
+                    </Link>
+                  ))}
+                </nav>
+                <div className="absolute bottom-6 left-6 right-6">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      navigate('/');
+                    }}
+                    className="w-full justify-start"
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back to Site
+                  </Button>
+                </div>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
 
         {/* Main content */}
-        <main className="flex-1 md:ml-64 p-4 md:p-8 pb-24 md:pb-8">
+        <main className="flex-1 md:ml-64 p-4 md:p-8 pt-20 md:pt-4">
           <Outlet />
         </main>
       </div>
