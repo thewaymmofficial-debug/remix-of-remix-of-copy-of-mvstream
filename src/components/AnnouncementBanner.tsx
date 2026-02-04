@@ -19,7 +19,8 @@ export function AnnouncementBanner() {
       className="fixed top-14 left-0 right-0 z-40 overflow-hidden py-2"
       style={{ 
         backgroundColor: announcement.bgColor || '#e50914',
-        color: announcement.textColor || '#ffffff'
+        color: announcement.textColor || '#ffffff',
+        opacity: (announcement.opacity ?? 100) / 100
       }}
     >
       <div className="flex whitespace-nowrap">

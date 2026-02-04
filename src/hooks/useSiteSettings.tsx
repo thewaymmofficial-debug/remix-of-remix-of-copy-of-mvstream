@@ -26,6 +26,7 @@ export interface AnnouncementSettings {
   bgColor: string;
   textColor: string;
   speed: 'slow' | 'normal' | 'fast';
+  opacity: number;
 }
 
 export function useSiteSettings() {
