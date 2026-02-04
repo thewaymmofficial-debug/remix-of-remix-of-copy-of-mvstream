@@ -10,7 +10,7 @@ export function MovieCard({ movie, onClick }: MovieCardProps) {
   return (
     <button
       onClick={onClick}
-      className="movie-card group relative flex-shrink-0 w-[160px] sm:w-[180px] md:w-[200px] aspect-[2/3] bg-card focus:outline-none tv-focus"
+      className="movie-card group relative flex-shrink-0 w-[130px] sm:w-[145px] md:w-[160px] aspect-[2/3] bg-card focus:outline-none tv-focus"
     >
       {/* Poster Image */}
       {movie.poster_url ? (
@@ -39,22 +39,22 @@ export function MovieCard({ movie, onClick }: MovieCardProps) {
 
       {/* Play button overlay */}
       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-        <div className="w-14 h-14 rounded-full bg-primary/90 flex items-center justify-center backdrop-blur-sm">
-          <Play className="w-6 h-6 text-primary-foreground fill-current ml-1" />
+        <div className="w-11 h-11 rounded-full bg-primary/90 flex items-center justify-center backdrop-blur-sm">
+          <Play className="w-5 h-5 text-primary-foreground fill-current ml-0.5" />
         </div>
       </div>
 
       {/* Info */}
-      <div className="absolute bottom-0 left-0 right-0 p-3 text-left">
-        <h3 className="text-sm font-semibold text-white line-clamp-2 group-hover:text-primary transition-colors drop-shadow-lg">
+      <div className="absolute bottom-0 left-0 right-0 p-2 text-left">
+        <h3 className="text-xs font-semibold text-white line-clamp-2 group-hover:text-primary transition-colors drop-shadow-lg">
           {movie.title}
         </h3>
-        <div className="flex items-center gap-2 mt-1">
+        <div className="flex items-center gap-1.5 mt-0.5">
           {movie.year && (
-            <span className="text-xs text-white/80 drop-shadow">{movie.year}</span>
+            <span className="text-[10px] text-white/80 drop-shadow">{movie.year}</span>
           )}
           {movie.resolution && (
-            <span className="text-[10px] px-1.5 py-0.5 bg-black/60 backdrop-blur-sm rounded text-white/90 font-medium">
+            <span className="text-[9px] px-1 py-0.5 bg-black/60 backdrop-blur-sm rounded text-white/90 font-medium">
               {movie.resolution}
             </span>
           )}

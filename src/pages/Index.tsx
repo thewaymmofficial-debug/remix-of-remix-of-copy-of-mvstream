@@ -147,7 +147,7 @@ const Index = () => {
                   <div className="h-6 w-32 bg-muted rounded mb-4" />
                   <div className="flex gap-3 overflow-hidden">
                     {[1, 2, 3, 4, 5].map((j) => (
-                      <div key={j} className="flex-shrink-0 w-[180px] aspect-[2/3] bg-muted rounded-lg" />
+                      <div key={j} className="flex-shrink-0 w-[145px] aspect-[2/3] bg-muted rounded-lg" />
                     ))}
                   </div>
                 </div>
