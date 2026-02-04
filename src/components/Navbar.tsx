@@ -39,7 +39,7 @@ export function Navbar({ children }: NavbarProps) {
         <div className="flex items-center justify-between px-4 md:px-8 h-16 max-w-[1920px] mx-auto">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <span className="text-2xl font-bold text-gradient">CineGeek</span>
+            <span className="text-2xl font-bold text-gradient">Ceniverse</span>
             <span className="text-xs font-semibold px-2 py-0.5 premium-badge rounded text-black">
               PREMIUM
             </span>

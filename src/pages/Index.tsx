@@ -129,7 +129,7 @@ const Index = () => {
       {/* Footer */}
       <footer className="py-8 border-t border-border">
         <div className="text-center text-sm text-muted-foreground">
-          <p>© 2024 CineGeek Premium. All rights reserved.</p>
+          <p>© 2024 Ceniverse Premium. All rights reserved.</p>
         </div>
       </footer>
 

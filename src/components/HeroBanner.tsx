@@ -13,7 +13,7 @@ export function HeroBanner({ movie, onPlay, onMoreInfo }: HeroBannerProps) {
     return (
       <div className="relative w-full h-[60vh] md:h-[80vh] bg-gradient-to-b from-muted to-background flex items-center justify-center">
         <div className="text-center px-4">
-          <h1 className="text-4xl md:text-6xl font-bold mb-4 text-gradient">CineGeek Premium</h1>
+          <h1 className="text-4xl md:text-6xl font-bold mb-4 text-gradient">Ceniverse Premium</h1>
           <p className="text-lg text-muted-foreground">Your ultimate streaming destination</p>
         </div>
       </div>
