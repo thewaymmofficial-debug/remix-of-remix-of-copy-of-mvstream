@@ -1,15 +1,35 @@
-import { ArrowLeft, Bookmark } from 'lucide-react';
+import { ArrowLeft, Bookmark, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { MovieCard } from '@/components/MovieCard';
+import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { useWatchlist } from '@/hooks/useMovies';
+import { useWatchlist, useRemoveFromWatchlist } from '@/hooks/useMovies';
+import { useToast } from '@/hooks/use-toast';
 
 const Watchlist = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: watchlist, isLoading } = useWatchlist();
+  const removeFromWatchlist = useRemoveFromWatchlist();
+  const { toast } = useToast();
+
+  const handleRemove = async (movieId: string, movieTitle: string) => {
+    try {
+      await removeFromWatchlist.mutateAsync(movieId);
+      toast({
+        title: "Removed from Watchlist",
+        description: `${movieTitle} has been removed from your watchlist.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to remove from watchlist. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (!user) {
     return (
@@ -57,11 +77,24 @@ const Watchlist = () => {
         ) : watchlist && watchlist.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {watchlist.map((item) => (
-              <MovieCard
-                key={item.id}
-                movie={item.movie}
-                onClick={() => navigate(`/movie/${item.movie.id}`)}
-              />
+              <div key={item.id} className="relative group">
+                <MovieCard
+                  movie={item.movie}
+                  onClick={() => navigate(`/movie/${item.movie.id}`)}
+                />
+                {/* Remove button */}
+                <Button
+                  size="icon"
+                  variant="destructive"
+                  className="absolute top-2 right-2 w-8 h-8 opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemove(item.movie.id, item.movie.title);
+                  }}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
             ))}
           </div>
         ) : (
