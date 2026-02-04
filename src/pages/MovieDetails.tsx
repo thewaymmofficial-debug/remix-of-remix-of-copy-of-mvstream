@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Navbar } from '@/components/Navbar';
-import { VideoPlayer } from '@/components/VideoPlayer';
 import { PremiumModal } from '@/components/PremiumModal';
 import { useAuth } from '@/hooks/useAuth';
 import { useMovie } from '@/hooks/useMovies';
@@ -22,7 +21,6 @@ export default function MovieDetails() {
   const navigate = useNavigate();
   const { user, isPremium, isLoading: authLoading } = useAuth();
   const { data: movie, isLoading } = useMovie(id || '');
-  const [showPlayer, setShowPlayer] = useState(false);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
 
   // Redirect if not logged in
@@ -62,7 +60,7 @@ export default function MovieDetails() {
     if (movie.is_premium && !isPremium) {
       setShowPremiumModal(true);
     } else if (movie.stream_url) {
-      setShowPlayer(true);
+      window.open(movie.stream_url, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -229,15 +227,6 @@ export default function MovieDetails() {
           </div>
         </div>
       </div>
-
-      {/* Video Player */}
-      {showPlayer && movie.stream_url && (
-        <VideoPlayer
-          url={movie.stream_url}
-          title={movie.title}
-          onClose={() => setShowPlayer(false)}
-        />
-      )}
 
       {/* Premium Modal */}
       <PremiumModal open={showPremiumModal} onOpenChange={setShowPremiumModal} />

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, User, Menu, X, LogOut, Settings, Crown } from 'lucide-react';
+import { Search, User, Menu, X, LogOut, Settings, Crown, Sun, Moon } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -11,12 +12,16 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/hooks/useAuth';
 import { LoginModal } from './LoginModal';
-
 export function Navbar() {
   const navigate = useNavigate();
+  const { theme, setTheme } = useTheme();
   const { user, profile, role, isAdmin, signOut } = useAuth();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const toggleTheme = () => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -56,6 +61,15 @@ export function Navbar() {
 
           {/* Right side */}
           <div className="flex items-center gap-4">
+            {/* Theme toggle */}
+            <Button variant="ghost" size="icon" onClick={toggleTheme}>
+              {theme === 'dark' ? (
+                <Sun className="w-5 h-5" />
+              ) : (
+                <Moon className="w-5 h-5" />
+              )}
+            </Button>
+
             {/* Search button */}
             <Button variant="ghost" size="icon" className="hidden md:flex">
               <Search className="w-5 h-5" />
