@@ -1,141 +1,113 @@
 
 
-# CineGeek Premium - Streaming Platform Plan
+# UI Layout and Theme Update Plan
 
 ## Overview
-A Netflix-style premium streaming platform with role-based access control, an admin dashboard for content management, and responsive design that works across mobile, desktop, and TV devices.
+Update the Ceniverse app to match the CineGeek reference design, featuring a consistently dark cinematic theme throughout the entire app (removing the light content section), an enhanced navbar with always-visible search and filter dropdowns, and showing the user's watchlist on the homepage.
+
+## Key Changes
+
+### 1. Theme Updates (CSS Variables)
+- Remove the hybrid light/dark approach (dark hero + light content)
+- Make the entire app consistently dark in dark mode
+- Update CSS variables in `src/index.css`:
+  - Dark mode: Deep cinematic black/olive tones throughout
+  - Light mode: Keep the current warm beige theme for users who prefer it
+  - Remove the separate `--content-bg` variable usage for dark mode
+
+### 2. Navbar Enhancements (`src/components/Navbar.tsx`)
+- Add always-visible search input field with search icon placeholder
+- Add Category dropdown filter (select component)
+- Add Year dropdown filter (select component)  
+- Style theme toggle with red ring/border when in dark mode (matching reference)
+- Make navbar more compact and streamlined
+- Pass filter state up to parent via props/context
+
+### 3. Hero Banner Updates (`src/components/HeroBanner.tsx`)
+- Add director information display (already in database as `director` field)
+- Format as: "Year - Category - 4K - Dir. Director Name"
+- Ensure consistent styling with the reference
+
+### 4. Homepage Layout (`src/pages/Index.tsx`)
+- Remove the separate `bg-black` and `bg-content-bg` wrapper divs
+- Make entire page use theme-aware background
+- Add "My Watchlist" section at the top of movie rows (when user is logged in)
+- Integrate filter state from navbar to filter displayed movies
+
+### 5. Mobile Bottom Navigation (`src/components/MobileBottomNav.tsx`)
+- Update icon styling to match reference (filled when active)
+- Ensure consistent dark theme styling
+
+### 6. Search and Filter Integration
+- Create a new context or lift state to share search/filter between Navbar and Index page
+- Implement Category and Year filtering for movie rows
 
 ---
 
-## 🎨 Design & Theme
+## Technical Implementation Details
 
-### Visual Identity
-- **Color Palette**: Deep dark mode (#0a0a0a background) with rich accent colors for premium feel
-- **Cards**: Netflix-style movie cards with hover zoom effects and gradient overlays
-- **Typography**: Clean, modern fonts with strong hierarchy
-- **Glass Effects**: Subtle glass-morphism on sidebar and modals
-- **Animations**: Smooth hover states, card expansions, and page transitions
+### File: `src/index.css`
+- Simplify dark mode to be consistently dark throughout
+- Keep the light mode beige theme as-is for preference
+- Remove complex hero vs content background splitting in dark mode
 
-### Layout Structure
-- **Hero Section**: Full-width cinematic banner featuring a featured movie with backdrop image
-- **Content Rows**: Horizontal scrolling carousels for categories (Latest, Action, K-Drama, etc.)
-- **Sidebar**: Collapsible navigation on desktop, bottom navigation on mobile
-- **Focus States**: High-contrast borders for TV/D-pad navigation support
+### File: `src/components/Navbar.tsx`
+- Replace the expandable search button with an always-visible search input
+- Add two Select dropdowns for Category and Year
+- Add visual styling for theme toggle (red ring in dark mode)
+- Accept callback props for search/filter changes
 
----
+### File: `src/components/HeroBanner.tsx`
+- Add director info display after category
+- Format: `{year} - {category} - {resolution} - Dir. {director}`
 
-## 👤 Authentication & Access Control
+### File: `src/pages/Index.tsx`
+- Remove hybrid background approach
+- Use single theme-aware background
+- Add watchlist section at top when user is logged in and has watchlist items
+- Implement filtering based on navbar selections
 
-### User Roles (4 Tiers)
-| Role | Permissions |
-|------|-------------|
-| **Guest** | View homepage only. Clicking any movie opens login modal |
-| **Free User** | Browse catalog + view movie details. Cannot play videos |
-| **Premium** | Full access to stream all content |
-| **Admin** | All premium features + access to /admin dashboard |
+### File: `src/components/MobileBottomNav.tsx`
+- Style active icons with fill for better visual feedback
 
-### Implementation
-- Supabase Auth for email/password login & signup
-- Secure `user_roles` table (separate from profiles) to prevent privilege escalation
-- Protected routes that redirect based on user role
-- Login modal appears when guests try to access content
+### New File: `src/contexts/FilterContext.tsx` (optional)
+- Context to share filter state between Navbar and content
+- Stores: searchQuery, selectedCategory, selectedYear
 
 ---
 
-## 🗄️ Database Structure
+## Component Structure After Changes
 
-### Movies Table
-- **Basic Info**: Title, description, director, actors array, year, category
-- **Quality**: Resolution (720p/1080p/4K), file size
-- **Media**: Poster URL, backdrop URL
-- **Streaming Links**: 
-  - `stream_url` - Direct HLS/MP4 link for in-app player
-  - `telegram_url` - External link (opens new tab)
-  - `mega_url` - External link (opens new tab)
-- **Flags**: `is_premium` boolean
-
-### Profiles Table
-- User ID, email, display name, avatar
-
-### User Roles Table (Security-Focused)
-- Separate table with user_id and role enum
-- RLS policies using security-definer functions
-
----
-
-## 📺 Core Features
-
-### Home Page (Public)
-- Hero banner with featured movie
-- Category rows: Latest Releases, Action, K-Drama, Hollywood, etc.
-- Each movie card shows poster, title, year, and premium badge if applicable
-- Clicking a card → Login modal for guests, details page for logged-in users
-
-### Movie Details Page (Logged In)
-- Full backdrop image with gradient overlay
-- Movie info: Title, year, director, actors, description
-- Quality badges (4K, 1080p, etc.)
-- **Play Button**: Opens video player for premium users, shows "Premium Only" modal for free users
-- Alternative links: Telegram and MEGA buttons (open in new tabs)
-
-### Video Player
-- Custom HTML5 player supporting HLS (.m3u8) and MP4
-- Standard controls: play/pause, volume, fullscreen, progress bar
-- Resume from where you left off (optional enhancement)
-
-### User Profile
-- View account details
-- View current plan status (Free vs Premium)
+```text
+Index Page
++-- Navbar (dark, fixed)
+|   +-- Logo + Premium badge
+|   +-- Search Input (always visible)
+|   +-- Category Dropdown
+|   +-- Year Dropdown
+|   +-- Theme Toggle (red ring in dark)
+|   +-- User Menu
++-- HeroBanner
+|   +-- Movie backdrop
+|   +-- Premium badge
+|   +-- Title
+|   +-- Year - Category - 4K - Dir. Name
+|   +-- Description
+|   +-- Play/Info buttons
++-- Content Section (theme-aware bg)
+|   +-- My Watchlist Row (if logged in)
+|   +-- Movie Category Rows (filtered)
++-- Footer
++-- MobileBottomNav
+```
 
 ---
 
-## ⚙️ Admin Dashboard (/admin)
-
-### Movie Management
-- Add new movie form with all fields
-- Edit existing movies
-- Delete movies
-- Toggle premium/free status
-
-### User Management
-- View all registered users
-- Toggle user status: Free ↔ Premium
-- See user registration date and last activity
-
-### Dashboard Stats (Optional)
-- Total movies count
-- Total users count
-- Premium users count
-
----
-
-## 📱 Responsive Design
-
-| Device | Layout |
-|--------|--------|
-| **Mobile** | Bottom navigation bar, stacked cards, full-width player |
-| **Desktop** | Collapsible sidebar, horizontal scroll rows, inline player |
-| **TV** | Large focus states, D-pad keyboard navigation support |
-
----
-
-## 🛡️ Security
-
-- Row-Level Security (RLS) on all tables
-- Anyone can view movies (SELECT)
-- Only admins can modify movies (INSERT/UPDATE/DELETE)
-- Roles stored in separate secure table with security-definer functions
-- Protected admin routes with server-side role validation
-
----
-
-## Pages Summary
-
-1. **/** - Home page (public hero + movie grids)
-2. **/auth** - Login & signup page
-3. **/movie/:id** - Movie details page (requires login)
-4. **/profile** - User profile page (requires login)
-5. **/admin** - Admin dashboard (admin only)
-6. **/admin/movies** - Movie management (admin only)
-7. **/admin/users** - User management (admin only)
+## Summary of Files to Modify
+1. `src/index.css` - Unify dark theme, remove content-bg splitting
+2. `src/components/Navbar.tsx` - Add search input, dropdowns, themed toggle
+3. `src/components/HeroBanner.tsx` - Add director info display
+4. `src/pages/Index.tsx` - Unified bg, add watchlist row, filtering
+5. `src/components/MobileBottomNav.tsx` - Active state styling
+6. `tailwind.config.ts` - May need minor adjustments for new utilities
 
