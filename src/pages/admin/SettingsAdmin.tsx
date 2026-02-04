@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Settings, Save, Loader2, Megaphone } from 'lucide-react';
+import { Settings, Save, Loader2, Megaphone, ChevronDown, CreditCard, Phone } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useSiteSettings, useUpdateSiteSettings, AdminContacts, SubscriptionPrices, AnnouncementSettings } from '@/hooks/useSiteSettings';
 import { TelegramIcon, ViberIcon } from '@/components/ContactIcons';
 import { Mail } from 'lucide-react';
@@ -37,6 +38,13 @@ export default function SettingsAdmin() {
     textColor: '#ffffff',
     speed: 'normal',
     opacity: 100,
+  });
+
+  // Collapsible states for mobile
+  const [openSections, setOpenSections] = useState({
+    announcement: true,
+    contacts: false,
+    prices: false,
   });
 
   // Load settings into form when fetched
@@ -94,382 +102,437 @@ export default function SettingsAdmin() {
         Site Settings
       </h1>
 
-      <div className="grid gap-6">
-        {/* Announcement Banner */}
-        <Card className="glass border-cineverse-red/30">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <Megaphone className="w-5 h-5 text-cineverse-red" />
-              Announcement Banner
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Enable/Disable Toggle */}
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="announcement-enabled" className="text-sm sm:text-base font-medium">
-                  Enable Banner
-                </Label>
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  Show scrolling announcement under the header
-                </p>
-              </div>
-              <Switch
-                id="announcement-enabled"
-                checked={announcement.enabled}
-                onCheckedChange={(checked) =>
-                  setAnnouncement({ ...announcement, enabled: checked })
-                }
-              />
-            </div>
-
-            {/* Announcement Text */}
-            <div className="space-y-2">
-              <Label htmlFor="announcement-text">Announcement Text</Label>
-              <Input
-                id="announcement-text"
-                value={announcement.text}
-                onChange={(e) =>
-                  setAnnouncement({ ...announcement, text: e.target.value })
-                }
-                placeholder="Enter your announcement message..."
-              />
-            </div>
-
-            {/* Colors - Stack on mobile */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="announcement-bg" className="text-sm">Background Color</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="announcement-bg"
-                    type="color"
-                    value={announcement.bgColor}
-                    onChange={(e) =>
-                      setAnnouncement({ ...announcement, bgColor: e.target.value })
+      <div className="grid gap-4">
+        {/* Announcement Banner - Collapsible */}
+        <Collapsible 
+          open={openSections.announcement} 
+          onOpenChange={(open) => setOpenSections(prev => ({ ...prev, announcement: open }))}
+        >
+          <Card className="glass border-cineverse-red/30">
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                <CardTitle className="flex items-center justify-between text-base sm:text-lg">
+                  <div className="flex items-center gap-2">
+                    <Megaphone className="w-5 h-5 text-cineverse-red" />
+                    Announcement Banner
+                  </div>
+                  <ChevronDown className={`w-5 h-5 transition-transform ${openSections.announcement ? 'rotate-180' : ''}`} />
+                </CardTitle>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="space-y-4 pt-0">
+                {/* Enable/Disable Toggle */}
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <Label htmlFor="announcement-enabled" className="text-sm font-medium">
+                      Enable Banner
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Show scrolling announcement
+                    </p>
+                  </div>
+                  <Switch
+                    id="announcement-enabled"
+                    checked={announcement.enabled}
+                    onCheckedChange={(checked) =>
+                      setAnnouncement({ ...announcement, enabled: checked })
                     }
-                    className="w-10 h-10 p-1 cursor-pointer shrink-0"
-                  />
-                  <Input
-                    value={announcement.bgColor}
-                    onChange={(e) =>
-                      setAnnouncement({ ...announcement, bgColor: e.target.value })
-                    }
-                    className="flex-1 min-w-0"
                   />
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="announcement-text-color" className="text-sm">Text Color</Label>
-                <div className="flex gap-2">
+                {/* Announcement Text */}
+                <div className="space-y-2">
+                  <Label htmlFor="announcement-text" className="text-sm">Announcement Text</Label>
                   <Input
-                    id="announcement-text-color"
-                    type="color"
-                    value={announcement.textColor}
+                    id="announcement-text"
+                    value={announcement.text}
                     onChange={(e) =>
-                      setAnnouncement({ ...announcement, textColor: e.target.value })
+                      setAnnouncement({ ...announcement, text: e.target.value })
                     }
-                    className="w-10 h-10 p-1 cursor-pointer shrink-0"
-                  />
-                  <Input
-                    value={announcement.textColor}
-                    onChange={(e) =>
-                      setAnnouncement({ ...announcement, textColor: e.target.value })
-                    }
-                    className="flex-1 min-w-0"
+                    placeholder="Enter your message..."
+                    className="text-sm"
                   />
                 </div>
-              </div>
-            </div>
 
-            {/* Speed */}
-            <div className="space-y-2">
-              <Label htmlFor="announcement-speed">Scroll Speed</Label>
-              <Select
-                value={announcement.speed}
-                onValueChange={(value: 'slow' | 'normal' | 'fast') =>
-                  setAnnouncement({ ...announcement, speed: value })
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Speed" />
-                </SelectTrigger>
-                <SelectContent className="bg-popover">
-                  <SelectItem value="slow">Slow</SelectItem>
-                  <SelectItem value="normal">Normal</SelectItem>
-                  <SelectItem value="fast">Fast</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                {/* Colors - Stack on mobile */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="announcement-bg" className="text-sm">Background Color</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="announcement-bg"
+                        type="color"
+                        value={announcement.bgColor}
+                        onChange={(e) =>
+                          setAnnouncement({ ...announcement, bgColor: e.target.value })
+                        }
+                        className="w-10 h-10 p-1 cursor-pointer shrink-0"
+                      />
+                      <Input
+                        value={announcement.bgColor}
+                        onChange={(e) =>
+                          setAnnouncement({ ...announcement, bgColor: e.target.value })
+                        }
+                        className="flex-1 min-w-0 text-sm"
+                      />
+                    </div>
+                  </div>
 
-            {/* Opacity Slider */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="announcement-opacity">Background Opacity</Label>
-                <span className="text-sm text-muted-foreground">{announcement.opacity ?? 100}%</span>
-              </div>
-              <Slider
-                id="announcement-opacity"
-                value={[announcement.opacity ?? 100]}
-                onValueChange={(value) =>
-                  setAnnouncement({ ...announcement, opacity: value[0] })
-                }
-                min={10}
-                max={100}
-                step={5}
-                className="w-full"
-              />
-            </div>
-
-            {/* Preview */}
-            {announcement.text && (
-              <div className="space-y-2">
-                <Label>Preview</Label>
-                <div 
-                  className="overflow-hidden rounded-lg py-2"
-                  style={{ 
-                    backgroundColor: announcement.bgColor,
-                    color: announcement.textColor,
-                    opacity: (announcement.opacity ?? 100) / 100
-                  }}
-                >
-                  <div className="whitespace-nowrap animate-marquee">
-                    <span className="mx-8 text-sm font-medium">{announcement.text}</span>
-                    <span className="mx-8 text-sm font-medium">{announcement.text}</span>
+                  <div className="space-y-2">
+                    <Label htmlFor="announcement-text-color" className="text-sm">Text Color</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="announcement-text-color"
+                        type="color"
+                        value={announcement.textColor}
+                        onChange={(e) =>
+                          setAnnouncement({ ...announcement, textColor: e.target.value })
+                        }
+                        className="w-10 h-10 p-1 cursor-pointer shrink-0"
+                      />
+                      <Input
+                        value={announcement.textColor}
+                        onChange={(e) =>
+                          setAnnouncement({ ...announcement, textColor: e.target.value })
+                        }
+                        className="flex-1 min-w-0 text-sm"
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
 
-            <Button
-              onClick={handleSaveAnnouncement}
-              disabled={updateSettings.isPending}
-              className="w-full bg-cineverse-red hover:bg-cineverse-red/90"
-            >
-              {updateSettings.isPending ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4 mr-2" />
-              )}
-              Save Announcement
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Admin Contacts */}
-        <Card className="glass">
-          <CardHeader>
-            <CardTitle>Admin Contact Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Telegram */}
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-full bg-[#0088cc] flex items-center justify-center shrink-0">
-                <TelegramIcon className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1 space-y-2">
-                <Label htmlFor="telegram-handle">Telegram Handle</Label>
-                <Input
-                  id="telegram-handle"
-                  value={contacts.telegram.handle}
-                  onChange={(e) =>
-                    setContacts({
-                      ...contacts,
-                      telegram: { ...contacts.telegram, handle: e.target.value },
-                    })
-                  }
-                  placeholder="@username"
-                />
-              </div>
-            </div>
-
-            {/* Viber */}
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-full bg-[#7360f2] flex items-center justify-center shrink-0">
-                <ViberIcon className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1 space-y-2">
-                <Label htmlFor="viber-number">Viber Number</Label>
-                <Input
-                  id="viber-number"
-                  value={contacts.viber.number}
-                  onChange={(e) =>
-                    setContacts({
-                      ...contacts,
-                      viber: { ...contacts.viber, number: e.target.value },
-                    })
-                  }
-                  placeholder="09xxxxxxxxx"
-                />
-              </div>
-            </div>
-
-            {/* Email */}
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-full bg-[#EA4335] flex items-center justify-center shrink-0">
-                <Mail className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1 space-y-2">
-                <Label htmlFor="email-address">Email Address</Label>
-                <Input
-                  id="email-address"
-                  type="email"
-                  value={contacts.email.address}
-                  onChange={(e) =>
-                    setContacts({
-                      ...contacts,
-                      email: { ...contacts.email, address: e.target.value },
-                    })
-                  }
-                  placeholder="email@example.com"
-                />
-              </div>
-            </div>
-
-            <Button
-              onClick={handleSaveContacts}
-              disabled={updateSettings.isPending}
-              className="w-full"
-            >
-              {updateSettings.isPending ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4 mr-2" />
-              )}
-              Save Contacts
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Subscription Prices */}
-        <Card className="glass">
-          <CardHeader>
-            <CardTitle>Subscription Prices</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Monthly */}
-            <div className="p-4 bg-muted rounded-lg space-y-4">
-              <h3 className="font-semibold">Monthly Subscription</h3>
-              <div className="grid grid-cols-2 gap-4">
+                {/* Speed */}
                 <div className="space-y-2">
-                  <Label htmlFor="monthly-mmk">Price (MMK)</Label>
-                  <Input
-                    id="monthly-mmk"
-                    type="number"
-                    value={prices.monthly.mmk}
-                    onChange={(e) =>
-                      setPrices({
-                        ...prices,
-                        monthly: { ...prices.monthly, mmk: Number(e.target.value) },
-                      })
+                  <Label htmlFor="announcement-speed" className="text-sm">Scroll Speed</Label>
+                  <Select
+                    value={announcement.speed}
+                    onValueChange={(value: 'slow' | 'normal' | 'fast') =>
+                      setAnnouncement({ ...announcement, speed: value })
                     }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Speed" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover">
+                      <SelectItem value="slow">Slow</SelectItem>
+                      <SelectItem value="normal">Normal</SelectItem>
+                      <SelectItem value="fast">Fast</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Opacity Slider */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="announcement-opacity" className="text-sm">Opacity</Label>
+                    <span className="text-xs text-muted-foreground">{announcement.opacity ?? 100}%</span>
+                  </div>
+                  <Slider
+                    id="announcement-opacity"
+                    value={[announcement.opacity ?? 100]}
+                    onValueChange={(value) =>
+                      setAnnouncement({ ...announcement, opacity: value[0] })
+                    }
+                    min={10}
+                    max={100}
+                    step={5}
+                    className="w-full"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="monthly-usd">Price (USD)</Label>
-                  <Input
-                    id="monthly-usd"
-                    type="number"
-                    step="0.01"
-                    value={prices.monthly.usd}
-                    onChange={(e) =>
-                      setPrices({
-                        ...prices,
-                        monthly: { ...prices.monthly, usd: Number(e.target.value) },
-                      })
-                    }
-                  />
-                </div>
-              </div>
-            </div>
 
-            {/* Yearly */}
-            <div className="p-4 bg-muted rounded-lg space-y-4">
-              <h3 className="font-semibold">Yearly Subscription</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="yearly-mmk">Price (MMK)</Label>
-                  <Input
-                    id="yearly-mmk"
-                    type="number"
-                    value={prices.yearly.mmk}
-                    onChange={(e) =>
-                      setPrices({
-                        ...prices,
-                        yearly: { ...prices.yearly, mmk: Number(e.target.value) },
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="yearly-usd">Price (USD)</Label>
-                  <Input
-                    id="yearly-usd"
-                    type="number"
-                    step="0.01"
-                    value={prices.yearly.usd}
-                    onChange={(e) =>
-                      setPrices({
-                        ...prices,
-                        yearly: { ...prices.yearly, usd: Number(e.target.value) },
-                      })
-                    }
-                  />
-                </div>
-              </div>
-            </div>
+                {/* Preview */}
+                {announcement.text && (
+                  <div className="space-y-2">
+                    <Label className="text-sm">Preview</Label>
+                    <div 
+                      className="overflow-hidden rounded-lg py-2"
+                      style={{ 
+                        backgroundColor: announcement.bgColor,
+                        color: announcement.textColor,
+                        opacity: (announcement.opacity ?? 100) / 100
+                      }}
+                    >
+                      <div className="whitespace-nowrap animate-marquee">
+                        <span className="mx-8 text-xs font-medium">{announcement.text}</span>
+                        <span className="mx-8 text-xs font-medium">{announcement.text}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
-            {/* Lifetime */}
-            <div className="p-4 bg-muted rounded-lg space-y-4">
-              <h3 className="font-semibold">Lifetime Access</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="lifetime-mmk">Price (MMK)</Label>
-                  <Input
-                    id="lifetime-mmk"
-                    type="number"
-                    value={prices.lifetime.mmk}
-                    onChange={(e) =>
-                      setPrices({
-                        ...prices,
-                        lifetime: { ...prices.lifetime, mmk: Number(e.target.value) },
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lifetime-usd">Price (USD)</Label>
-                  <Input
-                    id="lifetime-usd"
-                    type="number"
-                    step="0.01"
-                    value={prices.lifetime.usd}
-                    onChange={(e) =>
-                      setPrices({
-                        ...prices,
-                        lifetime: { ...prices.lifetime, usd: Number(e.target.value) },
-                      })
-                    }
-                  />
-                </div>
-              </div>
-            </div>
+                <Button
+                  onClick={handleSaveAnnouncement}
+                  disabled={updateSettings.isPending}
+                  className="w-full bg-cineverse-red hover:bg-cineverse-red/90"
+                  size="sm"
+                >
+                  {updateSettings.isPending ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-2" />
+                  )}
+                  Save Announcement
+                </Button>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
 
-            <Button
-              onClick={handleSavePrices}
-              disabled={updateSettings.isPending}
-              className="w-full"
-            >
-              {updateSettings.isPending ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4 mr-2" />
-              )}
-              Save Prices
-            </Button>
-          </CardContent>
-        </Card>
+        {/* Admin Contacts - Collapsible */}
+        <Collapsible 
+          open={openSections.contacts} 
+          onOpenChange={(open) => setOpenSections(prev => ({ ...prev, contacts: open }))}
+        >
+          <Card className="glass">
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                <CardTitle className="flex items-center justify-between text-base sm:text-lg">
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-5 h-5" />
+                    Admin Contacts
+                  </div>
+                  <ChevronDown className={`w-5 h-5 transition-transform ${openSections.contacts ? 'rotate-180' : ''}`} />
+                </CardTitle>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="space-y-4 pt-0">
+                {/* Telegram */}
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-[#0088cc] flex items-center justify-center shrink-0">
+                    <TelegramIcon className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <Label htmlFor="telegram-handle" className="text-xs text-muted-foreground">Telegram</Label>
+                    <Input
+                      id="telegram-handle"
+                      value={contacts.telegram.handle}
+                      onChange={(e) =>
+                        setContacts({
+                          ...contacts,
+                          telegram: { ...contacts.telegram, handle: e.target.value },
+                        })
+                      }
+                      placeholder="@username"
+                      className="text-sm h-9"
+                    />
+                  </div>
+                </div>
+
+                {/* Viber */}
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-[#7360f2] flex items-center justify-center shrink-0">
+                    <ViberIcon className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <Label htmlFor="viber-number" className="text-xs text-muted-foreground">Viber</Label>
+                    <Input
+                      id="viber-number"
+                      value={contacts.viber.number}
+                      onChange={(e) =>
+                        setContacts({
+                          ...contacts,
+                          viber: { ...contacts.viber, number: e.target.value },
+                        })
+                      }
+                      placeholder="09xxxxxxxxx"
+                      className="text-sm h-9"
+                    />
+                  </div>
+                </div>
+
+                {/* Email */}
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-[#EA4335] flex items-center justify-center shrink-0">
+                    <Mail className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <Label htmlFor="email-address" className="text-xs text-muted-foreground">Email</Label>
+                    <Input
+                      id="email-address"
+                      type="email"
+                      value={contacts.email.address}
+                      onChange={(e) =>
+                        setContacts({
+                          ...contacts,
+                          email: { ...contacts.email, address: e.target.value },
+                        })
+                      }
+                      placeholder="email@example.com"
+                      className="text-sm h-9"
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  onClick={handleSaveContacts}
+                  disabled={updateSettings.isPending}
+                  className="w-full"
+                  size="sm"
+                >
+                  {updateSettings.isPending ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-2" />
+                  )}
+                  Save Contacts
+                </Button>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
+
+        {/* Subscription Prices - Collapsible */}
+        <Collapsible 
+          open={openSections.prices} 
+          onOpenChange={(open) => setOpenSections(prev => ({ ...prev, prices: open }))}
+        >
+          <Card className="glass">
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                <CardTitle className="flex items-center justify-between text-base sm:text-lg">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="w-5 h-5" />
+                    Subscription Prices
+                  </div>
+                  <ChevronDown className={`w-5 h-5 transition-transform ${openSections.prices ? 'rotate-180' : ''}`} />
+                </CardTitle>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="space-y-4 pt-0">
+                {/* Monthly */}
+                <div className="p-3 bg-muted rounded-lg space-y-3">
+                  <h3 className="font-medium text-sm">Monthly</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="monthly-mmk" className="text-xs">MMK</Label>
+                      <Input
+                        id="monthly-mmk"
+                        type="number"
+                        value={prices.monthly.mmk}
+                        onChange={(e) =>
+                          setPrices({
+                            ...prices,
+                            monthly: { ...prices.monthly, mmk: Number(e.target.value) },
+                          })
+                        }
+                        className="text-sm h-9"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="monthly-usd" className="text-xs">USD</Label>
+                      <Input
+                        id="monthly-usd"
+                        type="number"
+                        step="0.01"
+                        value={prices.monthly.usd}
+                        onChange={(e) =>
+                          setPrices({
+                            ...prices,
+                            monthly: { ...prices.monthly, usd: Number(e.target.value) },
+                          })
+                        }
+                        className="text-sm h-9"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Yearly */}
+                <div className="p-3 bg-muted rounded-lg space-y-3">
+                  <h3 className="font-medium text-sm">Yearly</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="yearly-mmk" className="text-xs">MMK</Label>
+                      <Input
+                        id="yearly-mmk"
+                        type="number"
+                        value={prices.yearly.mmk}
+                        onChange={(e) =>
+                          setPrices({
+                            ...prices,
+                            yearly: { ...prices.yearly, mmk: Number(e.target.value) },
+                          })
+                        }
+                        className="text-sm h-9"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="yearly-usd" className="text-xs">USD</Label>
+                      <Input
+                        id="yearly-usd"
+                        type="number"
+                        step="0.01"
+                        value={prices.yearly.usd}
+                        onChange={(e) =>
+                          setPrices({
+                            ...prices,
+                            yearly: { ...prices.yearly, usd: Number(e.target.value) },
+                          })
+                        }
+                        className="text-sm h-9"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Lifetime */}
+                <div className="p-3 bg-muted rounded-lg space-y-3">
+                  <h3 className="font-medium text-sm">Lifetime</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="lifetime-mmk" className="text-xs">MMK</Label>
+                      <Input
+                        id="lifetime-mmk"
+                        type="number"
+                        value={prices.lifetime.mmk}
+                        onChange={(e) =>
+                          setPrices({
+                            ...prices,
+                            lifetime: { ...prices.lifetime, mmk: Number(e.target.value) },
+                          })
+                        }
+                        className="text-sm h-9"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="lifetime-usd" className="text-xs">USD</Label>
+                      <Input
+                        id="lifetime-usd"
+                        type="number"
+                        step="0.01"
+                        value={prices.lifetime.usd}
+                        onChange={(e) =>
+                          setPrices({
+                            ...prices,
+                            lifetime: { ...prices.lifetime, usd: Number(e.target.value) },
+                          })
+                        }
+                        className="text-sm h-9"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={handleSavePrices}
+                  disabled={updateSettings.isPending}
+                  className="w-full"
+                  size="sm"
+                >
+                  {updateSettings.isPending ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-2" />
+                  )}
+                  Save Prices
+                </Button>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
       </div>
     </div>
   );
