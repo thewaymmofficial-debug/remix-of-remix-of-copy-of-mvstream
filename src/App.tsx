@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import MovieDetails from "./pages/MovieDetails";
 import Profile from "./pages/Profile";
+import Watchlist from "./pages/Watchlist";
 import AdminLayout from "./pages/admin/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
 import MoviesAdmin from "./pages/admin/MoviesAdmin";
@@ -30,6 +31,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/movie/:id" element={<MovieDetails />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/watchlist" element={<Watchlist />} />
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<Dashboard />} />
                 <Route path="movies" element={<MoviesAdmin />} />
