@@ -1,6 +1,6 @@
 import { useState, ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Menu, X, LogOut, Settings, Crown, Sun, Moon, Search } from 'lucide-react';
+import { User, LogOut, Settings, Crown, Sun, Moon, Search } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +18,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 import { useAuth } from '@/hooks/useAuth';
 import { LoginModal } from './LoginModal';
 import { useFilter } from '@/contexts/FilterContext';
@@ -34,7 +41,7 @@ export function Navbar({ children, categories = [], years = [] }: NavbarProps) {
   const { theme, setTheme } = useTheme();
   const { user, profile, role, isAdmin, signOut } = useAuth();
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [searchSheetOpen, setSearchSheetOpen] = useState(false);
   const { searchQuery, setSearchQuery, selectedCategory, setSelectedCategory, selectedYear, setSelectedYear } = useFilter();
 
   const toggleTheme = () => {
@@ -177,98 +184,73 @@ export function Navbar({ children, categories = [], years = [] }: NavbarProps) {
               )}
             </div>
 
-            {/* Mobile menu button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden text-white h-9 w-9"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </Button>
+            {/* Mobile search button */}
+            <Sheet open={searchSheetOpen} onOpenChange={setSearchSheetOpen}>
+              <SheetTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="md:hidden text-white hover:bg-white/10 h-9 w-9"
+                >
+                  <Search className="w-4 h-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="top" className="bg-black/95 border-white/10">
+                <SheetHeader className="text-left pb-4">
+                  <SheetTitle className="text-white">Search</SheetTitle>
+                </SheetHeader>
+                <div className="space-y-3">
+                  {/* Search Input */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
+                    <Input
+                      type="text"
+                      placeholder="Search movies..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9 bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                      autoFocus
+                    />
+                  </div>
+
+                  {/* Filters */}
+                  <div className="flex gap-2">
+                    {categories.length > 0 && (
+                      <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                        <SelectTrigger className="flex-1 bg-white/10 border-white/20 text-white text-sm">
+                          <SelectValue placeholder="Category" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover border-border">
+                          <SelectItem value="all">All Categories</SelectItem>
+                          {categories.map((cat) => (
+                            <SelectItem key={cat} value={cat}>
+                              {cat}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    {years.length > 0 && (
+                      <Select value={selectedYear} onValueChange={setSelectedYear}>
+                        <SelectTrigger className="flex-1 bg-white/10 border-white/20 text-white text-sm">
+                          <SelectValue placeholder="Year" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover border-border">
+                          <SelectItem value="all">All Years</SelectItem>
+                          {years.map((year) => (
+                            <SelectItem key={year} value={year.toString()}>
+                              {year}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
-
-        {/* Mobile menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden bg-black/95 backdrop-blur-xl border-t border-white/10">
-            <div className="flex flex-col p-4 space-y-3">
-              {/* Mobile Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
-                <Input
-                  type="text"
-                  placeholder="Search movies..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 bg-white/10 border-white/20 text-white placeholder:text-white/50"
-                />
-              </div>
-
-              {/* Mobile Filters */}
-              <div className="flex gap-2">
-                {categories.length > 0 && (
-                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger className="flex-1 bg-white/10 border-white/20 text-white text-sm">
-                      <SelectValue placeholder="Category" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border-border">
-                      <SelectItem value="all">All Categories</SelectItem>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat} value={cat}>
-                          {cat}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-                {years.length > 0 && (
-                  <Select value={selectedYear} onValueChange={setSelectedYear}>
-                    <SelectTrigger className="flex-1 bg-white/10 border-white/20 text-white text-sm">
-                      <SelectValue placeholder="Year" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border-border">
-                      <SelectItem value="all">All Years</SelectItem>
-                      {years.map((year) => (
-                        <SelectItem key={year} value={year.toString()}>
-                          {year}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-
-              <Link
-                to="/"
-                className="text-sm font-medium py-2 text-white"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Home
-              </Link>
-              {user && (
-                <>
-                  <Link
-                    to="/profile"
-                    className="text-sm font-medium py-2 text-white/70"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    My Profile
-                  </Link>
-                  {isAdmin && (
-                    <Link
-                      to="/admin"
-                      className="text-sm font-medium py-2 text-cg-gold"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      Admin Dashboard
-                    </Link>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-        )}
       </nav>
 
       <LoginModal open={showLoginModal} onOpenChange={setShowLoginModal} />
