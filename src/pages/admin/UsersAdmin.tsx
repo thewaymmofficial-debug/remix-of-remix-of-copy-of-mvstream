@@ -239,7 +239,7 @@ export default function UsersAdmin() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">Users</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold">Users</h1>
       </div>
 
       {/* Search */}
@@ -259,69 +259,77 @@ export default function UsersAdmin() {
           {isLoading ? (
             <div className="p-8 text-center text-muted-foreground">Loading...</div>
           ) : filteredUsers && filteredUsers.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Joined</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUsers.map((user) => (
-                  <TableRow key={user.user_id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        {getRoleIcon(user.role)}
-                        {user.display_name || 'Unknown'}
-                      </div>
-                    </TableCell>
-                    <TableCell>{user.email || 'N/A'}</TableCell>
-                    <TableCell>
-                      {new Date(user.created_at).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                          user.role === 'admin'
-                            ? 'bg-cg-gold/20 text-cg-gold'
-                            : user.role === 'premium'
-                            ? 'bg-cg-premium/20 text-cg-premium'
-                            : 'bg-muted text-muted-foreground'
-                        }`}
-                      >
-                        {user.role === 'admin'
-                          ? 'Admin'
-                          : user.role === 'premium'
-                          ? 'Premium'
-                          : 'Free User'}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {getPremiumStatus(user)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Select
-                        value={user.role}
-                        onValueChange={(value: AppRole) => handleRoleChange(user, value)}
-                      >
-                        <SelectTrigger className="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="free_user">Free User</SelectItem>
-                          <SelectItem value="premium">Premium</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table className="min-w-[700px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>User</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead className="hidden sm:table-cell">Joined</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead className="hidden sm:table-cell">Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredUsers.map((user) => (
+                    <TableRow key={user.user_id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {getRoleIcon(user.role)}
+                          <span className="truncate max-w-[100px] sm:max-w-none">
+                            {user.display_name || 'Unknown'}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="truncate block max-w-[120px] sm:max-w-none">
+                          {user.email || 'N/A'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        {new Date(user.created_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                            user.role === 'admin'
+                              ? 'bg-cg-gold/20 text-cg-gold'
+                              : user.role === 'premium'
+                              ? 'bg-cg-premium/20 text-cg-premium'
+                              : 'bg-muted text-muted-foreground'
+                          }`}
+                        >
+                          {user.role === 'admin'
+                            ? 'Admin'
+                            : user.role === 'premium'
+                            ? 'Premium'
+                            : 'Free'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        {getPremiumStatus(user)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Select
+                          value={user.role}
+                          onValueChange={(value: AppRole) => handleRoleChange(user, value)}
+                        >
+                          <SelectTrigger className="w-24 sm:w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="free_user">Free</SelectItem>
+                            <SelectItem value="premium">Premium</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           ) : (
             <div className="p-8 text-center text-muted-foreground">
               No users found.

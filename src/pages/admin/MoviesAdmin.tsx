@@ -210,9 +210,9 @@ export default function MoviesAdmin() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">Movies</h1>
-        <Button onClick={openCreateModal} className="gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold">Movies</h1>
+        <Button onClick={openCreateModal} className="gap-2 w-full sm:w-auto">
           <Plus className="w-4 h-4" />
           Add Movie
         </Button>
@@ -235,99 +235,102 @@ export default function MoviesAdmin() {
           {isLoading ? (
             <div className="p-8 text-center text-muted-foreground">Loading...</div>
           ) : filteredMovies && filteredMovies.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Year</TableHead>
-                  <TableHead>Premium</TableHead>
-                  <TableHead>Featured</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredMovies.map((movie) => (
-                  <TableRow key={movie.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-3">
-                        {movie.poster_url && (
-                          <img
-                            src={movie.poster_url}
-                            alt={movie.title}
-                            className="w-10 h-14 rounded object-cover"
-                          />
-                        )}
-                        <div>
-                          <div>{movie.title}</div>
-                          <div className="text-xs text-muted-foreground">{movie.resolution}</div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
-                        movie.content_type === 'series' 
-                          ? 'bg-blue-500/20 text-blue-400' 
-                          : 'bg-muted text-muted-foreground'
-                      }`}>
-                        {movie.content_type === 'series' ? (
-                          <><Tv className="w-3 h-3" /> Series</>
-                        ) : (
-                          <><Film className="w-3 h-3" /> Movie</>
-                        )}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm">{movie.category.join(', ')}</span>
-                    </TableCell>
-                    <TableCell>{movie.year}</TableCell>
-                    <TableCell>
-                      {movie.is_premium && (
-                        <Crown className="w-4 h-4 text-cg-gold" />
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {movie.is_featured && (
-                        <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded">
-                          Featured
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {movie.content_type === 'series' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => navigate(`/admin/series/${movie.id}`)}
-                          >
-                            Episodes
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEditModal(movie)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setMovieToDelete(movie);
-                            setDeleteDialogOpen(true);
-                          }}
-                        >
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table className="min-w-[800px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead className="hidden sm:table-cell">Category</TableHead>
+                    <TableHead className="hidden sm:table-cell">Year</TableHead>
+                    <TableHead>Premium</TableHead>
+                    <TableHead className="hidden sm:table-cell">Featured</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredMovies.map((movie) => (
+                    <TableRow key={movie.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-3">
+                          {movie.poster_url && (
+                            <img
+                              src={movie.poster_url}
+                              alt={movie.title}
+                              className="w-8 h-12 sm:w-10 sm:h-14 rounded object-cover flex-shrink-0"
+                            />
+                          )}
+                          <div className="min-w-0">
+                            <div className="truncate max-w-[100px] sm:max-w-[200px]">{movie.title}</div>
+                            <div className="text-xs text-muted-foreground">{movie.resolution}</div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
+                          movie.content_type === 'series' 
+                            ? 'bg-blue-500/20 text-blue-400' 
+                            : 'bg-muted text-muted-foreground'
+                        }`}>
+                          {movie.content_type === 'series' ? (
+                            <><Tv className="w-3 h-3" /> Series</>
+                          ) : (
+                            <><Film className="w-3 h-3" /> Movie</>
+                          )}
+                        </span>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        <span className="text-sm truncate block max-w-[150px]">{movie.category.join(', ')}</span>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">{movie.year}</TableCell>
+                      <TableCell>
+                        {movie.is_premium && (
+                          <Crown className="w-4 h-4 text-cg-gold" />
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        {movie.is_featured && (
+                          <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded">
+                            Featured
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1 sm:gap-2">
+                          {movie.content_type === 'series' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => navigate(`/admin/series/${movie.id}`)}
+                              className="text-xs px-2"
+                            >
+                              Episodes
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEditModal(movie)}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setMovieToDelete(movie);
+                              setDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           ) : (
             <div className="p-8 text-center text-muted-foreground">
               No movies found. Add your first movie!

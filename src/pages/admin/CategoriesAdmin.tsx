@@ -104,12 +104,12 @@ export default function CategoriesAdmin() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Categories</h1>
-          <p className="text-muted-foreground mt-1">Manage movie and series genre categories</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Categories</h1>
+          <p className="text-muted-foreground text-sm mt-1">Manage movie and series genre categories</p>
         </div>
-        <Button onClick={openCreateModal} className="gap-2">
+        <Button onClick={openCreateModal} className="gap-2 w-full sm:w-auto">
           <Plus className="w-4 h-4" />
           Add Category
         </Button>
@@ -120,49 +120,51 @@ export default function CategoriesAdmin() {
           {isLoading ? (
             <div className="p-8 text-center text-muted-foreground">Loading...</div>
           ) : categories && categories.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">Order</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {categories.map((category) => (
-                  <TableRow key={category.id}>
-                    <TableCell className="font-mono text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <GripVertical className="w-4 h-4 text-muted-foreground/50" />
-                        {category.display_order}
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-medium">{category.name}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEditModal(category)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setCategoryToDelete(category);
-                            setDeleteDialogOpen(true);
-                          }}
-                        >
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table className="min-w-[400px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">Order</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {categories.map((category) => (
+                    <TableRow key={category.id}>
+                      <TableCell className="font-mono text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <GripVertical className="w-4 h-4 text-muted-foreground/50" />
+                          {category.display_order}
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">{category.name}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEditModal(category)}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setCategoryToDelete(category);
+                              setDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           ) : (
             <div className="p-8 text-center text-muted-foreground">
               No categories found. Add your first category!
