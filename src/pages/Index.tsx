@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Navbar } from '@/components/Navbar';
 import { HeroBanner } from '@/components/HeroBanner';
 import { MovieRow } from '@/components/MovieRow';
@@ -16,14 +17,15 @@ import { useContinueWatching, useRemoveFromHistory } from '@/hooks/useWatchHisto
 import { useTrendingMovies } from '@/hooks/useTrending';
 import { useRecommendations } from '@/hooks/useRecommendations';
 import { useFilter } from '@/contexts/FilterContext';
-import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Sparkles, RefreshCw } from 'lucide-react';
 import type { Movie } from '@/types/database';
 
 const Index = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user } = useAuth();
   const { data: featuredMovies } = useFeaturedMovies();
-  const { data: moviesByCategory, isLoading } = useMoviesByCategory();
+  const { data: moviesByCategory, isLoading, isError, error, refetch } = useMoviesByCategory();
   const { data: watchlistData } = useWatchlist();
   const { data: continueWatching } = useContinueWatching();
   const { data: trendingMovies } = useTrendingMovies();
@@ -151,6 +153,11 @@ const Index = () => {
   const hasNoResults = Object.keys(filteredMoviesByCategory).length === 0 && !isLoading;
   const isFiltering = searchQuery.trim() || selectedCategory !== 'all' || selectedYear !== 'all';
 
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['movies'] });
+    refetch();
+  };
+
   return (
     <div className="min-h-screen bg-background mobile-nav-spacing">
       <Navbar categories={categories} years={years} />
@@ -171,14 +178,42 @@ const Index = () => {
             <SkeletonRow />
             <SkeletonRow />
           </div>
+        ) : isError ? (
+          <div className="text-center py-20 px-4">
+            <p className="text-destructive text-lg mb-4">
+              Failed to load movies. Please try again.
+            </p>
+            <p className="text-muted-foreground text-sm mb-6">
+              {error instanceof Error ? error.message : 'Network error'}
+            </p>
+            <button
+              onClick={handleRefresh}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Try Again
+            </button>
+          </div>
         ) : hasNoResults ? (
           <div className="text-center py-20">
-            <p className="text-muted-foreground text-lg">
-              {isFiltering 
-                ? 'No movies match your filters. Try adjusting your search.'
-                : 'No movies available yet. Check back soon!'
-              }
-            </p>
+            {isFiltering ? (
+              <p className="text-muted-foreground text-lg">
+                No movies match your filters. Try adjusting your search.
+              </p>
+            ) : (
+              <div>
+                <p className="text-muted-foreground text-lg mb-4">
+                  No movies available yet. Check back soon!
+                </p>
+                <button
+                  onClick={handleRefresh}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-muted hover:bg-muted/80 rounded-lg transition-colors"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Refresh
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <>
