@@ -336,6 +336,170 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          reference_id: string | null
+          reference_type: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          reference_id?: string | null
+          reference_type?: string | null
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      payment_methods: {
+        Row: {
+          account_name: string
+          account_number: string
+          created_at: string
+          display_order: number
+          gradient: string
+          id: string
+          is_active: boolean
+          name: string
+          text_color: string
+          updated_at: string
+        }
+        Insert: {
+          account_name: string
+          account_number: string
+          created_at?: string
+          display_order?: number
+          gradient?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          text_color?: string
+          updated_at?: string
+        }
+        Update: {
+          account_name?: string
+          account_number?: string
+          created_at?: string
+          display_order?: number
+          gradient?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          text_color?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      premium_requests: {
+        Row: {
+          admin_note: string | null
+          created_at: string
+          id: string
+          plan_duration: string
+          plan_id: string | null
+          plan_price: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          screenshot_url: string | null
+          status: string
+          transaction_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          created_at?: string
+          id?: string
+          plan_duration: string
+          plan_id?: string | null
+          plan_price: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          screenshot_url?: string | null
+          status?: string
+          transaction_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          created_at?: string
+          id?: string
+          plan_duration?: string
+          plan_id?: string | null
+          plan_price?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          screenshot_url?: string | null
+          status?: string
+          transaction_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "premium_requests_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "pricing_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pricing_plans: {
+        Row: {
+          created_at: string
+          display_order: number
+          duration: string
+          duration_days: number
+          id: string
+          is_active: boolean
+          price: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          duration: string
+          duration_days?: number
+          id?: string
+          is_active?: boolean
+          price: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          duration?: string
+          duration_days?: number
+          id?: string
+          is_active?: boolean
+          price?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -602,6 +766,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_premium_request: {
+        Args: { _admin_id: string; _request_id: string }
+        Returns: undefined
+      }
+      deny_premium_request: {
+        Args: { _admin_id: string; _reason?: string; _request_id: string }
+        Returns: undefined
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
