@@ -219,7 +219,7 @@ export default function MovieRequest() {
           onClick={() => {
             if (step === 'name') setStep('type');
             else if (step === 'type') setStep('history');
-            else navigate(-1);
+            else navigate('/');
           }}
           className="text-foreground"
         >

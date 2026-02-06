@@ -76,7 +76,7 @@ export default function TvChannels() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => navigate(-1)}
+          onClick={() => navigate('/')}
           className="text-foreground"
         >
           <ArrowLeft className="w-6 h-6" />
