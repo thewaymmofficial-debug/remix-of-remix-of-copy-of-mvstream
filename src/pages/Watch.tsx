@@ -23,6 +23,14 @@ export default function Watch() {
     }
   }, [url, navigate]);
 
+  // Auto-hide loading spinner after 3 seconds regardless (iframe may not fire onLoad due to mixed content)
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setIsLoading(false);
+    }, 3000);
+    return () => clearTimeout(timeout);
+  }, []);
+
   // Auto-hide controls after 3 seconds
   useEffect(() => {
     const hideControls = () => {
@@ -73,7 +81,7 @@ export default function Watch() {
     >
       {/* Loading spinner */}
       {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center z-20">
+        <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
           <Loader2 className="w-10 h-10 text-white animate-spin" />
         </div>
       )}
