@@ -47,7 +47,7 @@ export function Navbar({ children, categories = [], years = [] }: NavbarProps) {
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/');
+    navigate('/auth');
   };
 
   return (
