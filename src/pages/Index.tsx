@@ -12,6 +12,7 @@ import { MovieQuickPreview } from '@/components/MovieQuickPreview';
 import { SkeletonRow } from '@/components/SkeletonCard';
 import { AnnouncementBanner } from '@/components/AnnouncementBanner';
 import { CategoryGrid } from '@/components/CategoryGrid';
+import { InfoCarousel } from '@/components/InfoCarousel';
 import { useAuth } from '@/hooks/useAuth';
 import { useFeaturedMovies, useMoviesByCategory, useWatchlist } from '@/hooks/useMovies';
 import { useContinueWatching, useRemoveFromHistory } from '@/hooks/useWatchHistory';
@@ -168,12 +169,8 @@ const Index = () => {
       <Navbar categories={categories} years={years} />
       <AnnouncementBanner />
 
-      {/* Hero Section */}
-      <HeroBanner
-        movies={featuredMovies || []}
-        onPlay={handlePlay}
-        onMoreInfo={handleMoreInfo}
-      />
+      {/* Info Carousel - replaces hero */}
+      <InfoCarousel />
 
       {/* Category Grid Section */}
       <CategoryGrid onCategoryClick={(filter) => {
