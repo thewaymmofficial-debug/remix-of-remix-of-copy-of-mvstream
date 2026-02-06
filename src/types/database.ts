@@ -112,6 +112,24 @@ export interface EpisodeInsert {
 
 export interface EpisodeUpdate extends Partial<Omit<EpisodeInsert, 'season_id'>> {}
 
+// Cast types
+export interface CastMember {
+  id: string;
+  name: string;
+  photo_url: string | null;
+  created_at: string;
+}
+
+export interface MovieCastEntry {
+  id: string;
+  movie_id: string;
+  cast_member_id: string;
+  character_name: string | null;
+  display_order: number;
+  created_at: string;
+  cast_member?: CastMember;
+}
+
 // Extended types with relations
 export interface SeasonWithEpisodes extends Season {
   episodes: Episode[];

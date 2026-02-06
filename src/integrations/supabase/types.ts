@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      cast_members: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          photo_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          photo_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          photo_url?: string | null
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
@@ -129,6 +150,48 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      movie_cast: {
+        Row: {
+          cast_member_id: string
+          character_name: string | null
+          created_at: string
+          display_order: number | null
+          id: string
+          movie_id: string
+        }
+        Insert: {
+          cast_member_id: string
+          character_name?: string | null
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          movie_id: string
+        }
+        Update: {
+          cast_member_id?: string
+          character_name?: string | null
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          movie_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "movie_cast_cast_member_id_fkey"
+            columns: ["cast_member_id"]
+            isOneToOne: false
+            referencedRelation: "cast_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movie_cast_movie_id_fkey"
+            columns: ["movie_id"]
+            isOneToOne: false
+            referencedRelation: "movies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       movie_requests: {
         Row: {

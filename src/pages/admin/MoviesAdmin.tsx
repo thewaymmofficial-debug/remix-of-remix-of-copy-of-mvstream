@@ -4,7 +4,7 @@ import { Plus, Edit, Trash2, Crown, Search, Upload, Loader2, X, Film, Tv } from 
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -34,7 +34,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useMovies, useCreateMovie, useUpdateMovie, useDeleteMovie } from '@/hooks/useMovies';
 import { useCategories } from '@/hooks/useCategories';
-import type { Movie, MovieInsert, MovieUpdate } from '@/types/database';
+import { useSaveMovieCast } from '@/hooks/useCast';
+import { CastManager, type CastEntry } from '@/components/admin/CastManager';
+import type { Movie, MovieInsert } from '@/types/database';
 import { toast } from 'sonner';
 
 const defaultMovie: MovieInsert = {
@@ -64,6 +66,7 @@ export default function MoviesAdmin() {
   const createMovie = useCreateMovie();
   const updateMovie = useUpdateMovie();
   const deleteMovie = useDeleteMovie();
+  const saveMovieCast = useSaveMovieCast();
 
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -71,7 +74,7 @@ export default function MoviesAdmin() {
   const [formData, setFormData] = useState<MovieInsert>(defaultMovie);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [movieToDelete, setMovieToDelete] = useState<Movie | null>(null);
-  const [actorsInput, setActorsInput] = useState('');
+  const [castEntries, setCastEntries] = useState<CastEntry[]>([]);
   const [uploadingPoster, setUploadingPoster] = useState(false);
   const [uploadingBackdrop, setUploadingBackdrop] = useState(false);
   const posterInputRef = useRef<HTMLInputElement>(null);
@@ -86,11 +89,11 @@ export default function MoviesAdmin() {
   const openCreateModal = () => {
     setEditingMovie(null);
     setFormData(defaultMovie);
-    setActorsInput('');
+    setCastEntries([]);
     setShowModal(true);
   };
 
-  const openEditModal = (movie: Movie) => {
+  const openEditModal = async (movie: Movie) => {
     setEditingMovie(movie);
     setFormData({
       title: movie.title,
@@ -110,7 +113,34 @@ export default function MoviesAdmin() {
       is_featured: movie.is_featured,
       content_type: movie.content_type || 'movie',
     });
-    setActorsInput(movie.actors?.join(', ') || '');
+
+    // Load existing cast from movie_cast table
+    const { data: existingCast } = await supabase
+      .from('movie_cast')
+      .select('*, cast_members(*)')
+      .eq('movie_id', movie.id)
+      .order('display_order');
+
+    if (existingCast && existingCast.length > 0) {
+      setCastEntries(
+        existingCast.map((mc: any) => ({
+          name: mc.cast_members?.name || '',
+          character_name: mc.character_name || '',
+          photo_url: mc.cast_members?.photo_url || null,
+          existing_cast_member_id: mc.cast_member_id,
+        }))
+      );
+    } else {
+      // Fall back to old actors array
+      setCastEntries(
+        (movie.actors || []).map((name: string) => ({
+          name,
+          character_name: '',
+          photo_url: null,
+        }))
+      );
+    }
+
     setShowModal(true);
   };
 
@@ -178,19 +208,32 @@ export default function MoviesAdmin() {
 
     const movieData = {
       ...formData,
-      actors: actorsInput.split(',').map((a) => a.trim()).filter(Boolean),
+      actors: castEntries.map((e) => e.name).filter(Boolean),
     };
 
     try {
+      let movieId: string;
       if (editingMovie) {
         await updateMovie.mutateAsync({ id: editingMovie.id, ...movieData });
+        movieId = editingMovie.id;
         toast.success('Movie updated successfully');
       } else {
-        await createMovie.mutateAsync(movieData);
+        const newMovie = await createMovie.mutateAsync(movieData);
+        movieId = newMovie.id;
         toast.success('Movie created successfully');
       }
+
+      // Save cast entries to movie_cast table
+      if (movieId && castEntries.filter(e => e.name.trim()).length > 0) {
+        await saveMovieCast.mutateAsync({
+          movieId,
+          castEntries: castEntries.filter(e => e.name.trim()),
+        });
+      }
+
       setShowModal(false);
     } catch (error) {
+      console.error('Save error:', error);
       toast.error('Failed to save movie');
     }
   };
@@ -574,16 +617,7 @@ export default function MoviesAdmin() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="actors">Actors (comma separated)</Label>
-              <Input
-                id="actors"
-                value={actorsInput}
-                onChange={(e) => setActorsInput(e.target.value)}
-                placeholder="Actor 1, Actor 2, Actor 3"
-                className="bg-muted"
-              />
-            </div>
+            <CastManager entries={castEntries} onChange={setCastEntries} />
 
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>

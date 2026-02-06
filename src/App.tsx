@@ -11,6 +11,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import MovieDetails from "./pages/MovieDetails";
+import ActorDetail from "./pages/ActorDetail";
 import Profile from "./pages/Profile";
 import Watchlist from "./pages/Watchlist";
 import History from "./pages/History";
@@ -62,6 +63,7 @@ const App = () => (
                   <Route path="/" element={<Index />} />
                   <Route path="/movie/:id" element={<MovieDetails />} />
                   <Route path="/browse/:filter" element={<Browse />} />
+                  <Route path="/actor/:id" element={<ActorDetail />} />
                   <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                   <Route path="/watchlist" element={<ProtectedRoute><Watchlist /></ProtectedRoute>} />
                   <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
