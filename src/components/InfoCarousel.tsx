@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useInfoSlides } from '@/hooks/useInfoSlides';
 
@@ -84,25 +83,6 @@ export function InfoCarousel() {
           )}
         </div>
 
-        {/* Nav buttons */}
-        {slides.length > 1 && (
-          <>
-            <button
-              onClick={(e) => { e.stopPropagation(); prev(); }}
-              className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/30 hover:bg-black/50 backdrop-blur-sm transition-colors"
-              aria-label="Previous slide"
-            >
-              <ChevronLeft className="w-4 h-4 text-white" />
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); next(); }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/30 hover:bg-black/50 backdrop-blur-sm transition-colors"
-              aria-label="Next slide"
-            >
-              <ChevronRight className="w-4 h-4 text-white" />
-            </button>
-          </>
-        )}
 
         {/* Dots */}
         {slides.length > 1 && (
