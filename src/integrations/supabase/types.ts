@@ -271,6 +271,7 @@ export type Database = {
           created_at: string
           description: string | null
           director: string | null
+          download_url: string | null
           file_size: string | null
           id: string
           is_featured: boolean | null
@@ -294,6 +295,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           director?: string | null
+          download_url?: string | null
           file_size?: string | null
           id?: string
           is_featured?: boolean | null
@@ -317,6 +319,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           director?: string | null
+          download_url?: string | null
           file_size?: string | null
           id?: string
           is_featured?: boolean | null

@@ -352,6 +352,7 @@ export default function MovieDetails() {
         streamUrl={movie.stream_url}
         telegramUrl={movie.telegram_url}
         megaUrl={movie.mega_url}
+        downloadUrl={(movie as any).download_url}
         type="download"
       />
 

@@ -53,6 +53,7 @@ const defaultMovie: MovieInsert = {
   stream_url: '',
   telegram_url: '',
   mega_url: '',
+  download_url: '',
   is_premium: false,
   is_featured: false,
   content_type: 'movie',
@@ -109,6 +110,7 @@ export default function MoviesAdmin() {
       stream_url: movie.stream_url || '',
       telegram_url: movie.telegram_url || '',
       mega_url: movie.mega_url || '',
+      download_url: (movie as any).download_url || '',
       is_premium: movie.is_premium,
       is_featured: movie.is_featured,
       content_type: movie.content_type || 'movie',
@@ -458,7 +460,7 @@ export default function MoviesAdmin() {
 
       {/* Create/Edit Modal */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="admin-fullscreen-dialog max-w-2xl max-h-[90vh] !flex !flex-col overflow-hidden glass sm:max-h-[90vh] h-[100dvh] sm:h-auto">
+        <DialogContent className="admin-fullscreen-dialog max-w-2xl !flex !flex-col overflow-hidden glass h-[90vh]">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle>
               {editingMovie ? 'Edit Movie' : 'Add New Movie'}
@@ -780,7 +782,7 @@ export default function MoviesAdmin() {
                 />
               </div>
 
-              <div className="space-y-2 md:col-span-2">
+              <div className="space-y-2">
                 <Label htmlFor="mega_url">MEGA URL</Label>
                 <Input
                   id="mega_url"
@@ -789,6 +791,19 @@ export default function MoviesAdmin() {
                     setFormData({ ...formData, mega_url: e.target.value })
                   }
                   placeholder="https://mega.nz/..."
+                  className="bg-muted"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="download_url">Download Link</Label>
+                <Input
+                  id="download_url"
+                  value={formData.download_url || ''}
+                  onChange={(e) =>
+                    setFormData({ ...formData, download_url: e.target.value })
+                  }
+                  placeholder="https://download-link..."
                   className="bg-muted"
                 />
               </div>

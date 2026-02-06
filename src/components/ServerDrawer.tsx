@@ -13,6 +13,7 @@ interface ServerDrawerProps {
   streamUrl?: string | null;
   telegramUrl?: string | null;
   megaUrl?: string | null;
+  downloadUrl?: string | null;
   type: 'play' | 'download';
 }
 
@@ -22,6 +23,7 @@ export function ServerDrawer({
   streamUrl,
   telegramUrl,
   megaUrl,
+  downloadUrl,
   type,
 }: ServerDrawerProps) {
   const { t } = useLanguage();
@@ -32,6 +34,7 @@ export function ServerDrawer({
   };
 
   const servers = [
+    ...(downloadUrl ? [{ name: 'Direct Download', url: downloadUrl, icon: 'download' as const }] : []),
     ...(streamUrl ? [{ name: 'Main Server', url: streamUrl, icon: 'main' as const }] : []),
     ...(telegramUrl ? [{ name: 'Telegram', url: telegramUrl, icon: 'telegram' as const }] : []),
     ...(megaUrl ? [{ name: 'MEGA', url: megaUrl, icon: 'mega' as const }] : []),
