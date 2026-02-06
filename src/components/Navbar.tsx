@@ -5,6 +5,7 @@ import cineverseLogo from '@/assets/cineverse-logo.png';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { NotificationBell } from './NotificationBell';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -129,6 +130,9 @@ export function Navbar({ children, categories = [], years = [] }: NavbarProps) {
                 <Moon className="w-4 h-4" />
               )}
             </Button>
+
+            {/* Notification Bell */}
+            <NotificationBell />
 
             {/* Desktop: User menu or Sign In */}
             <div className="hidden md:block">
