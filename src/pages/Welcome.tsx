@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Crown, CalendarDays, Film, RefreshCw, Smartphone, Sun, Moon, Trash2 } from 'lucide-react';
+import { LogOut, Crown, Sun, Moon, Trash2, Smartphone, Star, Smile } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -14,7 +14,7 @@ import cineverseLogo from '@/assets/cineverse-logo.png';
 
 export default function Welcome() {
   const navigate = useNavigate();
-  const { user, profile, role, premiumExpiresAt, isLoading, signOut } = useAuth();
+  const { user, profile, role, isLoading, signOut } = useAuth();
   const { t } = useLanguage();
   const { theme, setTheme } = useTheme();
   const [showDevicesModal, setShowDevicesModal] = useState(false);
@@ -43,12 +43,8 @@ export default function Welcome() {
     role === 'admin'
       ? t('administrator')
       : role === 'premium'
-      ? t('premiumMember')
-      : t('freeUser');
-
-  const expiryText = premiumExpiresAt
-    ? new Date(premiumExpiresAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
-    : 'N/A';
+      ? 'VIP Member'
+      : 'Normal Member';
 
   // Generate a device ID from user agent
   const deviceName = profile?.display_name || 'User';
@@ -105,10 +101,10 @@ export default function Welcome() {
         </h2>
         <p className="text-sm text-muted-foreground mb-8">{user?.email}</p>
 
-        {/* Plan Card - matching reference with icons */}
+        {/* Plan Card */}
         <div className="w-full max-w-sm bg-card rounded-2xl border border-border p-5 mb-6 shadow-sm">
           {/* Plan row */}
-          <div className="flex items-center justify-between pb-4 border-b border-border">
+          <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <Crown className="w-5 h-5 text-primary" />
               <span className="text-sm text-muted-foreground">Plan</span>
@@ -127,42 +123,23 @@ export default function Welcome() {
             </span>
           </div>
 
-          {/* Expires row */}
-          <div className="flex items-center justify-between pt-4">
-            <div className="flex items-center gap-3">
-              <CalendarDays className="w-5 h-5 text-primary" />
-              <span className="text-sm text-muted-foreground">Expires on</span>
-            </div>
-            <span className="text-sm font-bold text-foreground">{expiryText}</span>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="w-full max-w-sm space-y-3 mb-8">
+          {/* VIP လျှောက်ရန် button */}
           <Button
-            onClick={() => navigate('/')}
-            className="w-full h-14 rounded-2xl font-semibold text-base gap-2"
-          >
-            <Film className="w-5 h-5" />
-            Movie ကြည့်ရန်
-          </Button>
-
-          <Button
-            variant="outline"
             onClick={() => navigate('/premium-renewal')}
-            className="w-full h-14 rounded-2xl font-semibold text-base border-primary text-primary hover:bg-primary/5"
+            className="w-full h-12 rounded-2xl font-semibold text-base gap-2 mb-3 bg-primary hover:bg-primary/90"
           >
-            <RefreshCw className="w-5 h-5 mr-2" />
-            သက်တမ်းတိုးရန်
+            <Star className="w-5 h-5" />
+            VIP လျှောက်ရန်
           </Button>
 
+          {/* ဘာတွေရှိလဲကြည့်မယ် button */}
           <Button
             variant="outline"
-            onClick={() => setShowDevicesModal(true)}
-            className="w-full h-14 rounded-2xl font-semibold text-base border-border"
+            onClick={() => navigate('/')}
+            className="w-full h-12 rounded-2xl font-semibold text-base border-border"
           >
-            <Smartphone className="w-5 h-5 mr-2" />
-            အသုံးပြုနေသော device များ
+            <Smile className="w-5 h-5 mr-2" />
+            ဘာတွေရှိလဲကြည့်မယ်
           </Button>
         </div>
 

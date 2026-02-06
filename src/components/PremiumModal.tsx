@@ -1,14 +1,10 @@
-import { Crown, Lock } from 'lucide-react';
+import { Award } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ContactIcons } from '@/components/ContactIcons';
-import { useSiteSettings } from '@/hooks/useSiteSettings';
 
 interface PremiumModalProps {
   open: boolean;
@@ -16,92 +12,46 @@ interface PremiumModalProps {
 }
 
 export function PremiumModal({ open, onOpenChange }: PremiumModalProps) {
-  const { data: settings } = useSiteSettings();
-  const contacts = settings?.adminContacts;
-  const prices = settings?.subscriptionPrices;
+  const navigate = useNavigate();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md glass border-border text-center">
-        <div className="flex justify-center mb-4">
-          <div className="w-20 h-20 rounded-full premium-badge flex items-center justify-center">
-            <Lock className="w-10 h-10 text-black" />
+      <DialogContent className="sm:max-w-sm border-border text-center p-8 rounded-2xl">
+        {/* Icon */}
+        <div className="flex justify-center mb-5">
+          <div className="w-20 h-20 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+            <Award className="w-10 h-10 text-primary" />
           </div>
         </div>
-        
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-center flex items-center justify-center gap-2">
-            <Crown className="w-6 h-6 text-cg-gold" />
-            Premium Content
-          </DialogTitle>
-          <DialogDescription className="text-center text-base mt-2">
-            This content is only available to Premium members.
-          </DialogDescription>
-        </DialogHeader>
 
-        <div className="mt-6 space-y-4">
-          {/* Pricing */}
-          {prices && (
-            <div className="grid grid-cols-3 gap-2">
-              <div className="p-3 bg-muted rounded-lg text-center">
-                <p className="text-xs text-muted-foreground">{prices.monthly.label}</p>
-                <p className="text-lg font-bold text-cg-gold">{prices.monthly.mmk.toLocaleString()} MMK</p>
-                <p className="text-xs text-muted-foreground">${prices.monthly.usd}</p>
-              </div>
-              <div className="p-3 bg-muted rounded-lg text-center border-2 border-cg-gold">
-                <p className="text-xs text-muted-foreground">{prices.yearly.label}</p>
-                <p className="text-lg font-bold text-cg-gold">{prices.yearly.mmk.toLocaleString()} MMK</p>
-                <p className="text-xs text-muted-foreground">${prices.yearly.usd}</p>
-              </div>
-              <div className="p-3 bg-muted rounded-lg text-center">
-                <p className="text-xs text-muted-foreground">{prices.lifetime.label}</p>
-                <p className="text-lg font-bold text-cg-gold">{prices.lifetime.mmk.toLocaleString()} MMK</p>
-                <p className="text-xs text-muted-foreground">${prices.lifetime.usd}</p>
-              </div>
-            </div>
-          )}
+        {/* Title */}
+        <h2 className="text-2xl font-bold text-foreground mb-3">
+          VIP Member Only
+        </h2>
 
-          <div className="p-4 bg-muted rounded-lg">
-            <p className="text-sm text-muted-foreground">
-              Upgrade to Premium to unlock:
-            </p>
-            <ul className="mt-2 space-y-2 text-sm text-left">
-              <li className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-cg-gold" />
-                Unlimited streaming access
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-cg-gold" />
-                4K Ultra HD quality
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-cg-gold" />
-                No ads experience
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-cg-gold" />
-                Early access to new releases
-              </li>
-            </ul>
-          </div>
+        {/* Description in Burmese */}
+        <p className="text-muted-foreground text-base leading-relaxed mb-8">
+          'ဇာတ်ကား ကြည့်ခြင်း' feature ကို{'\n'}
+          အသုံးပြုရန် VIP Member ဖြစ်ရန်လို{'\n'}
+          အပ်ပါသည်။
+        </p>
 
-          <p className="text-xs text-muted-foreground">
-            Contact us to upgrade:
-          </p>
-
-          <ContactIcons
-            telegramUrl={contacts?.telegram.url}
-            viberUrl={contacts?.viber.url}
-            emailUrl={contacts?.email.url}
-            size="sm"
-          />
-
-          <Button
+        {/* Action buttons */}
+        <div className="flex items-center justify-center gap-6">
+          <button
             onClick={() => onOpenChange(false)}
-            variant="secondary"
-            className="w-full"
+            className="text-muted-foreground font-medium text-base hover:text-foreground transition-colors px-4 py-2"
           >
-            Close
+            Cancel
+          </button>
+          <Button
+            onClick={() => {
+              onOpenChange(false);
+              navigate('/premium-renewal');
+            }}
+            className="rounded-full px-8 py-3 h-auto text-base font-semibold"
+          >
+            Subscribe Now
           </Button>
         </div>
       </DialogContent>
