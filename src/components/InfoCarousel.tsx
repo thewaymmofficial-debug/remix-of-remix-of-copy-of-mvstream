@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useInfoSlides } from '@/hooks/useInfoSlides';
 
@@ -6,6 +6,9 @@ export function InfoCarousel() {
   const [current, setCurrent] = useState(0);
   const { data: dbSlides } = useInfoSlides();
   const navigate = useNavigate();
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
+  const isSwiping = useRef(false);
 
   const slides = dbSlides && dbSlides.length > 0 ? dbSlides : [];
 
@@ -31,7 +34,33 @@ export function InfoCarousel() {
 
   const slide = slides[current];
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    isSwiping.current = false;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.touches[0].clientX;
+    const diff = Math.abs(touchStartX.current - touchEndX.current);
+    if (diff > 10) {
+      isSwiping.current = true;
+    }
+  };
+
+  const handleTouchEnd = () => {
+    const diff = touchStartX.current - touchEndX.current;
+    const minSwipe = 50;
+    if (Math.abs(diff) > minSwipe) {
+      if (diff > 0) {
+        next();
+      } else {
+        prev();
+      }
+    }
+  };
+
   const handleClick = () => {
+    if (isSwiping.current) return;
     if (!slide.redirect_link) return;
     const link = slide.redirect_link;
     if (link.startsWith('http://') || link.startsWith('https://')) {
@@ -46,6 +75,9 @@ export function InfoCarousel() {
       <div
         className={`relative overflow-hidden rounded-2xl ${slide.redirect_link ? 'cursor-pointer' : ''}`}
         onClick={handleClick}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         role={slide.redirect_link ? 'link' : undefined}
       >
         {/* Slide */}
@@ -82,7 +114,6 @@ export function InfoCarousel() {
             </div>
           )}
         </div>
-
 
         {/* Dots */}
         {slides.length > 1 && (
