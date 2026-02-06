@@ -106,7 +106,7 @@ export function useCreateMovie() {
     mutationFn: async (movie: MovieInsert) => {
       const { data, error } = await supabase
         .from('movies')
-        .insert(movie)
+        .insert(movie as any)
         .select()
         .single();
 
@@ -126,7 +126,7 @@ export function useUpdateMovie() {
     mutationFn: async ({ id, ...movie }: MovieUpdate & { id: string }) => {
       const { data, error } = await supabase
         .from('movies')
-        .update(movie)
+        .update(movie as any)
         .eq('id', id)
         .select()
         .single();
