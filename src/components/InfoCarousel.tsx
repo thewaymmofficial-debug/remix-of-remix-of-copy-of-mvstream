@@ -43,7 +43,7 @@ export function InfoCarousel() {
   };
 
   return (
-    <section className="px-4 md:px-8 pt-4 pb-2">
+    <section className="px-4 md:px-8 pt-6 md:pt-8 pb-4">
       <div
         className={`relative overflow-hidden rounded-2xl ${slide.redirect_link ? 'cursor-pointer' : ''}`}
         onClick={handleClick}
@@ -51,7 +51,7 @@ export function InfoCarousel() {
       >
         {/* Slide */}
         <div
-          className={`relative min-h-[160px] md:min-h-[200px] flex transition-all duration-500 ${
+          className={`relative min-h-[220px] md:min-h-[300px] lg:min-h-[360px] flex transition-all duration-500 ${
             slide.image_url ? '' : `bg-gradient-to-br ${slide.bg_color}`
           }`}
         >
@@ -62,19 +62,19 @@ export function InfoCarousel() {
                 alt={slide.title || 'Slide'}
                 className="absolute inset-0 w-full h-full object-cover"
               />
-              <div className="absolute inset-0 bg-black/30" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
             </>
           )}
 
           {(slide.title || slide.description) && (
-            <div className="relative z-10 flex flex-col justify-end p-6 md:p-8 w-full">
+            <div className="relative z-10 flex flex-col justify-end p-6 md:p-10 w-full">
               {slide.title && (
-                <h3 className="text-lg md:text-xl font-bold text-white mb-1 drop-shadow-lg">
+                <h3 className="text-xl md:text-2xl lg:text-3xl font-bold text-white mb-1.5 drop-shadow-lg">
                   {slide.title}
                 </h3>
               )}
               {slide.description && (
-                <p className={`text-sm md:text-base font-medium leading-relaxed drop-shadow ${
+                <p className={`text-sm md:text-base lg:text-lg font-medium leading-relaxed drop-shadow ${
                   slide.image_url ? 'text-white/90' : slide.accent_color
                 }`}>
                   {slide.description}
