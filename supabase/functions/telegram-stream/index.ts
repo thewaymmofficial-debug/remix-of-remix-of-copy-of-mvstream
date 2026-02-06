@@ -40,9 +40,11 @@ function getContentType(fileName: string): string {
 // ─── MTProto streaming via GramJS (unlimited file size) ───
 
 async function handleMTProtoStream(req: Request, msgId: number) {
-  const { TelegramClient } = await import("npm:telegram@2");
-  const { StringSession } = await import("npm:telegram/sessions");
-  const { Api } = await import("npm:telegram/tl");
+  const telegramModule = await import("npm:telegram@2");
+  const TelegramClient = telegramModule.TelegramClient;
+  const Api = telegramModule.Api;
+  const { StringSession } = await import("npm:telegram@2/sessions/index.js");
+  const bigInt = (await import("npm:big-integer")).default;
 
   let client: InstanceType<typeof TelegramClient> | null = null;
 
@@ -146,10 +148,10 @@ async function handleMTProtoStream(req: Request, msgId: number) {
 
           for await (const chunk of clientRef.iterDownload({
             file: inputLocation,
-            offset: BigInt(alignedStart),
+            offset: bigInt(alignedStart),
             requestSize: REQUEST_SIZE,
             dcId: document.dcId,
-            fileSize: BigInt(fileSize),
+            fileSize: document.size,
           })) {
             let data = new Uint8Array(chunk);
 
