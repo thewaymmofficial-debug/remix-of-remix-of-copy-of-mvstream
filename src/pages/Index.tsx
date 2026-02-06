@@ -37,6 +37,7 @@ const Index = () => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [previewMovie, setPreviewMovie] = useState<Movie | null>(null);
   const { searchQuery, selectedCategory, setSelectedCategory, selectedYear } = useFilter();
+  const [browsing, setBrowsing] = useState(false);
   const continueWatchingRef = useRef<HTMLDivElement>(null);
 
   // Get all unique categories and years for filters
@@ -155,6 +156,7 @@ const Index = () => {
 
   const hasNoResults = Object.keys(filteredMoviesByCategory).length === 0 && !isLoading;
   const isFiltering = searchQuery.trim() || selectedCategory !== 'all' || selectedYear !== 'all';
+  const showMovies = browsing || isFiltering;
 
   const handleRefresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ['movies'] });
@@ -175,16 +177,18 @@ const Index = () => {
 
       {/* Category Grid Section */}
       <CategoryGrid onCategoryClick={(filter) => {
+        setBrowsing(true);
         if (filter === 'movie' || filter === 'series') {
           setSelectedCategory(filter === 'movie' ? 'Action' : 'K-Drama');
         } else if (filter === 'trending' || filter === 'trending-series' || filter === 'featured') {
-          // Scroll to trending section
+          setSelectedCategory('all');
         } else {
           setSelectedCategory(filter);
         }
       }} />
 
-      {/* Movie Rows */}
+      {/* Movie Rows - only show when a category is clicked */}
+      {showMovies && (
       <div className="py-8 relative z-30 bg-background">
         {isLoading ? (
           <div className="px-4 md:px-8">
@@ -329,6 +333,7 @@ const Index = () => {
           </>
         )}
       </div>
+      )}
 
       {/* Footer */}
       <footer className="py-8 border-t border-border">
