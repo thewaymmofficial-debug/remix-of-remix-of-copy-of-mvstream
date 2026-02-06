@@ -25,6 +25,7 @@ import SearchPage from "./pages/Search";
 import Welcome from "./pages/Welcome";
 import Downloads from "./pages/Downloads";
 import Watch from "./pages/Watch";
+import Support from "./pages/Support";
 import AdminLayout from "./pages/admin/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
 import MoviesAdmin from "./pages/admin/MoviesAdmin";
@@ -77,6 +78,7 @@ const App = () => (
                   <Route path="/welcome" element={<ProtectedRoute><Welcome /></ProtectedRoute>} />
                   <Route path="/downloads" element={<ProtectedRoute><Downloads /></ProtectedRoute>} />
                   <Route path="/watch" element={<Watch />} />
+                  <Route path="/support" element={<Support />} />
                   <Route path="/actor/:id" element={<ActorDetail />} />
                   <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                   <Route path="/watchlist" element={<ProtectedRoute><Watchlist /></ProtectedRoute>} />
