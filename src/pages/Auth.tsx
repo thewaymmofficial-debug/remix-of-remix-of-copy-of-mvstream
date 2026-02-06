@@ -25,7 +25,7 @@ export default function Auth() {
 
   useEffect(() => {
     if (user && !authLoading) {
-      navigate('/');
+      navigate('/welcome');
     }
   }, [user, authLoading, navigate]);
 
@@ -61,7 +61,7 @@ export default function Auth() {
           toast.error('Invalid email or password');
         } else {
           toast.success('Welcome back!');
-          navigate('/');
+          navigate('/welcome');
         }
       }
     } catch (error) {

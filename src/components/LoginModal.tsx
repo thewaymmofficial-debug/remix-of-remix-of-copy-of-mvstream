@@ -51,6 +51,7 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
         } else {
           toast.success('Welcome back!');
           onOpenChange(false);
+          navigate('/welcome');
         }
       }
     } catch (error) {

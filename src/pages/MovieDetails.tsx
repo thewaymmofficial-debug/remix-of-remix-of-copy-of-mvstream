@@ -354,6 +354,14 @@ export default function MovieDetails() {
         megaUrl={movie.mega_url}
         downloadUrl={(movie as any).download_url}
         type="download"
+        movieInfo={{
+          movieId: movie.id,
+          title: movie.title,
+          posterUrl: movie.poster_url,
+          year: movie.year,
+          resolution: movie.resolution,
+          fileSize: movie.file_size,
+        }}
       />
 
       {/* Premium Modal */}
