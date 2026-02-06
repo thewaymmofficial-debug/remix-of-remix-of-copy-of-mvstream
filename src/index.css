@@ -225,14 +225,14 @@
     display: none;
   }
 
-  /* Safe area for mobile bottom nav */
+  /* Safe area for mobile bottom nav - with Android WebView fallback */
   .safe-area-bottom {
-    padding-bottom: env(safe-area-inset-bottom, 0);
+    padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
   }
 
   /* Add padding to main content for mobile bottom nav */
   .mobile-nav-spacing {
-    @apply pb-20 md:pb-0;
+    @apply pb-24 md:pb-0;
   }
 
   /* Theme toggle with red ring in dark mode */

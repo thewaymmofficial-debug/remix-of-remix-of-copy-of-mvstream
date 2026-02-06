@@ -46,7 +46,7 @@ export function MobileBottomNav() {
   return (
     <>
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-xl border-t border-border safe-area-bottom">
-        <div className="flex items-center justify-around h-16 px-2">
+        <div className="flex items-center justify-around h-16 px-1">
           {navItems.map((item) => {
             const active = isActive(item.path);
             
@@ -55,7 +55,7 @@ export function MobileBottomNav() {
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-1 py-2 px-4 rounded-lg transition-all",
+                  "flex flex-col items-center justify-center gap-0.5 py-2 px-1 flex-1 min-w-0 rounded-lg transition-all",
                   active 
                     ? "text-cineverse-red" 
                     : "text-cineverse-gray hover:text-foreground"
@@ -63,13 +63,13 @@ export function MobileBottomNav() {
               >
                 <item.icon 
                   className={cn(
-                    "w-5 h-5 transition-all",
+                    "w-[18px] h-[18px] transition-all",
                     active && "fill-cineverse-red"
                   )} 
                   fill={active ? "currentColor" : "none"}
                 />
                 <span className={cn(
-                  "text-xs font-medium",
+                  "text-[10px] font-medium truncate w-full text-center",
                   active && "text-cineverse-red"
                 )}>
                   {item.label}
@@ -82,7 +82,7 @@ export function MobileBottomNav() {
             <Link
               to="/admin/premium-requests"
               className={cn(
-                "flex flex-col items-center justify-center gap-1 py-2 px-4 rounded-lg transition-all relative",
+                "flex flex-col items-center justify-center gap-0.5 py-2 px-1 flex-1 min-w-0 rounded-lg transition-all relative",
                 location.pathname === '/admin/premium-requests'
                   ? "text-cineverse-red"
                   : "text-cineverse-gray hover:text-foreground"
@@ -91,19 +91,19 @@ export function MobileBottomNav() {
               <div className="relative">
                 <Bell
                   className={cn(
-                    "w-5 h-5 transition-all",
+                    "w-[18px] h-[18px] transition-all",
                     location.pathname === '/admin/premium-requests' && "fill-cineverse-red"
                   )}
                   fill={location.pathname === '/admin/premium-requests' ? "currentColor" : "none"}
                 />
                 {pendingCount > 0 && (
-                  <span className="absolute -top-1.5 -right-2 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                  <span className="absolute -top-1.5 -right-2 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-0.5">
                     {pendingCount > 99 ? '99+' : pendingCount}
                   </span>
                 )}
               </div>
               <span className={cn(
-                "text-xs font-medium",
+                "text-[10px] font-medium truncate w-full text-center",
                 location.pathname === '/admin/premium-requests' && "text-cineverse-red"
               )}>
                 Requests
@@ -117,7 +117,7 @@ export function MobileBottomNav() {
               <SheetTrigger asChild>
                 <button
                   className={cn(
-                    "flex flex-col items-center justify-center gap-1 py-2 px-4 rounded-lg transition-all",
+                    "flex flex-col items-center justify-center gap-0.5 py-2 px-1 flex-1 min-w-0 rounded-lg transition-all",
                     (location.pathname === '/profile') 
                       ? "text-cineverse-red" 
                       : "text-cineverse-gray hover:text-foreground"
@@ -125,13 +125,13 @@ export function MobileBottomNav() {
                 >
                   <User 
                     className={cn(
-                      "w-5 h-5 transition-all",
+                      "w-[18px] h-[18px] transition-all",
                       location.pathname === '/profile' && "fill-cineverse-red"
                     )} 
                     fill={location.pathname === '/profile' ? "currentColor" : "none"}
                   />
                   <span className={cn(
-                    "text-xs font-medium",
+                    "text-[10px] font-medium truncate w-full text-center",
                     location.pathname === '/profile' && "text-cineverse-red"
                   )}>
                     Profile
@@ -213,10 +213,10 @@ export function MobileBottomNav() {
           ) : (
             <Link
               to="/auth"
-              className="flex flex-col items-center justify-center gap-1 py-2 px-4 rounded-lg transition-all text-cineverse-gray hover:text-foreground"
+              className="flex flex-col items-center justify-center gap-0.5 py-2 px-1 flex-1 min-w-0 rounded-lg transition-all text-cineverse-gray hover:text-foreground"
             >
-              <User className="w-5 h-5" />
-              <span className="text-xs font-medium">Login</span>
+              <User className="w-[18px] h-[18px]" />
+              <span className="text-[10px] font-medium">Login</span>
             </Link>
           )}
         </div>
