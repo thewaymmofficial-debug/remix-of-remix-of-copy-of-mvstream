@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Copy, Upload, FileText, Moon, Sun, HelpCircle, Shield, Mail, CalendarDays, Loader2 } from 'lucide-react';
+import { ArrowLeft, Copy, Upload, FileText, Moon, Sun, HelpCircle, Shield, Gem, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -13,11 +13,12 @@ import { useSubmitPremiumRequest } from '@/hooks/usePremiumRequests';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+
 export default function PremiumRenewal() {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
-  const { t, language } = useLanguage();
-  const { user, role, premiumExpiresAt } = useAuth();
+  const { t } = useLanguage();
+  const { user } = useAuth();
   const { data: paymentMethods, isLoading: methodsLoading } = usePaymentMethods();
   const { data: pricingPlans, isLoading: plansLoading } = usePricingPlans();
   const submitRequest = useSubmitPremiumRequest();
@@ -40,15 +41,15 @@ export default function PremiumRenewal() {
 
   const handleSubmit = async () => {
     if (!selectedPlanId) {
-      toast.error(language === 'mm' ? 'Plan ရွေးချယ်ပါ' : 'Please select a plan');
+      toast.error('Plan ရွေးချယ်ပါ');
       return;
     }
     if (!transactionId.trim()) {
-      toast.error(language === 'mm' ? 'Transaction ID ထည့်ပါ' : 'Please enter Transaction ID');
+      toast.error('Transaction ID ထည့်ပါ');
       return;
     }
     if (!screenshot) {
-      toast.error(language === 'mm' ? 'Screenshot ထည့်ပါ' : 'Please upload screenshot');
+      toast.error('Screenshot ထည့်ပါ');
       return;
     }
     if (!user) return;
@@ -82,16 +83,12 @@ export default function PremiumRenewal() {
         screenshot_url: screenshotUrl,
       });
 
-      toast.success(
-        language === 'mm'
-          ? 'တင်သွင်းပြီးပါပြီ! စစ်ဆေးပြီးအကြောင်းကြားပါမည်'
-          : 'Submitted! We will review and notify you.'
-      );
+      toast.success('တင်သွင်းပြီးပါပြီ! စစ်ဆေးပြီးအကြောင်းကြားပါမည်');
       setTransactionId('');
       setScreenshot(null);
       setSelectedPlanId('');
     } catch {
-      toast.error(language === 'mm' ? 'အမှားတစ်ခု ဖြစ်ပွားသည်' : 'An error occurred');
+      toast.error('အမှားတစ်ခု ဖြစ်ပွားသည်');
     } finally {
       setIsSubmitting(false);
     }
@@ -101,13 +98,6 @@ export default function PremiumRenewal() {
     navigate('/auth');
     return null;
   }
-
-  const planLabel =
-    role === 'admin' ? 'Administrator' : role === 'premium' ? 'Gold Member' : 'Free User';
-
-  const expiryText = premiumExpiresAt
-    ? new Date(premiumExpiresAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
-    : 'N/A';
 
   const isLoading = methodsLoading || plansLoading;
 
@@ -120,7 +110,7 @@ export default function PremiumRenewal() {
             <ArrowLeft className="w-5 h-5 text-foreground" />
           </button>
           <h1 className="text-lg font-bold text-foreground">
-            {language === 'mm' ? 'သက်တမ်းတိုးရန်' : 'Premium Renewal'}
+            VIP Member လျှောက်ရန်
           </h1>
           <div className="flex items-center gap-1">
             <Button
@@ -144,48 +134,62 @@ export default function PremiumRenewal() {
         </div>
       ) : (
         <div className="px-4 py-6 max-w-lg mx-auto space-y-6">
-          {/* Current Plan Card */}
-          <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-5 text-white relative overflow-hidden">
-            <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white/10" />
-            <div className="absolute right-10 bottom-2 w-20 h-20 rounded-full bg-white/10" />
-            <div className="relative z-10">
-              <div className="flex items-center justify-between mb-1">
-                <div>
-                  <p className="text-white/80 text-sm">Current Plan</p>
-                  <h2 className="text-2xl font-bold">{planLabel}</h2>
+
+          {/* Plan Type Selection Cards */}
+          <div>
+            <h2 className="text-lg font-bold text-foreground mb-4">
+              Plan ကွာခြားချက်များ
+            </h2>
+            <div className="grid grid-cols-2 gap-3">
+              {/* Gold Card */}
+              <div className="bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl p-5 text-white text-center relative overflow-hidden">
+                <div className="absolute -right-4 -top-4 w-16 h-16 rounded-full bg-white/10" />
+                <div className="relative z-10">
+                  <div className="w-12 h-12 mx-auto rounded-full bg-white/20 flex items-center justify-center mb-3">
+                    <Shield className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-lg font-bold mb-1">Gold</h3>
+                  <span className="text-xs bg-white/20 rounded-full px-3 py-1">
+                    2 Devices
+                  </span>
                 </div>
-                <span className="bg-white/20 px-3 py-1 rounded-full text-xs font-semibold">
-                  1 Device
-                </span>
               </div>
-              <div className="mt-4 bg-white/15 rounded-xl p-3 space-y-2">
-                <div className="flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-white/80" />
-                  <span className="text-sm">{user?.email}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CalendarDays className="w-4 h-4 text-white/80" />
-                  <span className="text-sm">Expires: {expiryText}</span>
+
+              {/* Platinum Card */}
+              <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-5 text-white text-center relative overflow-hidden">
+                <div className="absolute -right-4 -top-4 w-16 h-16 rounded-full bg-white/10" />
+                <div className="relative z-10">
+                  <div className="w-12 h-12 mx-auto rounded-full bg-white/20 flex items-center justify-center mb-3">
+                    <Gem className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-lg font-bold mb-1">Platinum</h3>
+                  <span className="text-xs bg-white/20 rounded-full px-3 py-1">
+                    3 Devices
+                  </span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Pricing Plans Card */}
+          {/* VIP Member ဈေးနှုန်းများ */}
           <div>
             <h2 className="text-lg font-bold text-foreground mb-4">
-              {language === 'mm' ? 'သက်တမ်းတိုးရန် Plan များ' : 'Renewal Plans'}
+              VIP Member ဈေးနှုန်းများ
             </h2>
-            <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-5 text-white relative overflow-hidden">
+
+            {/* Gold Plan Pricing */}
+            <div className="bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl p-5 text-white relative overflow-hidden mb-4">
               <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-white/10" />
               <div className="relative z-10">
                 <div className="flex items-center gap-3 mb-4">
-                  <Shield className="w-6 h-6" />
-                  <h3 className="text-xl font-bold">Gold Member</h3>
+                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                    <Shield className="w-5 h-5 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold">Gold Plan</h3>
                 </div>
                 <div className="bg-white/15 rounded-xl divide-y divide-white/20">
                   {pricingPlans?.map((plan) => (
-                    <div key={plan.id} className="flex items-center justify-between px-4 py-3">
+                    <div key={`gold-${plan.id}`} className="flex items-center justify-between px-4 py-3">
                       <span className="text-sm font-medium">{plan.duration}</span>
                       <span className="text-sm font-bold">{plan.price}</span>
                     </div>
@@ -193,12 +197,57 @@ export default function PremiumRenewal() {
                 </div>
               </div>
             </div>
+
+            {/* Platinum Plan Pricing */}
+            <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-5 text-white relative overflow-hidden">
+              <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-white/10" />
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                    <Gem className="w-5 h-5 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold">Platinum Plan</h3>
+                </div>
+                <div className="bg-white/15 rounded-xl divide-y divide-white/20">
+                  {pricingPlans?.map((plan) => {
+                    // Platinum prices are higher
+                    const priceNum = parseInt(plan.price.replace(/[^0-9]/g, ''));
+                    const platinumPrice = Math.round(priceNum * 1.4);
+                    return (
+                      <div key={`plat-${plan.id}`} className="flex items-center justify-between px-4 py-3">
+                        <span className="text-sm font-medium">{plan.duration}</span>
+                        <span className="text-sm font-bold">{platinumPrice.toLocaleString()} MMK</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* သင်အသုံးပြုလိုသော Plan ကိုရွေးပါ */}
+          <div>
+            <h2 className="text-lg font-bold text-foreground mb-4">
+              သင်အသုံးပြုလိုသော Plan ကိုရွေးပါ
+            </h2>
+            <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
+              <SelectTrigger className="h-12 bg-card border-border text-foreground">
+                <SelectValue placeholder="Plan ရွေးချယ်ပါ" />
+              </SelectTrigger>
+              <SelectContent className="bg-popover">
+                {pricingPlans?.map((plan) => (
+                  <SelectItem key={plan.id} value={plan.id}>
+                    {plan.duration} — {plan.price}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Step 1: Payment Accounts */}
           <div>
             <h2 className="text-lg font-bold text-foreground mb-4">
-              {language === 'mm' ? '၁။ ငွေလွှဲရန်အချက်အလက်များ' : '1. Payment Accounts'}
+              ၁။ ငွေလွှဲရန်အချက်အလက်များ
             </h2>
             <div className="space-y-4">
               {paymentMethods?.map((method) => (
@@ -218,7 +267,7 @@ export default function PremiumRenewal() {
                       </span>
                     </div>
                     <p className={`text-sm opacity-80 ${method.text_color}`}>
-                      {t('accountNumber')}
+                      Account Number
                     </p>
                     <div className="flex items-end justify-between mt-1">
                       <div>
@@ -242,29 +291,10 @@ export default function PremiumRenewal() {
             </div>
           </div>
 
-          {/* Step 2: Select Plan */}
+          {/* Step 2: Upload Screenshot */}
           <div>
             <h2 className="text-lg font-bold text-foreground mb-4">
-              {language === 'mm' ? '၂။ Plan ရွေးချယ်ပါ' : '2. Select Plan'}
-            </h2>
-            <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
-              <SelectTrigger className="h-12 bg-card border-border text-foreground">
-                <SelectValue placeholder={language === 'mm' ? 'Plan ရွေးချယ်ပါ' : 'Select a plan'} />
-              </SelectTrigger>
-              <SelectContent className="bg-popover">
-                {pricingPlans?.map((plan) => (
-                  <SelectItem key={plan.id} value={plan.id}>
-                    {plan.duration} — {plan.price}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Step 3: Upload Screenshot */}
-          <div>
-            <h2 className="text-lg font-bold text-foreground mb-4">
-              {language === 'mm' ? '၃။ ငွေလွှဲ Screenshot ထည့်ပါ' : '3. Upload Screenshot'}
+              ၂။ ငွေလွှဲ Screenshot ထည့်ပါ
             </h2>
             <label className="block border-2 border-dashed border-border rounded-2xl p-8 text-center cursor-pointer hover:border-primary/50 transition-colors bg-card">
               <input
@@ -279,30 +309,28 @@ export default function PremiumRenewal() {
                     <FileText className="w-8 h-8 text-emerald-500" />
                   </div>
                   <p className="text-sm font-medium text-foreground">{screenshot.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {language === 'mm' ? 'ပြောင်းလဲရန် နှိပ်ပါ' : 'Tap to change'}
-                  </p>
+                  <p className="text-xs text-muted-foreground">ပြောင်းလဲရန် နှိပ်ပါ</p>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
-                    <Upload className="w-8 h-8 text-primary" />
+                  <div className="w-16 h-16 mx-auto bg-muted rounded-full flex items-center justify-center">
+                    <Upload className="w-8 h-8 text-muted-foreground" />
                   </div>
-                  <p className="text-sm text-muted-foreground">{t('tapToUpload')}</p>
+                  <p className="text-sm text-muted-foreground">Tap to upload screenshot</p>
                 </div>
               )}
             </label>
           </div>
 
-          {/* Step 4: Transaction ID */}
+          {/* Step 3: Transaction ID */}
           <div>
             <h2 className="text-lg font-bold text-foreground mb-4">
-              {language === 'mm' ? '၄။ Transaction ID ထည့်ပါ' : '4. Enter Transaction ID'}
+              ၃။ Transaction ID ထည့်ပါ
             </h2>
             <div className="relative">
               <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
-                placeholder={t('transactionPlaceholder')}
+                placeholder="ငွေလွှဲပြေစာမှ Transaction ID ကို..."
                 value={transactionId}
                 onChange={(e) => setTransactionId(e.target.value)}
                 className="pl-10 h-12 bg-card border-border text-foreground"
@@ -319,10 +347,10 @@ export default function PremiumRenewal() {
             {isSubmitting ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                {language === 'mm' ? 'တင်သွင်းနေသည်...' : 'Submitting...'}
+                တင်သွင်းနေသည်...
               </>
             ) : (
-              t('submitRenewal')
+              'Submit Application'
             )}
           </Button>
         </div>
