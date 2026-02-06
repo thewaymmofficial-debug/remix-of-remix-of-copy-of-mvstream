@@ -180,7 +180,7 @@ export function CategoryGrid() {
           <h2 className="text-xl font-bold text-foreground mb-5 flex items-center gap-2">
             {section.emoji} {language === 'mm' ? section.titleMm : section.titleEn}
           </h2>
-          <div className="grid grid-cols-4 gap-4 md:gap-6 max-w-2xl">
+          <div className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-6 gap-4 md:gap-6">
             {section.items.map((item) => (
               <button
                 key={item.labelEn}
