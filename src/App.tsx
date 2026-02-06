@@ -7,6 +7,7 @@ import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/hooks/useAuth";
 import { FilterProvider } from "@/contexts/FilterContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { DownloadProvider } from "@/contexts/DownloadContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { DevicePresenceMonitor } from "@/components/DevicePresenceMonitor";
 import Index from "./pages/Index";
@@ -61,6 +62,7 @@ const App = () => (
       <LanguageProvider>
         <AuthProvider>
           <FilterProvider>
+            <DownloadProvider>
             <DevicePresenceMonitor />
             <TooltipProvider>
               <Toaster />
@@ -98,6 +100,7 @@ const App = () => (
                 </Routes>
               </BrowserRouter>
             </TooltipProvider>
+            </DownloadProvider>
           </FilterProvider>
         </AuthProvider>
       </LanguageProvider>
