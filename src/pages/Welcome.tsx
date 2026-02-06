@@ -38,17 +38,20 @@ export default function Welcome() {
     }
   }, [user, isLoading, navigate]);
 
-  // Register device on login and check limits
+  // Register device on login and check limits (only for premium/admin)
   useEffect(() => {
-    if (user && !isLoading && !deviceCheckDone) {
+    if (user && !isLoading && !deviceCheckDone && (isPremium || isAdmin)) {
       registerDevice(user.id).then(({ allowed }) => {
         if (!allowed) {
           setShowDeviceLimitModal(true);
         }
         setDeviceCheckDone(true);
       });
+    } else if (user && !isLoading && !deviceCheckDone) {
+      // Free user - skip device check
+      setDeviceCheckDone(true);
     }
-  }, [user, isLoading, deviceCheckDone, registerDevice]);
+  }, [user, isLoading, deviceCheckDone, isPremium, isAdmin, registerDevice]);
 
   if (isLoading) {
     return (
@@ -170,19 +173,21 @@ export default function Welcome() {
             </div>
           )}
 
-          {/* Active Devices row */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <Smartphone className="w-5 h-5 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Active Devices</span>
+          {/* Active Devices row - only for premium/admin */}
+          {(isPremium || isAdmin) && (
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <Smartphone className="w-5 h-5 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Active Devices</span>
+              </div>
+              <button
+                onClick={() => setShowDevicesModal(true)}
+                className="text-sm font-medium text-primary hover:underline"
+              >
+                {devices.length} / {isAdmin ? '∞' : maxDevices}
+              </button>
             </div>
-            <button
-              onClick={() => setShowDevicesModal(true)}
-              className="text-sm font-medium text-primary hover:underline"
-            >
-              {devices.length} / {isAdmin ? '∞' : maxDevices}
-            </button>
-          </div>
+          )}
 
           {/* Action Buttons based on role */}
           {showPremiumView ? (

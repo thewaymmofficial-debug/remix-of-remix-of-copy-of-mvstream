@@ -75,31 +75,106 @@ export function useDevices(userId: string | undefined) {
     const deviceId = getDeviceId();
     const deviceName = parseDeviceName();
 
-    // Get user's max_devices from user_roles
+    // Get user's max_devices and role from user_roles
     const { data: roleData } = await supabase
       .from('user_roles')
       .select('max_devices, role')
       .eq('user_id', userId)
       .single();
 
+    const userRole = roleData?.role;
     const userMaxDevices = roleData?.max_devices ?? 1;
-    const isAdmin = roleData?.role === 'admin';
+    const isAdmin = userRole === 'admin';
+    const isPremium = userRole === 'premium';
     setMaxDevices(userMaxDevices);
 
-    // Try upsert current device (update last_active if exists)
+    // Free users: skip device tracking entirely, always allow
+    if (!isAdmin && !isPremium) {
+      setDeviceLimitReached(false);
+      setDevices([]);
+      return { allowed: true, devices: [] };
+    }
+
+    // Admin has unlimited devices - just register and allow
+    if (isAdmin) {
+      await supabase
+        .from('user_devices')
+        .upsert(
+          {
+            user_id: userId,
+            device_id: deviceId,
+            device_name: deviceName,
+            last_active_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id,device_id' }
+        );
+
+      const { data: allDevices } = await supabase
+        .from('user_devices')
+        .select('*')
+        .eq('user_id', userId)
+        .order('last_active_at', { ascending: false });
+
+      const deviceList = (allDevices || []) as UserDevice[];
+      setDevices(deviceList);
+      setDeviceLimitReached(false);
+      return { allowed: true, devices: deviceList };
+    }
+
+    // Premium users: enforce device limits strictly
+    // First check if this device is already registered
+    const { data: existingDevice } = await supabase
+      .from('user_devices')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('device_id', deviceId)
+      .maybeSingle();
+
+    if (existingDevice) {
+      // Device already registered - just update last_active and allow
+      await supabase
+        .from('user_devices')
+        .update({ last_active_at: new Date().toISOString(), device_name: deviceName })
+        .eq('id', existingDevice.id);
+
+      const { data: allDevices } = await supabase
+        .from('user_devices')
+        .select('*')
+        .eq('user_id', userId)
+        .order('last_active_at', { ascending: false });
+
+      const deviceList = (allDevices || []) as UserDevice[];
+      setDevices(deviceList);
+      setDeviceLimitReached(false);
+      return { allowed: true, devices: deviceList };
+    }
+
+    // New device - check if limit is already reached
+    const { data: currentDevices } = await supabase
+      .from('user_devices')
+      .select('*')
+      .eq('user_id', userId)
+      .order('last_active_at', { ascending: false });
+
+    const currentList = (currentDevices || []) as UserDevice[];
+    setDevices(currentList);
+
+    if (currentList.length >= userMaxDevices) {
+      // Limit reached - DO NOT register the new device, block login
+      setDeviceLimitReached(true);
+      return { allowed: false, devices: currentList };
+    }
+
+    // Under limit - register the new device
     await supabase
       .from('user_devices')
-      .upsert(
-        {
-          user_id: userId,
-          device_id: deviceId,
-          device_name: deviceName,
-          last_active_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,device_id' }
-      );
+      .insert({
+        user_id: userId,
+        device_id: deviceId,
+        device_name: deviceName,
+        last_active_at: new Date().toISOString(),
+      });
 
-    // Fetch all devices for this user
     const { data: allDevices } = await supabase
       .from('user_devices')
       .select('*')
@@ -108,38 +183,6 @@ export function useDevices(userId: string | undefined) {
 
     const deviceList = (allDevices || []) as UserDevice[];
     setDevices(deviceList);
-
-    // Admin has unlimited devices
-    if (isAdmin) {
-      setDeviceLimitReached(false);
-      return { allowed: true, devices: deviceList };
-    }
-
-    // Check if current device is in the allowed list
-    const currentDeviceIndex = deviceList.findIndex(d => d.device_id === deviceId);
-    
-    if (deviceList.length > userMaxDevices && currentDeviceIndex >= userMaxDevices) {
-      // This device exceeds the limit and isn't one of the oldest registered
-      setDeviceLimitReached(true);
-      // Remove the device we just registered since it's not allowed
-      await supabase
-        .from('user_devices')
-        .delete()
-        .eq('user_id', userId)
-        .eq('device_id', deviceId);
-      
-      // Re-fetch without the rejected device
-      const { data: updatedDevices } = await supabase
-        .from('user_devices')
-        .select('*')
-        .eq('user_id', userId)
-        .order('last_active_at', { ascending: false });
-      
-      const updatedList = (updatedDevices || []) as UserDevice[];
-      setDevices(updatedList);
-      return { allowed: false, devices: updatedList };
-    }
-
     setDeviceLimitReached(false);
     return { allowed: true, devices: deviceList };
   }, []);
