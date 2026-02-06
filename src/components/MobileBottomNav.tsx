@@ -211,13 +211,13 @@ export function MobileBottomNav() {
               </SheetContent>
             </Sheet>
           ) : (
-            <button
-              onClick={() => setShowLoginModal(true)}
+            <Link
+              to="/auth"
               className="flex flex-col items-center justify-center gap-1 py-2 px-4 rounded-lg transition-all text-cineverse-gray hover:text-foreground"
             >
               <User className="w-5 h-5" />
               <span className="text-xs font-medium">Login</span>
-            </button>
+            </Link>
           )}
         </div>
       </nav>
