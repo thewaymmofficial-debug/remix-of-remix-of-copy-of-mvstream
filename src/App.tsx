@@ -37,6 +37,7 @@ import Analytics from "./pages/admin/Analytics";
 import SlidesAdmin from "./pages/admin/SlidesAdmin";
 import PaymentSettingsAdmin from "./pages/admin/PaymentSettingsAdmin";
 import PremiumRequestsAdmin from "./pages/admin/PremiumRequestsAdmin";
+import MovieRequestsAdmin from "./pages/admin/MovieRequestsAdmin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -97,6 +98,7 @@ const App = () => (
                     <Route path="slides" element={<SlidesAdmin />} />
                     <Route path="payment-settings" element={<PaymentSettingsAdmin />} />
                     <Route path="premium-requests" element={<PremiumRequestsAdmin />} />
+                    <Route path="movie-requests" element={<MovieRequestsAdmin />} />
                     <Route path="analytics" element={<Analytics />} />
                   </Route>
                   <Route path="*" element={<NotFound />} />
