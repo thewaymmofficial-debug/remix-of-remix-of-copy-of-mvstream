@@ -75,19 +75,21 @@ export default function Welcome() {
     role === 'admin'
       ? 'Administrator'
       : role === 'premium'
-      ? `VIP ${premiumType ? premiumType.charAt(0).toUpperCase() + premiumType.slice(1) : ''} Member`
+      ? `${premiumType ? premiumType.charAt(0).toUpperCase() + premiumType.slice(1) : ''} Member`
       : 'Normal Member';
 
   // Check if user is premium or admin (shows premium welcome)
   const showPremiumView = isPremium || isAdmin;
 
-  // Format expiration date
+  // Format expiration date as DD-MM-YYYY
   const expiresFormatted = premiumExpiresAt
-    ? new Date(premiumExpiresAt).toLocaleDateString('my-MM', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      })
+    ? (() => {
+        const d = new Date(premiumExpiresAt);
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yyyy = d.getFullYear();
+        return `${dd}-${mm}-${yyyy}`;
+      })()
     : null;
 
   return (
@@ -143,18 +145,18 @@ export default function Welcome() {
         {/* Plan Card */}
         <div className="w-full max-w-sm bg-card rounded-2xl border border-border p-5 mb-6 shadow-sm">
           {/* Plan row */}
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Crown className={cn("w-5 h-5", isAdmin ? "text-yellow-500" : "text-primary")} />
+              <Crown className={cn("w-5 h-5", isAdmin ? "text-amber-500" : "text-primary")} />
               <span className="text-sm text-muted-foreground">Plan</span>
             </div>
             <span
               className={cn(
-                'text-sm font-bold',
+                'text-base font-bold',
                 role === 'admin'
                   ? 'text-amber-500'
                   : role === 'premium'
-                  ? 'text-primary'
+                  ? 'text-foreground'
                   : 'text-foreground'
               )}
             >
@@ -162,73 +164,78 @@ export default function Welcome() {
             </span>
           </div>
 
-          {/* Premium expiration for premium users */}
+          {/* Divider + Expires row for premium users */}
           {role === 'premium' && expiresFormatted && (
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <Calendar className="w-5 h-5 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Expires</span>
+            <>
+              <div className="border-t border-border my-4" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Calendar className="w-5 h-5 text-primary" />
+                  <span className="text-sm text-muted-foreground">Expires on</span>
+                </div>
+                <span className="text-base font-bold text-foreground">{expiresFormatted}</span>
               </div>
-              <span className="text-sm font-medium text-foreground">{expiresFormatted}</span>
-            </div>
+            </>
           )}
 
           {/* Action Buttons based on role */}
-          {showPremiumView ? (
-            <>
-              {/* Premium/Admin: Go to movies */}
-              <Button
-                onClick={() => navigate('/')}
-                className="w-full h-12 rounded-2xl font-semibold text-base gap-2 mb-3 bg-primary hover:bg-primary/90"
-              >
-                <Play className="w-5 h-5" />
-                Movie ကြည့်ရန်
-              </Button>
+          <div className="mt-5 space-y-3">
+            {showPremiumView ? (
+              <>
+                {/* Premium/Admin: Go to movies */}
+                <Button
+                  onClick={() => navigate('/')}
+                  className="w-full h-12 rounded-2xl font-semibold text-base gap-2 bg-primary hover:bg-primary/90"
+                >
+                  <Play className="w-5 h-5" />
+                  Movie ကြည့်ရန်
+                </Button>
 
-              {/* Renewal button (not for admin) */}
-              {role === 'premium' && (
+                {/* Renewal button (not for admin) */}
+                {role === 'premium' && (
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate('/premium-renewal')}
+                    className="w-full h-12 rounded-2xl font-semibold text-base border-primary text-primary"
+                  >
+                    <Star className="w-5 h-5 mr-2" />
+                    သက်တမ်းတိုးရန်
+                  </Button>
+                )}
+
+                {/* Active Devices button - only for premium/admin */}
                 <Button
                   variant="outline"
-                  onClick={() => navigate('/premium-renewal')}
-                  className="w-full h-12 rounded-2xl font-semibold text-base border-primary text-primary mb-3"
+                  onClick={() => setShowDevicesModal(true)}
+                  className="w-full h-12 rounded-2xl font-semibold text-base border-border text-muted-foreground"
                 >
-                  <Star className="w-5 h-5 mr-2" />
-                  သက်တမ်းတိုးရန်
+                  <Smartphone className="w-5 h-5 mr-2" />
+                  အသုံးပြုနေသော device များ
                 </Button>
-              )}
+              </>
+            ) : (
+              <>
+                {/* Normal user: Apply for VIP */}
+                <Button
+                  onClick={() => navigate('/premium-renewal')}
+                  className="w-full h-12 rounded-2xl font-semibold text-base gap-2 bg-primary hover:bg-primary/90"
+                >
+                  <Star className="w-5 h-5" />
+                  VIP လျှောက်ရန်
+                </Button>
 
-              {/* Active Devices button - only for premium/admin */}
-              <Button
-                variant="outline"
-                onClick={() => setShowDevicesModal(true)}
-                className="w-full h-12 rounded-2xl font-semibold text-base border-border text-muted-foreground"
-              >
-                <Smartphone className="w-5 h-5 mr-2" />
-                အသုံးပြုနေသော device များ
-              </Button>
-            </>
-          ) : (
-            <>
-              {/* Normal user: Apply for VIP */}
-              <Button
-                onClick={() => navigate('/premium-renewal')}
-                className="w-full h-12 rounded-2xl font-semibold text-base gap-2 mb-3 bg-primary hover:bg-primary/90"
-              >
-                <Star className="w-5 h-5" />
-                VIP လျှောက်ရန်
-              </Button>
-
-              {/* Browse button */}
-              <Button
-                variant="outline"
-                onClick={() => navigate('/')}
-                className="w-full h-12 rounded-2xl font-semibold text-base border-border"
-              >
-                <Smile className="w-5 h-5 mr-2" />
-                ဘာတွေရှိလဲကြည့်မယ်
-              </Button>
-            </>
-          )}
+                {/* Browse button */}
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/')}
+                  className="w-full h-12 rounded-2xl font-semibold text-base border-border"
+                >
+                  <Smile className="w-5 h-5 mr-2" />
+                  ဘာတွေရှိလဲကြည့်မယ်
+                </Button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Social Links */}
