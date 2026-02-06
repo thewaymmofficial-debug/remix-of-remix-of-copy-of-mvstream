@@ -107,13 +107,17 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
         headers['Range'] = `bytes=${startByte}-`;
       }
 
+      console.log('[Download] Fetching via proxy:', proxyUrl);
       const response = await fetch(proxyUrl, {
         signal: controller.signal,
         headers,
       });
 
+      console.log('[Download] Response status:', response.status, response.statusText);
+
       if (!response.ok && response.status !== 206) {
         const errorBody = await response.text().catch(() => '');
+        console.error('[Download] Error body:', errorBody);
         throw new Error(`HTTP ${response.status}: ${response.statusText} ${errorBody}`);
       }
 
