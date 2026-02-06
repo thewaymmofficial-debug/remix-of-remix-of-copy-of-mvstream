@@ -5,6 +5,7 @@ const CHANNEL_ID = "-1003139915696";
 const ADMIN_IDS = ["6158106622"];
 
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
+const STREAM_BASE_URL = "https://icnfjixjohbxjxqbnnac.supabase.co/functions/v1/telegram-stream";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -40,24 +41,6 @@ async function forwardMessage(chatId: string, fromChatId: number, messageId: num
   const data = await res.json();
   console.log("forwardMessage response:", JSON.stringify(data));
   return data;
-}
-
-async function getFileLink(fileId: string): Promise<string | null> {
-  try {
-    const res = await fetch(`${TELEGRAM_API}/getFile`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ file_id: fileId }),
-    });
-    const data = await res.json();
-    console.log("getFile response:", JSON.stringify(data));
-    if (data.ok && data.result?.file_path) {
-      return `https://api.telegram.org/file/bot${BOT_TOKEN}/${data.result.file_path}`;
-    }
-  } catch (err) {
-    console.error("getFile error:", err);
-  }
-  return null;
 }
 
 function getFileInfo(message: any): { fileId: string; fileName: string; fileSize: number } | null {
@@ -106,7 +89,6 @@ function formatFileSize(bytes: number): string {
 }
 
 function buildChannelLink(channelId: string, messageId: number): string {
-  // Remove the -100 prefix for the t.me link
   const cleanId = channelId.replace(/^-100/, "");
   return `https://t.me/c/${cleanId}/${messageId}`;
 }
@@ -146,10 +128,12 @@ Deno.serve(async (req) => {
         chatId,
         "🎬 <b>Cineverse File Bot</b>\n\n" +
           "Send me any file (video, document, audio, photo) and I'll generate stream/download links for you.\n\n" +
-          "The file will be forwarded to the archive channel and you'll get:\n" +
-          "• A permanent channel link\n" +
-          "• A direct download link (for files under 20MB)\n\n" +
-          "Just paste the links into the admin panel!"
+          "You'll get:\n" +
+          "• 🎬 <b>Stream URL</b> — paste as stream_url for in-app playback\n" +
+          "• 📥 <b>Download URL</b> — paste as download_url\n" +
+          "• 📢 <b>Channel Link</b> — paste as telegram_url\n\n" +
+          "⚠️ Stream/Download URLs only work for files under 20MB (Telegram Bot API limit).\n" +
+          "For larger files, use the Channel Link or upload to external hosting."
       );
       return new Response(JSON.stringify({ ok: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -173,29 +157,34 @@ Deno.serve(async (req) => {
       channelLink = buildChannelLink(CHANNEL_ID, forwardResult.result.message_id);
     }
 
-    // Try to get direct download link (only works for files under ~20MB)
-    let directLink: string | null = null;
-    if (fileInfo.fileSize > 0 && fileInfo.fileSize <= 20 * 1024 * 1024) {
-      directLink = await getFileLink(fileInfo.fileId);
-    }
+    const isSmallFile = fileInfo.fileSize > 0 && fileInfo.fileSize <= 20 * 1024 * 1024;
+
+    // Build stream and download URLs using the proxy
+    const streamUrl = `${STREAM_BASE_URL}?file_id=${encodeURIComponent(fileInfo.fileId)}`;
+    const downloadUrl = `${STREAM_BASE_URL}?file_id=${encodeURIComponent(fileInfo.fileId)}&download=true&name=${encodeURIComponent(fileInfo.fileName)}`;
 
     // Build reply message
     let replyText =
       `📁 <b>File Received</b>\n\n` +
       `<b>Name:</b> <code>${fileInfo.fileName}</code>\n` +
-      `<b>Size:</b> ${formatFileSize(fileInfo.fileSize)}\n\n` +
-      `🔗 <b>Stream/Download Links:</b>\n\n` +
-      `<b>Channel Link:</b>\n<code>${channelLink}</code>\n`;
+      `<b>Size:</b> ${formatFileSize(fileInfo.fileSize)}\n\n`;
 
-    if (directLink) {
-      replyText += `\n<b>Direct Link:</b>\n<code>${directLink}</code>\n`;
-    }
-
-    replyText +=
-      `\n💡 Copy the Channel Link and paste it as <b>telegram_url</b> in the admin panel.`;
-
-    if (directLink) {
-      replyText += `\nUse the Direct Link for <b>stream_url</b> or <b>download_url</b>.`;
+    if (isSmallFile) {
+      replyText +=
+        `🔗 <b>Links:</b>\n\n` +
+        `🎬 <b>Stream URL (for stream_url):</b>\n<code>${streamUrl}</code>\n\n` +
+        `📥 <b>Download URL (for download_url):</b>\n<code>${downloadUrl}</code>\n\n` +
+        `📢 <b>Channel Link (for telegram_url):</b>\n<code>${channelLink}</code>\n\n` +
+        `✅ All links are ready! Copy and paste into the admin panel.`;
+    } else {
+      replyText +=
+        `⚠️ <b>File exceeds 20MB — Bot API streaming limit</b>\n\n` +
+        `📢 <b>Channel Link (for telegram_url):</b>\n<code>${channelLink}</code>\n\n` +
+        `❌ Stream/Download URLs are NOT available for files over 20MB.\n\n` +
+        `💡 <b>For large files, you can:</b>\n` +
+        `• Upload to Google Drive / Mega and use that URL as stream_url\n` +
+        `• Use a direct hosting service for the video file\n` +
+        `• The Channel Link is saved for reference`;
     }
 
     await sendMessage(chatId, replyText);
