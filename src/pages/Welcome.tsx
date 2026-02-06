@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Crown, Sun, Moon, Trash2, Smartphone, Star, Smile, Play, Calendar, AlertTriangle } from 'lucide-react';
+import { LogOut, Crown, Sun, Moon, Trash2, Smartphone, Star, Smile, Play, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -20,13 +20,10 @@ export default function Welcome() {
   const { t } = useLanguage();
   const { theme, setTheme } = useTheme();
   const [showDevicesModal, setShowDevicesModal] = useState(false);
-  const [showDeviceLimitModal, setShowDeviceLimitModal] = useState(false);
-  const [deviceCheckDone, setDeviceCheckDone] = useState(false);
 
   const {
     devices,
     maxDevices,
-    registerDevice,
     removeDevice,
     currentDeviceId,
   } = useDevices(user?.id);
@@ -37,21 +34,6 @@ export default function Welcome() {
       navigate('/auth');
     }
   }, [user, isLoading, navigate]);
-
-  // Register device on login and check limits (only for premium/admin)
-  useEffect(() => {
-    if (user && !isLoading && !deviceCheckDone && (isPremium || isAdmin)) {
-      registerDevice(user.id).then(({ allowed }) => {
-        if (!allowed) {
-          setShowDeviceLimitModal(true);
-        }
-        setDeviceCheckDone(true);
-      });
-    } else if (user && !isLoading && !deviceCheckDone) {
-      // Free user - skip device check
-      setDeviceCheckDone(true);
-    }
-  }, [user, isLoading, deviceCheckDone, isPremium, isAdmin, registerDevice]);
 
   if (isLoading) {
     return (
@@ -333,70 +315,6 @@ export default function Welcome() {
         </DialogContent>
       </Dialog>
 
-      {/* Device Limit Reached Modal */}
-      <Dialog open={showDeviceLimitModal} onOpenChange={setShowDeviceLimitModal}>
-        <DialogContent className="sm:max-w-sm rounded-2xl bg-background border-border p-6">
-          <div className="flex flex-col items-center text-center mb-4">
-            <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-3">
-              <AlertTriangle className="w-8 h-8 text-destructive" />
-            </div>
-            <h2 className="text-xl font-bold text-foreground">Device Limit Reached</h2>
-            <p className="text-sm text-muted-foreground mt-2">
-              Your plan allows a maximum of {maxDevices} device{maxDevices > 1 ? 's' : ''}. 
-              Please remove a device below to continue on this device.
-            </p>
-          </div>
-
-          <div className="space-y-3 max-h-60 overflow-y-auto">
-            {devices.map((device) => (
-              <div key={device.id} className="border border-border rounded-xl p-4 flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center flex-shrink-0">
-                  <Smartphone className="w-6 h-6 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-foreground text-sm">{device.device_name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Last active: {new Date(device.last_active_at).toLocaleDateString()}
-                  </p>
-                </div>
-                <button
-                  onClick={async () => {
-                    await handleRemoveDevice(device.id);
-                    // Re-register this device after removing one
-                    if (user) {
-                      const result = await registerDevice(user.id);
-                      if (result.allowed) {
-                        setShowDeviceLimitModal(false);
-                        toast.success('Device registered successfully');
-                      }
-                    }
-                  }}
-                  className="p-2 text-destructive hover:text-destructive/80 transition-colors"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex gap-3 mt-4">
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={handleSignOut}
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
-            </Button>
-            <Button
-              className="flex-1"
-              onClick={() => navigate('/premium-renewal')}
-            >
-              Upgrade Plan
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
