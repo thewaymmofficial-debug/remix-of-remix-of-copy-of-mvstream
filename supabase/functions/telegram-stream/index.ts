@@ -1,6 +1,9 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
+const API_ID = 2040;
+const API_HASH = "b18441a1ff607e10a989891a5462e627";
 const BOT_TOKEN = "7684270072:AAGPUfKdSTfk4VCZAie4PsnNKLhebO0hyqA";
+const CHANNEL_ID = "-1003139915696";
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
 const corsHeaders = {
@@ -11,18 +14,78 @@ const corsHeaders = {
     "Content-Range, Accept-Ranges, Content-Length, Content-Type",
 };
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+const contentTypeMap: Record<string, string> = {
+  mp4: "video/mp4",
+  mkv: "video/x-matroska",
+  avi: "video/x-msvideo",
+  mov: "video/quicktime",
+  webm: "video/webm",
+  mp3: "audio/mpeg",
+  flac: "audio/flac",
+  wav: "audio/wav",
+  ogg: "audio/ogg",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  gif: "image/gif",
+  webp: "image/webp",
+  pdf: "application/pdf",
+};
+
+function getContentType(fileName: string): string {
+  const ext = fileName.split(".").pop()?.toLowerCase() || "";
+  return contentTypeMap[ext] || "application/octet-stream";
+}
+
+// ─── MTProto streaming via GramJS (unlimited file size) ───
+
+async function handleMTProtoStream(req: Request, msgId: number) {
+  const { TelegramClient } = await import("npm:telegram@2");
+  const { StringSession } = await import("npm:telegram/sessions");
+  const { Api } = await import("npm:telegram/tl");
+
+  let client: InstanceType<typeof TelegramClient> | null = null;
 
   try {
-    const url = new URL(req.url);
-    const fileId = url.searchParams.get("file_id");
+    console.log(`MTProto stream request for msg_id: ${msgId}`);
 
-    if (!fileId) {
+    const session = new StringSession("");
+    client = new TelegramClient(session, API_ID, API_HASH, {
+      connectionRetries: 3,
+      useWSS: true,
+    });
+
+    await client.start({ botAuthToken: BOT_TOKEN });
+    console.log("GramJS client connected as bot");
+
+    // Resolve channel entity and get the message
+    const channelEntity = await client.getEntity(CHANNEL_ID);
+    const messages = await client.getMessages(channelEntity, {
+      ids: [msgId],
+    });
+    const message = messages[0];
+
+    if (!message || !message.media) {
+      await client.disconnect().catch(() => {});
       return new Response(
-        JSON.stringify({ error: "Missing file_id parameter" }),
+        JSON.stringify({ error: "Message not found or has no media" }),
+        {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Extract document from media
+    const media = message.media;
+    let document: any = null;
+
+    if (media.className === "MessageMediaDocument" && media.document?.className === "Document") {
+      document = media.document;
+    } else {
+      await client.disconnect().catch(() => {});
+      return new Response(
+        JSON.stringify({ error: "Unsupported media type — only documents/videos supported" }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -30,9 +93,139 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Stream request for file_id: ${fileId}`);
+    const fileSize = Number(document.size);
 
-    // Get file path from Telegram
+    // Get filename from attributes
+    let fileName = "file";
+    for (const attr of document.attributes || []) {
+      if (attr.className === "DocumentAttributeFilename") {
+        fileName = attr.fileName;
+        break;
+      }
+    }
+
+    const contentType = getContentType(fileName);
+    console.log(`File: ${fileName}, Size: ${fileSize}, Type: ${contentType}`);
+
+    // Parse Range header
+    const rangeHeader = req.headers.get("range");
+    let start = 0;
+    let end = fileSize - 1;
+
+    if (rangeHeader && fileSize > 0) {
+      const match = rangeHeader.match(/bytes=(\d+)-(\d*)/);
+      if (match) {
+        start = parseInt(match[1], 10);
+        end = match[2] ? parseInt(match[2], 10) : fileSize - 1;
+      }
+    }
+
+    const responseLength = end - start + 1;
+    const REQUEST_SIZE = 512 * 1024; // 512KB — must be power of 2, max 1MB
+    const alignedStart = Math.floor(start / REQUEST_SIZE) * REQUEST_SIZE;
+    const skipBytes = start - alignedStart;
+
+    console.log(
+      `Streaming bytes ${start}-${end}/${fileSize} (aligned from ${alignedStart}, skip ${skipBytes})`
+    );
+
+    // Build InputDocumentFileLocation
+    const inputLocation = new Api.InputDocumentFileLocation({
+      id: document.id,
+      accessHash: document.accessHash,
+      fileReference: document.fileReference,
+      thumbSize: "",
+    });
+
+    const clientRef = client;
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          let bytesWritten = 0;
+          let isFirstChunk = true;
+
+          for await (const chunk of clientRef.iterDownload({
+            file: inputLocation,
+            offset: BigInt(alignedStart),
+            requestSize: REQUEST_SIZE,
+            dcId: document.dcId,
+            fileSize: BigInt(fileSize),
+          })) {
+            let data = new Uint8Array(chunk);
+
+            // On first chunk, skip alignment padding
+            if (isFirstChunk && skipBytes > 0) {
+              data = data.slice(skipBytes);
+              isFirstChunk = false;
+            } else {
+              isFirstChunk = false;
+            }
+
+            // Trim to remaining needed bytes
+            const remaining = responseLength - bytesWritten;
+            if (remaining <= 0) break;
+            if (data.length > remaining) {
+              data = data.slice(0, remaining);
+            }
+
+            controller.enqueue(data);
+            bytesWritten += data.length;
+
+            if (bytesWritten >= responseLength) break;
+          }
+
+          controller.close();
+        } catch (err) {
+          console.error("Stream chunk error:", err);
+          controller.error(err);
+        } finally {
+          await clientRef.disconnect().catch(() => {});
+          console.log("GramJS client disconnected");
+        }
+      },
+    });
+
+    const headers: Record<string, string> = {
+      ...corsHeaders,
+      "Content-Type": contentType,
+      "Accept-Ranges": "bytes",
+      "Content-Length": String(responseLength),
+    };
+
+    // Download disposition
+    const download = new URL(req.url).searchParams.get("download");
+    if (download === "true") {
+      headers["Content-Disposition"] = `attachment; filename="${fileName}"`;
+    }
+
+    if (rangeHeader) {
+      headers["Content-Range"] = `bytes ${start}-${end}/${fileSize}`;
+      return new Response(stream, { status: 206, headers });
+    }
+
+    return new Response(stream, { status: 200, headers });
+  } catch (error) {
+    console.error("MTProto stream error:", error);
+    if (client) await client.disconnect().catch(() => {});
+    return new Response(
+      JSON.stringify({
+        error: "Failed to stream file via MTProto",
+        details: String(error),
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
+  }
+}
+
+// ─── Bot API fallback (max 20MB) ───
+
+async function handleBotApiStream(req: Request, fileId: string) {
+  try {
+    console.log(`Bot API stream for file_id: ${fileId}`);
+
     const getFileRes = await fetch(`${TELEGRAM_API}/getFile`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -40,29 +233,8 @@ Deno.serve(async (req) => {
     });
 
     const getFileData = await getFileRes.json();
-    console.log("getFile response:", JSON.stringify(getFileData));
-
     if (!getFileData.ok || !getFileData.result?.file_path) {
-      const errorMsg =
-        getFileData.description || "Failed to get file from Telegram";
-
-      // Check if it's a file size limitation
-      if (
-        errorMsg.includes("too big") ||
-        errorMsg.includes("file is too large")
-      ) {
-        return new Response(
-          JSON.stringify({
-            error:
-              "File is too large for Telegram Bot API streaming (>20MB limit). Use an external hosting service for large files.",
-          }),
-          {
-            status: 413,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
-      }
-
+      const errorMsg = getFileData.description || "Failed to get file";
       return new Response(JSON.stringify({ error: errorMsg }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -72,39 +244,16 @@ Deno.serve(async (req) => {
     const filePath = getFileData.result.file_path;
     const fileSize = getFileData.result.file_size || 0;
     const telegramFileUrl = `https://api.telegram.org/file/bot${BOT_TOKEN}/${filePath}`;
+    const contentType = getContentType(filePath);
 
-    // Determine content type from file extension
-    const ext = filePath.split(".").pop()?.toLowerCase() || "";
-    const contentTypeMap: Record<string, string> = {
-      mp4: "video/mp4",
-      mkv: "video/x-matroska",
-      avi: "video/x-msvideo",
-      mov: "video/quicktime",
-      webm: "video/webm",
-      mp3: "audio/mpeg",
-      flac: "audio/flac",
-      wav: "audio/wav",
-      ogg: "audio/ogg",
-      jpg: "image/jpeg",
-      jpeg: "image/jpeg",
-      png: "image/png",
-      gif: "image/gif",
-      webp: "image/webp",
-      pdf: "application/pdf",
-    };
-    const contentType = contentTypeMap[ext] || "application/octet-stream";
-
-    // Handle range requests for video seeking
+    // Range support
     const rangeHeader = req.headers.get("range");
-
     if (rangeHeader && fileSize > 0) {
       const match = rangeHeader.match(/bytes=(\d+)-(\d*)/);
       if (match) {
         const start = parseInt(match[1], 10);
         const end = match[2] ? parseInt(match[2], 10) : fileSize - 1;
         const chunkSize = end - start + 1;
-
-        console.log(`Range request: bytes=${start}-${end}/${fileSize}`);
 
         const rangeRes = await fetch(telegramFileUrl, {
           headers: { Range: `bytes=${start}-${end}` },
@@ -123,35 +272,60 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Full file response
-    console.log(`Streaming full file: ${filePath} (${fileSize} bytes)`);
     const fileRes = await fetch(telegramFileUrl);
-
-    const responseHeaders: Record<string, string> = {
+    const headers: Record<string, string> = {
       ...corsHeaders,
       "Content-Type": contentType,
       "Accept-Ranges": "bytes",
     };
+    if (fileSize > 0) headers["Content-Length"] = String(fileSize);
 
-    if (fileSize > 0) {
-      responseHeaders["Content-Length"] = String(fileSize);
+    const reqUrl = new URL(req.url);
+    if (reqUrl.searchParams.get("download") === "true") {
+      const name = reqUrl.searchParams.get("name") || filePath.split("/").pop() || "file";
+      headers["Content-Disposition"] = `attachment; filename="${name}"`;
     }
 
-    // For downloads, add disposition header if requested
-    const download = url.searchParams.get("download");
-    if (download === "true") {
-      const fileName =
-        url.searchParams.get("name") || filePath.split("/").pop() || "file";
-      responseHeaders["Content-Disposition"] =
-        `attachment; filename="${fileName}"`;
-    }
-
-    return new Response(fileRes.body, {
-      status: 200,
-      headers: responseHeaders,
-    });
+    return new Response(fileRes.body, { status: 200, headers });
   } catch (error) {
-    console.error("Stream error:", error);
+    console.error("Bot API stream error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
+  }
+}
+
+// ─── Main handler ───
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  try {
+    const url = new URL(req.url);
+    const msgId = url.searchParams.get("msg_id");
+    const fileId = url.searchParams.get("file_id");
+
+    if (msgId) {
+      return await handleMTProtoStream(req, parseInt(msgId, 10));
+    } else if (fileId) {
+      return await handleBotApiStream(req, fileId);
+    } else {
+      return new Response(
+        JSON.stringify({ error: "Missing msg_id or file_id parameter" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+  } catch (error) {
+    console.error("Handler error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       {
