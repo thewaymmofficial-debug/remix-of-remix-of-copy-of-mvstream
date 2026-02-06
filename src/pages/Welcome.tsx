@@ -28,7 +28,7 @@ export default function Welcome() {
     maxDevices,
     registerDevice,
     removeDevice,
-    
+    currentDeviceId,
   } = useDevices(user?.id);
 
   // Redirect if not logged in
@@ -68,7 +68,7 @@ export default function Welcome() {
 
   const handleRemoveDevice = async (deviceDbId: string) => {
     await removeDevice(deviceDbId);
-    toast.success('Device removed successfully');
+    toast.success('Device removed successfully. That device will be signed out automatically.');
   };
 
   // Map premium_type to display label
@@ -279,44 +279,49 @@ export default function Welcome() {
       {/* Active Devices Modal */}
       <Dialog open={showDevicesModal} onOpenChange={setShowDevicesModal}>
         <DialogContent className="sm:max-w-sm rounded-2xl bg-background border-border p-6">
-          <h2 className="text-xl font-bold text-foreground mb-4">Active Devices</h2>
+          <h2 className="text-xl font-bold text-foreground mb-1">Active Devices</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            {devices.length} / {isAdmin ? '∞' : maxDevices} devices active
+          </p>
 
           <div className="space-y-3 max-h-60 overflow-y-auto">
-            {devices.map((device) => (
-              <div
-                key={device.id}
-                className="bg-accent/50 rounded-xl p-4 flex items-center gap-3"
-              >
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <Smartphone className="w-6 h-6 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-foreground text-sm">
-                    {device.device_name}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {device.device_id.substring(0, 10).toUpperCase()}
-                  </p>
-                </div>
-                <button
-                  onClick={() => handleRemoveDevice(device.id)}
-                  className="p-2 text-destructive hover:text-destructive/80 transition-colors"
+            {devices.map((device) => {
+              const isCurrentDevice = device.device_id === currentDeviceId;
+              return (
+                <div
+                  key={device.id}
+                  className={cn(
+                    "rounded-xl p-4 flex items-center gap-3",
+                    isCurrentDevice
+                      ? "bg-primary/10 border border-primary/30"
+                      : "bg-accent/50"
+                  )}
                 >
-                  <Trash2 className="w-5 h-5" />
-                </button>
-              </div>
-            ))}
-          </div>
-
-          <div className="border-t border-border mt-4 pt-3">
-            <p className="text-sm text-muted-foreground text-center mb-1">
-              နောက်ဆုံး Logout ထုက်ထားသောနေ့
-            </p>
-            <p className="text-sm text-muted-foreground text-center">
-              {devices.length > 0
-                ? new Date(devices[devices.length - 1]?.last_active_at).toLocaleDateString('my-MM')
-                : '-'}
-            </p>
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Smartphone className="w-6 h-6 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-foreground text-sm">
+                      {device.device_name}
+                      {isCurrentDevice && (
+                        <span className="ml-2 text-xs text-primary font-normal">(This device)</span>
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Last active: {new Date(device.last_active_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                  {!isCurrentDevice && (
+                    <button
+                      onClick={() => handleRemoveDevice(device.id)}
+                      className="p-2 text-destructive hover:text-destructive/80 transition-colors"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           <button

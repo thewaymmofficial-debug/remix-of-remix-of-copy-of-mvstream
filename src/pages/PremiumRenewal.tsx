@@ -98,9 +98,7 @@ export default function PremiumRenewal() {
       });
 
       toast.success('တင်သွင်းပြီးပါပြီ! စစ်ဆေးပြီးအကြောင်းကြားပါမည်');
-      setTransactionId('');
-      setScreenshot(null);
-      setSelectedPlanId('');
+      navigate('/');
     } catch {
       toast.error('အမှားတစ်ခု ဖြစ်ပွားသည်');
     } finally {
