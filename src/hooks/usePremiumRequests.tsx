@@ -80,6 +80,7 @@ export function useSubmitPremiumRequest() {
       plan_price: string;
       transaction_id: string;
       screenshot_url: string | null;
+      premium_type?: string;
     }) => {
       const { data, error } = await supabase
         .from('premium_requests')

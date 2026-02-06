@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Copy, Upload, FileText, Moon, Sun, HelpCircle, Shield, Gem, Loader2 } from 'lucide-react';
+import { ArrowLeft, Copy, Upload, FileText, Moon, Sun, HelpCircle, Shield, Gem, Loader2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -12,7 +12,11 @@ import { usePricingPlans } from '@/hooks/usePricingPlans';
 import { useSubmitPremiumRequest } from '@/hooks/usePremiumRequests';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
+type PlanType = 'gold' | 'platinum';
+
+const PLATINUM_MULTIPLIER = 1.4;
 
 export default function PremiumRenewal() {
   const navigate = useNavigate();
@@ -23,6 +27,7 @@ export default function PremiumRenewal() {
   const { data: pricingPlans, isLoading: plansLoading } = usePricingPlans();
   const submitRequest = useSubmitPremiumRequest();
 
+  const [selectedType, setSelectedType] = useState<PlanType>('gold');
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const [transactionId, setTransactionId] = useState('');
   const [screenshot, setScreenshot] = useState<File | null>(null);
@@ -37,6 +42,13 @@ export default function PremiumRenewal() {
     if (e.target.files && e.target.files[0]) {
       setScreenshot(e.target.files[0]);
     }
+  };
+
+  const getPlanPrice = (plan: { price: string }, type: PlanType): string => {
+    if (type === 'gold') return plan.price;
+    const priceNum = parseInt(plan.price.replace(/[^0-9]/g, ''));
+    const platinumPrice = Math.round(priceNum * PLATINUM_MULTIPLIER);
+    return `${platinumPrice.toLocaleString()} MMK`;
   };
 
   const handleSubmit = async () => {
@@ -73,14 +85,16 @@ export default function PremiumRenewal() {
       }
 
       const selectedPlan = pricingPlans?.find(p => p.id === selectedPlanId);
+      const planPrice = selectedPlan ? getPlanPrice(selectedPlan, selectedType) : '';
 
       await submitRequest.mutateAsync({
         user_id: user.id,
         plan_id: selectedPlanId,
         plan_duration: selectedPlan?.duration || '',
-        plan_price: selectedPlan?.price || '',
+        plan_price: planPrice,
         transaction_id: transactionId.trim(),
         screenshot_url: screenshotUrl,
+        premium_type: selectedType,
       });
 
       toast.success('တင်သွင်းပြီးပါပြီ! စစ်ဆေးပြီးအကြောင်းကြားပါမည်');
@@ -135,15 +149,32 @@ export default function PremiumRenewal() {
       ) : (
         <div className="px-4 py-6 max-w-lg mx-auto space-y-6">
 
-          {/* Plan Type Selection Cards */}
+          {/* Plan Type Selection Cards - Clickable */}
           <div>
             <h2 className="text-lg font-bold text-foreground mb-4">
               Plan ကွာခြားချက်များ
             </h2>
             <div className="grid grid-cols-2 gap-3">
               {/* Gold Card */}
-              <div className="bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl p-5 text-white text-center relative overflow-hidden">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedType('gold');
+                  setSelectedPlanId('');
+                }}
+                className={cn(
+                  "bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl p-5 text-white text-center relative overflow-hidden transition-all",
+                  selectedType === 'gold'
+                    ? 'ring-3 ring-amber-300 scale-[1.02] shadow-lg'
+                    : 'opacity-70'
+                )}
+              >
                 <div className="absolute -right-4 -top-4 w-16 h-16 rounded-full bg-white/10" />
+                {selectedType === 'gold' && (
+                  <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-white flex items-center justify-center">
+                    <Check className="w-4 h-4 text-amber-500" />
+                  </div>
+                )}
                 <div className="relative z-10">
                   <div className="w-12 h-12 mx-auto rounded-full bg-white/20 flex items-center justify-center mb-3">
                     <Shield className="w-6 h-6 text-white" />
@@ -153,11 +184,28 @@ export default function PremiumRenewal() {
                     2 Devices
                   </span>
                 </div>
-              </div>
+              </button>
 
               {/* Platinum Card */}
-              <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-5 text-white text-center relative overflow-hidden">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedType('platinum');
+                  setSelectedPlanId('');
+                }}
+                className={cn(
+                  "bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-5 text-white text-center relative overflow-hidden transition-all",
+                  selectedType === 'platinum'
+                    ? 'ring-3 ring-blue-300 scale-[1.02] shadow-lg'
+                    : 'opacity-70'
+                )}
+              >
                 <div className="absolute -right-4 -top-4 w-16 h-16 rounded-full bg-white/10" />
+                {selectedType === 'platinum' && (
+                  <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-white flex items-center justify-center">
+                    <Check className="w-4 h-4 text-blue-500" />
+                  </div>
+                )}
                 <div className="relative z-10">
                   <div className="w-12 h-12 mx-auto rounded-full bg-white/20 flex items-center justify-center mb-3">
                     <Gem className="w-6 h-6 text-white" />
@@ -167,62 +215,59 @@ export default function PremiumRenewal() {
                     3 Devices
                   </span>
                 </div>
-              </div>
+              </button>
             </div>
           </div>
 
-          {/* VIP Member ဈေးနှုန်းများ */}
+          {/* VIP Member ဈေးနှုန်းများ - Shows pricing for selected type */}
           <div>
             <h2 className="text-lg font-bold text-foreground mb-4">
               VIP Member ဈေးနှုန်းများ
             </h2>
 
-            {/* Gold Plan Pricing */}
-            <div className="bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl p-5 text-white relative overflow-hidden mb-4">
-              <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-white/10" />
-              <div className="relative z-10">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                    <Shield className="w-5 h-5 text-white" />
-                  </div>
-                  <h3 className="text-xl font-bold">Gold Plan</h3>
-                </div>
-                <div className="bg-white/15 rounded-xl divide-y divide-white/20">
-                  {pricingPlans?.map((plan) => (
-                    <div key={`gold-${plan.id}`} className="flex items-center justify-between px-4 py-3">
-                      <span className="text-sm font-medium">{plan.duration}</span>
-                      <span className="text-sm font-bold">{plan.price}</span>
+            {selectedType === 'gold' ? (
+              /* Gold Plan Pricing */
+              <div className="bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl p-5 text-white relative overflow-hidden">
+                <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-white/10" />
+                <div className="relative z-10">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                      <Shield className="w-5 h-5 text-white" />
                     </div>
-                  ))}
+                    <h3 className="text-xl font-bold">Gold Plan</h3>
+                  </div>
+                  <div className="bg-white/15 rounded-xl divide-y divide-white/20">
+                    {pricingPlans?.map((plan) => (
+                      <div key={`gold-${plan.id}`} className="flex items-center justify-between px-4 py-3">
+                        <span className="text-sm font-medium">{plan.duration}</span>
+                        <span className="text-sm font-bold">{plan.price}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-
-            {/* Platinum Plan Pricing */}
-            <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-5 text-white relative overflow-hidden">
-              <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-white/10" />
-              <div className="relative z-10">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                    <Gem className="w-5 h-5 text-white" />
+            ) : (
+              /* Platinum Plan Pricing */
+              <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-5 text-white relative overflow-hidden">
+                <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-white/10" />
+                <div className="relative z-10">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                      <Gem className="w-5 h-5 text-white" />
+                    </div>
+                    <h3 className="text-xl font-bold">Platinum Plan</h3>
                   </div>
-                  <h3 className="text-xl font-bold">Platinum Plan</h3>
-                </div>
-                <div className="bg-white/15 rounded-xl divide-y divide-white/20">
-                  {pricingPlans?.map((plan) => {
-                    // Platinum prices are higher
-                    const priceNum = parseInt(plan.price.replace(/[^0-9]/g, ''));
-                    const platinumPrice = Math.round(priceNum * 1.4);
-                    return (
+                  <div className="bg-white/15 rounded-xl divide-y divide-white/20">
+                    {pricingPlans?.map((plan) => (
                       <div key={`plat-${plan.id}`} className="flex items-center justify-between px-4 py-3">
                         <span className="text-sm font-medium">{plan.duration}</span>
-                        <span className="text-sm font-bold">{platinumPrice.toLocaleString()} MMK</span>
+                        <span className="text-sm font-bold">{getPlanPrice(plan, 'platinum')}</span>
                       </div>
-                    );
-                  })}
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* သင်အသုံးပြုလိုသော Plan ကိုရွေးပါ */}
@@ -237,7 +282,7 @@ export default function PremiumRenewal() {
               <SelectContent className="bg-popover">
                 {pricingPlans?.map((plan) => (
                   <SelectItem key={plan.id} value={plan.id}>
-                    {plan.duration} — {plan.price}
+                    {selectedType === 'gold' ? 'Gold' : 'Platinum'} — {plan.duration} — {getPlanPrice(plan, selectedType)}
                   </SelectItem>
                 ))}
               </SelectContent>

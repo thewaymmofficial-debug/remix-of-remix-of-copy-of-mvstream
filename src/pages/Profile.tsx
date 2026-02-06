@@ -123,7 +123,11 @@ export default function Profile() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-lg font-semibold">
-                  {role === 'admin' ? t('administrator') : role === 'premium' ? t('premiumMember') : t('freeUser')}
+                  {role === 'admin'
+                    ? t('administrator')
+                    : role === 'premium'
+                    ? `${premiumType ? premiumType.charAt(0).toUpperCase() + premiumType.slice(1) : 'Premium'} Member`
+                    : t('freeUser')}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   {role === 'admin'
@@ -143,7 +147,7 @@ export default function Profile() {
                 }`}
               >
                 <span className="font-semibold uppercase text-sm">
-                  {role === 'admin' ? 'Admin' : role === 'premium' ? 'Premium' : 'Free'}
+                  {role === 'admin' ? 'Admin' : role === 'premium' ? (premiumType ? premiumType.charAt(0).toUpperCase() + premiumType.slice(1) : 'Premium') : 'Free'}
                 </span>
               </div>
             </div>

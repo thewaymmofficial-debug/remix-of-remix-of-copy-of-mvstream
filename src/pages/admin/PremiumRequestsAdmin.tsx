@@ -111,7 +111,7 @@ export default function PremiumRequestsAdmin() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{request.user_email}</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {request.plan_duration} • {request.plan_price}
+                      {(request as any).premium_type ? `${((request as any).premium_type as string).charAt(0).toUpperCase() + ((request as any).premium_type as string).slice(1)} • ` : ''}{request.plan_duration} • {request.plan_price}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       TxID: {request.transaction_id}
@@ -183,6 +183,10 @@ export default function PremiumRequestsAdmin() {
               <div>
                 <p className="text-xs text-muted-foreground">User</p>
                 <p className="text-sm font-medium">{selectedRequest.user_email}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Plan Type</p>
+                <p className="text-sm font-medium capitalize">{(selectedRequest as any)?.premium_type || 'gold'}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Plan</p>
