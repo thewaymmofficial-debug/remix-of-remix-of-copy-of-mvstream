@@ -7,6 +7,7 @@ import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/hooks/useAuth";
 import { FilterProvider } from "@/contexts/FilterContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import MovieDetails from "./pages/MovieDetails";
@@ -29,8 +30,8 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      gcTime: 1000 * 60 * 30, // 30 minutes (previously cacheTime)
+      staleTime: 1000 * 60 * 5,
+      gcTime: 1000 * 60 * 30,
       retry: 3,
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
       refetchOnWindowFocus: false,
@@ -55,16 +56,16 @@ const App = () => (
               <Sonner />
               <BrowserRouter>
                 <Routes>
-                  <Route path="/" element={<Index />} />
                   <Route path="/auth" element={<Auth />} />
-                  <Route path="/movie/:id" element={<MovieDetails />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/watchlist" element={<Watchlist />} />
-                  <Route path="/history" element={<History />} />
-                  <Route path="/premium-renewal" element={<PremiumRenewal />} />
-                  <Route path="/request" element={<MovieRequest />} />
-                  <Route path="/tv-channels" element={<TvChannels />} />
-                  <Route path="/admin" element={<AdminLayout />}>
+                  <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+                  <Route path="/movie/:id" element={<ProtectedRoute><MovieDetails /></ProtectedRoute>} />
+                  <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                  <Route path="/watchlist" element={<ProtectedRoute><Watchlist /></ProtectedRoute>} />
+                  <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
+                  <Route path="/premium-renewal" element={<ProtectedRoute><PremiumRenewal /></ProtectedRoute>} />
+                  <Route path="/request" element={<ProtectedRoute><MovieRequest /></ProtectedRoute>} />
+                  <Route path="/tv-channels" element={<ProtectedRoute><TvChannels /></ProtectedRoute>} />
+                  <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
                     <Route index element={<Dashboard />} />
                     <Route path="movies" element={<MoviesAdmin />} />
                     <Route path="series/:movieId" element={<SeriesAdmin />} />

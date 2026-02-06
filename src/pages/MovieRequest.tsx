@@ -61,10 +61,7 @@ export default function MovieRequest() {
     },
   });
 
-  if (!authLoading && !user) {
-    navigate('/auth');
-    return null;
-  }
+  // Auth is handled by ProtectedRoute
 
   const getStatusBadge = (status: string) => {
     switch (status) {
