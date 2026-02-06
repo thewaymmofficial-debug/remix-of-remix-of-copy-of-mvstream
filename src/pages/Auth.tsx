@@ -180,6 +180,15 @@ export default function Auth() {
           >
             {isLoading ? t('loading') : isSignUp ? t('createAccount') : t('login')}
           </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full h-12 text-base font-semibold rounded-xl border-border"
+            onClick={() => navigate('/')}
+          >
+            {t('browseFirst')}
+          </Button>
         </form>
 
         {/* Divider */}

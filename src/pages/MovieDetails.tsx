@@ -19,6 +19,7 @@ import { PremiumModal } from '@/components/PremiumModal';
 import { SeasonEpisodeList } from '@/components/SeasonEpisodeList';
 import { RelatedMovies } from '@/components/RelatedMovies';
 import { ServerDrawer } from '@/components/ServerDrawer';
+import { LoginRequiredModal } from '@/components/LoginRequiredModal';
 import { useAuth } from '@/hooks/useAuth';
 import { useMovie, useIsInWatchlist, useAddToWatchlist, useRemoveFromWatchlist } from '@/hooks/useMovies';
 import { useUpdateProgress } from '@/hooks/useWatchHistory';
@@ -39,6 +40,8 @@ export default function MovieDetails() {
   const [showPlayDrawer, setShowPlayDrawer] = useState(false);
   const [showDownloadDrawer, setShowDownloadDrawer] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginFeature, setLoginFeature] = useState('');
   const { toast } = useToast();
   const { t } = useLanguage();
 
@@ -52,12 +55,6 @@ export default function MovieDetails() {
       });
     }
   }, [id, user]);
-
-  // Redirect if not logged in
-  if (!authLoading && !user) {
-    navigate('/auth');
-    return null;
-  }
 
   if (isLoading || authLoading) {
     return (
@@ -94,6 +91,11 @@ export default function MovieDetails() {
   }
 
   const handlePlay = () => {
+    if (!user) {
+      setLoginFeature(t('play'));
+      setShowLoginModal(true);
+      return;
+    }
     if (movie.is_premium && !isPremium) {
       setShowPremiumModal(true);
     } else {
@@ -102,6 +104,11 @@ export default function MovieDetails() {
   };
 
   const handleDownload = () => {
+    if (!user) {
+      setLoginFeature(t('download'));
+      setShowLoginModal(true);
+      return;
+    }
     if (movie.is_premium && !isPremium) {
       setShowPremiumModal(true);
     } else {
@@ -110,6 +117,11 @@ export default function MovieDetails() {
   };
 
   const toggleWatchlist = async () => {
+    if (!user) {
+      setLoginFeature(t('favorite'));
+      setShowLoginModal(true);
+      return;
+    }
     if (!id) return;
     try {
       if (isInWatchlist) {
@@ -364,6 +376,13 @@ export default function MovieDetails() {
 
       {/* Premium Modal */}
       <PremiumModal open={showPremiumModal} onOpenChange={setShowPremiumModal} />
+
+      {/* Login Required Modal for guests */}
+      <LoginRequiredModal
+        open={showLoginModal}
+        onOpenChange={setShowLoginModal}
+        feature={loginFeature}
+      />
 
       <MobileBottomNav />
     </div>
