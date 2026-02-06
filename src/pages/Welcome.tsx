@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, ChevronRight, RefreshCw, Smartphone, Sun, Moon } from 'lucide-react';
+import { LogOut, Crown, CalendarDays, Film, RefreshCw, Smartphone, Sun, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -10,20 +10,9 @@ import cineverseLogo from '@/assets/cineverse-logo.png';
 
 export default function Welcome() {
   const navigate = useNavigate();
-  const { user, profile, role, premiumExpiresAt, isLoading } = useAuth();
+  const { user, profile, role, premiumExpiresAt, isLoading, signOut } = useAuth();
   const { t } = useLanguage();
   const { theme, setTheme } = useTheme();
-  const [countdown, setCountdown] = useState(5);
-
-  // Auto-redirect after 5 seconds
-  useEffect(() => {
-    if (countdown <= 0) {
-      navigate('/');
-      return;
-    }
-    const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [countdown, navigate]);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -40,6 +29,11 @@ export default function Welcome() {
     );
   }
 
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
+  };
+
   const planLabel =
     role === 'admin'
       ? t('administrator')
@@ -48,13 +42,13 @@ export default function Welcome() {
       : t('freeUser');
 
   const expiryText = premiumExpiresAt
-    ? new Date(premiumExpiresAt).toLocaleDateString()
+    ? new Date(premiumExpiresAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
     : 'N/A';
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Theme toggle top-right */}
-      <div className="flex justify-end px-4 py-3">
+      {/* Top bar: theme toggle left, logout right */}
+      <div className="flex items-center justify-between px-4 py-3">
         <Button
           variant="ghost"
           size="icon"
@@ -63,21 +57,21 @@ export default function Welcome() {
         >
           {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
         </Button>
-      </div>
-
-      {/* Success Banner */}
-      <div className="mx-4 mb-6 flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-4 py-3">
-        <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
-        <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-          Login Successful
-        </span>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleSignOut}
+          className="h-9 w-9 text-primary"
+        >
+          <LogOut className="w-5 h-5" />
+        </Button>
       </div>
 
       {/* Main content */}
       <div className="flex-1 flex flex-col items-center px-6 pb-8">
-        {/* Avatar */}
+        {/* Avatar with edit icon */}
         <div className="relative mb-4">
-          <div className="w-24 h-24 rounded-full bg-card border-2 border-border flex items-center justify-center overflow-hidden">
+          <div className="w-28 h-28 rounded-full bg-card border-2 border-border flex items-center justify-center overflow-hidden shadow-lg">
             {profile?.avatar_url ? (
               <img
                 src={profile.avatar_url}
@@ -85,80 +79,95 @@ export default function Welcome() {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <img src={cineverseLogo} alt="Cineverse" className="w-16 h-16 object-contain" />
+              <img src={cineverseLogo} alt="Cineverse" className="w-20 h-20 object-contain" />
             )}
+          </div>
+          {/* Edit icon overlay */}
+          <div className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-md">
+            <svg className="w-4 h-4 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
           </div>
         </div>
 
         {/* User info */}
-        <h2 className="text-xl font-bold text-foreground mb-1">
+        <h2 className="text-2xl font-bold text-foreground mb-1">
           {profile?.display_name || 'User'}
         </h2>
-        <p className="text-sm text-muted-foreground mb-6">{user?.email}</p>
+        <p className="text-sm text-muted-foreground mb-8">{user?.email}</p>
 
-        {/* Plan Card */}
-        <div className="w-full max-w-sm bg-card rounded-xl border border-border p-4 mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm text-muted-foreground">Plan</span>
+        {/* Plan Card - matching reference with icons */}
+        <div className="w-full max-w-sm bg-card rounded-2xl border border-border p-5 mb-6 shadow-sm">
+          {/* Plan row */}
+          <div className="flex items-center justify-between pb-4 border-b border-border">
+            <div className="flex items-center gap-3">
+              <Crown className="w-5 h-5 text-primary" />
+              <span className="text-sm text-muted-foreground">Plan</span>
+            </div>
             <span
               className={cn(
-                'text-xs font-semibold px-3 py-1 rounded-full',
+                'text-sm font-bold',
                 role === 'admin'
-                  ? 'bg-yellow-500/20 text-yellow-500'
+                  ? 'text-yellow-500'
                   : role === 'premium'
-                  ? 'bg-purple-500/20 text-purple-500'
-                  : 'bg-muted text-muted-foreground'
+                  ? 'text-primary'
+                  : 'text-foreground'
               )}
             >
               {planLabel}
             </span>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Expires</span>
-            <span className="text-sm font-medium text-foreground">{expiryText}</span>
+
+          {/* Expires row */}
+          <div className="flex items-center justify-between pt-4">
+            <div className="flex items-center gap-3">
+              <CalendarDays className="w-5 h-5 text-primary" />
+              <span className="text-sm text-muted-foreground">Expires on</span>
+            </div>
+            <span className="text-sm font-bold text-foreground">{expiryText}</span>
           </div>
         </div>
 
-        {/* Action Buttons */}
+        {/* Action Buttons - matching reference style */}
         <div className="w-full max-w-sm space-y-3 mb-8">
           <Button
             onClick={() => navigate('/')}
-            className="w-full h-12 rounded-xl font-semibold text-base"
+            className="w-full h-14 rounded-2xl font-semibold text-base gap-2"
           >
-            Browse Movies
-            <ChevronRight className="w-5 h-5 ml-1" />
+            <Film className="w-5 h-5" />
+            Movie ကြည့်ရန်
           </Button>
 
           <Button
             variant="outline"
             onClick={() => window.location.reload()}
-            className="w-full h-12 rounded-xl font-semibold text-base border-border"
+            className="w-full h-14 rounded-2xl font-semibold text-base border-primary text-primary hover:bg-primary/5"
           >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Refresh News
+            <RefreshCw className="w-5 h-5 mr-2" />
+            သက်တမ်းတိုးရန်
           </Button>
 
           <Button
             variant="outline"
             onClick={() => navigate('/profile')}
-            className="w-full h-12 rounded-xl font-semibold text-base border-border"
+            className="w-full h-14 rounded-2xl font-semibold text-base border-border"
           >
-            <Smartphone className="w-4 h-4 mr-2" />
-            Active Devices
+            <Smartphone className="w-5 h-5 mr-2" />
+            အသုံးပြုနေသော device များ
           </Button>
         </div>
 
         {/* Social Links */}
         <div className="mt-auto text-center">
-          <p className="text-sm text-muted-foreground mb-3">{t('followUs')}</p>
-          <div className="flex items-center justify-center gap-6">
+          <p className="text-sm text-muted-foreground mb-4">{t('followUs')}</p>
+          <div className="flex items-center justify-center gap-8">
             <a
               href="https://facebook.com"
               target="_blank"
               rel="noopener noreferrer"
               className="text-muted-foreground hover:text-foreground transition-colors"
             >
-              <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+              <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
               </svg>
             </a>
@@ -168,7 +177,7 @@ export default function Welcome() {
               rel="noopener noreferrer"
               className="text-muted-foreground hover:text-foreground transition-colors"
             >
-              <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+              <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z" />
               </svg>
             </a>
@@ -178,16 +187,16 @@ export default function Welcome() {
               rel="noopener noreferrer"
               className="text-muted-foreground hover:text-foreground transition-colors"
             >
-              <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+              <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
               </svg>
             </a>
           </div>
         </div>
 
-        {/* Version & countdown */}
-        <p className="text-center text-xs text-muted-foreground mt-6">
-          {t('version')} 1.0.0 • Redirecting in {countdown}s
+        {/* Version */}
+        <p className="text-center text-xs text-primary mt-8">
+          Version 7.0.0
         </p>
       </div>
     </div>
