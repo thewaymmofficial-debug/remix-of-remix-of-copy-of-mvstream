@@ -55,14 +55,24 @@ export function useDevices(userId: string | undefined) {
     if (!userId) return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('user_devices')
-        .select('*')
-        .eq('user_id', userId)
-        .order('last_active_at', { ascending: false });
+      const [devicesResult, roleResult] = await Promise.all([
+        supabase
+          .from('user_devices')
+          .select('*')
+          .eq('user_id', userId)
+          .order('last_active_at', { ascending: false }),
+        supabase
+          .from('user_roles')
+          .select('max_devices, role')
+          .eq('user_id', userId)
+          .single(),
+      ]);
 
-      if (!error && data) {
-        setDevices(data as UserDevice[]);
+      if (!devicesResult.error && devicesResult.data) {
+        setDevices(devicesResult.data as UserDevice[]);
+      }
+      if (!roleResult.error && roleResult.data) {
+        setMaxDevices(roleResult.data.max_devices ?? 1);
       }
     } catch (err) {
       console.error('Error fetching devices:', err);
