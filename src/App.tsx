@@ -25,6 +25,7 @@ import CategoriesAdmin from "./pages/admin/CategoriesAdmin";
 import UsersAdmin from "./pages/admin/UsersAdmin";
 import SettingsAdmin from "./pages/admin/SettingsAdmin";
 import Analytics from "./pages/admin/Analytics";
+import SlidesAdmin from "./pages/admin/SlidesAdmin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -72,6 +73,7 @@ const App = () => (
                     <Route path="categories" element={<CategoriesAdmin />} />
                     <Route path="users" element={<UsersAdmin />} />
                     <Route path="settings" element={<SettingsAdmin />} />
+                    <Route path="slides" element={<SlidesAdmin />} />
                     <Route path="analytics" element={<Analytics />} />
                   </Route>
                   <Route path="*" element={<NotFound />} />
