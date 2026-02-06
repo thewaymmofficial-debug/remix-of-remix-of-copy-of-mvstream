@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Play,
   Pause,
@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
+import { useFullscreenLandscape } from '@/hooks/useFullscreenLandscape';
 
 interface VideoPlayerProps {
   url: string;
@@ -27,34 +28,12 @@ export function VideoPlayer({ url, title, onClose }: VideoPlayerProps) {
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Lock to landscape on mount, unlock on unmount
-  useEffect(() => {
-    const lockOrientation = async () => {
-      try {
-        const orientation = screen.orientation;
-        if (orientation?.lock) {
-          await orientation.lock('landscape');
-        }
-      } catch (e) {
-        // Orientation lock not supported or denied – ignore
-        console.log('Orientation lock not available:', e);
-      }
-    };
-    lockOrientation();
+  const { needsCssRotation, isFullscreen } = useFullscreenLandscape(containerRef);
 
-    return () => {
-      try {
-        screen.orientation?.unlock?.();
-      } catch (e) {
-        // ignore
-      }
-    };
-  }, []);
-
+  // Video event listeners
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -75,15 +54,6 @@ export function VideoPlayer({ url, title, onClose }: VideoPlayerProps) {
       video.removeEventListener('play', handlePlay);
       video.removeEventListener('pause', handlePause);
     };
-  }, []);
-
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
   const togglePlay = () => {
@@ -123,9 +93,9 @@ export function VideoPlayer({ url, title, onClose }: VideoPlayerProps) {
   const toggleFullscreen = () => {
     if (containerRef.current) {
       if (!document.fullscreenElement) {
-        containerRef.current.requestFullscreen();
+        containerRef.current.requestFullscreen?.();
       } else {
-        document.exitFullscreen();
+        document.exitFullscreen?.();
       }
     }
   };
@@ -142,7 +112,7 @@ export function VideoPlayer({ url, title, onClose }: VideoPlayerProps) {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  const handleMouseMove = () => {
+  const resetControlsTimeout = useCallback(() => {
     setShowControls(true);
     if (controlsTimeoutRef.current) {
       clearTimeout(controlsTimeoutRef.current);
@@ -152,13 +122,28 @@ export function VideoPlayer({ url, title, onClose }: VideoPlayerProps) {
         setShowControls(false);
       }
     }, 3000);
-  };
+  }, [isPlaying]);
+
+  // CSS rotation styles for when fullscreen is unavailable
+  const rotationStyle = needsCssRotation
+    ? {
+        transform: 'rotate(90deg)',
+        transformOrigin: 'top left',
+        width: '100vh',
+        height: '100vw',
+        top: 0,
+        left: '100vw',
+        position: 'fixed' as const,
+      }
+    : {};
 
   return (
     <div
       ref={containerRef}
       className="fixed inset-0 z-50 bg-black flex items-center justify-center"
-      onMouseMove={handleMouseMove}
+      style={rotationStyle}
+      onMouseMove={resetControlsTimeout}
+      onTouchStart={resetControlsTimeout}
     >
       {/* Close button */}
       <Button
@@ -178,6 +163,8 @@ export function VideoPlayer({ url, title, onClose }: VideoPlayerProps) {
         src={url}
         className="w-full h-full object-contain"
         onClick={togglePlay}
+        playsInline
+        webkit-playsinline=""
       />
 
       {/* Controls overlay */}
