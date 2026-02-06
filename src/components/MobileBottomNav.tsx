@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Home, Bookmark, Crown, User, LogOut, Settings, Search, Download, Bell } from 'lucide-react';
+import { Home, Bookmark, Crown, User, LogOut, Settings, Search, Download } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { usePendingRequestCount } from '@/hooks/usePendingRequests';
@@ -31,13 +31,10 @@ export function MobileBottomNav() {
   const navItems = [
     { icon: Home, label: 'Home', path: '/', show: true },
     { icon: Search, label: 'Search', path: '/search', show: true },
-    { icon: Bookmark, label: 'Watchlist', path: '/watchlist', show: !!user },
+    { icon: Bookmark, label: 'Watchlist', path: '/watchlist', show: !!user && !isAdmin },
     { icon: Download, label: 'Downloads', path: '/downloads', show: !!user },
-    { icon: Crown, label: 'Admin', path: '/admin', show: isAdmin },
+    { icon: Crown, label: 'Admin', path: '/admin', show: isAdmin, badge: true },
   ].filter(item => item.show);
-
-  // Admin notification item rendered separately with badge
-  const showAdminNotif = isAdmin;
 
   const isActive = (path: string) => 
     location.pathname === path || 
@@ -45,7 +42,7 @@ export function MobileBottomNav() {
 
   return (
     <>
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-xl border-t border-border safe-area-bottom">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-xl border-t border-border safe-area-bottom overflow-hidden">
         <div className="flex items-center justify-around h-16 px-1">
           {navItems.map((item) => {
             const active = isActive(item.path);
@@ -61,13 +58,20 @@ export function MobileBottomNav() {
                     : "text-cineverse-gray hover:text-foreground"
                 )}
               >
-                <item.icon 
-                  className={cn(
-                    "w-[18px] h-[18px] transition-all",
-                    active && "fill-cineverse-red"
-                  )} 
-                  fill={active ? "currentColor" : "none"}
-                />
+                <div className="relative">
+                  <item.icon 
+                    className={cn(
+                      "w-[18px] h-[18px] transition-all",
+                      active && "fill-cineverse-red"
+                    )} 
+                    fill={active ? "currentColor" : "none"}
+                  />
+                  {item.badge && pendingCount > 0 && (
+                    <span className="absolute -top-1.5 -right-2 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-0.5">
+                      {pendingCount > 99 ? '99+' : pendingCount}
+                    </span>
+                  )}
+                </div>
                 <span className={cn(
                   "text-[10px] font-medium truncate w-full text-center",
                   active && "text-cineverse-red"
@@ -77,39 +81,6 @@ export function MobileBottomNav() {
               </Link>
             );
           })}
-          {/* Admin Notification Bell */}
-          {showAdminNotif && (
-            <Link
-              to="/admin/premium-requests"
-              className={cn(
-                "flex flex-col items-center justify-center gap-0.5 py-2 px-1 flex-1 min-w-0 rounded-lg transition-all relative",
-                location.pathname === '/admin/premium-requests'
-                  ? "text-cineverse-red"
-                  : "text-cineverse-gray hover:text-foreground"
-              )}
-            >
-              <div className="relative">
-                <Bell
-                  className={cn(
-                    "w-[18px] h-[18px] transition-all",
-                    location.pathname === '/admin/premium-requests' && "fill-cineverse-red"
-                  )}
-                  fill={location.pathname === '/admin/premium-requests' ? "currentColor" : "none"}
-                />
-                {pendingCount > 0 && (
-                  <span className="absolute -top-1.5 -right-2 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-0.5">
-                    {pendingCount > 99 ? '99+' : pendingCount}
-                  </span>
-                )}
-              </div>
-              <span className={cn(
-                "text-[10px] font-medium truncate w-full text-center",
-                location.pathname === '/admin/premium-requests' && "text-cineverse-red"
-              )}>
-                Requests
-              </span>
-            </Link>
-          )}
 
           {/* Profile Button with Sheet */}
           {user ? (
