@@ -3,6 +3,7 @@ import { MovieCard } from './MovieCard';
 import { SkeletonCard } from './SkeletonCard';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRef } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import type { Movie } from '@/types/database';
 
 interface RelatedMoviesProps {
@@ -14,6 +15,7 @@ interface RelatedMoviesProps {
 export function RelatedMovies({ movieId, category, onMovieClick }: RelatedMoviesProps) {
   const { data: relatedMovies, isLoading } = useRelatedMovies(movieId, category);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { t } = useLanguage();
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
@@ -32,7 +34,7 @@ export function RelatedMovies({ movieId, category, onMovieClick }: RelatedMovies
     <section className="mt-12">
       <div className="flex items-center justify-between mb-5">
         <h2 className="text-xl md:text-2xl font-bold text-foreground tracking-tight">
-          You Might Also Like
+          {t('youMayAlsoLike')}
         </h2>
         <div className="flex gap-2">
           <button
