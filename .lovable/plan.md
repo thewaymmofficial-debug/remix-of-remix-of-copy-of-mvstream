@@ -1,116 +1,63 @@
 
 
-# Unlimited Telegram File Streaming via MTProto
+# Fix Video Player Landscape Mode on Mobile
 
 ## The Problem
 
-The current `telegram-stream` edge function uses the Telegram **Bot API** `getFile` endpoint, which has a hard **20MB file size limit**. Most movie files (1-5GB) are way above this limit, so the stream/download URLs don't work for real content. Only the channel link works, but it just opens Telegram -- not your app.
+The `screen.orientation.lock('landscape')` API only works when the page is already in **fullscreen mode** on mobile browsers. The current code tries to lock orientation on mount but fullscreen hasn't been requested yet, so it silently fails and the video stays in portrait mode.
 
-## The Solution
+## The Fix
 
-Replace the Bot API-based proxy with **MTProto protocol** streaming using the **GramJS** library (a JavaScript MTProto implementation). MTProto is the core Telegram protocol and has **no file size limit** -- it can stream files of any size directly to your app's video player.
+Redesign the video player's mount behavior to properly enter fullscreen first, then lock orientation. Add a CSS-based fallback for browsers that don't support the Fullscreen API.
 
-## One-Time Setup Required
+## Changes to `src/components/VideoPlayer.tsx`
 
-You need to get **two credentials** from Telegram (free, takes 2 minutes):
+### 1. Auto-enter fullscreen on mount (mobile only)
+- On mount, immediately request fullscreen on the container element
+- Once fullscreen is confirmed (via `fullscreenchange` event), lock orientation to landscape
+- On unmount, exit fullscreen and unlock orientation
 
-1. Go to [https://my.telegram.org](https://my.telegram.org)
-2. Log in with your phone number
-3. Click "API development tools"
-4. Create an application (any name/description)
-5. Copy the **api_id** (a number) and **api_hash** (a string)
+### 2. CSS rotation fallback
+- If fullscreen request fails (some browsers restrict it), apply a CSS `transform: rotate(90deg)` with swapped width/height to force landscape layout
+- Detect portrait orientation using `window.matchMedia('(orientation: portrait)')` and apply the rotation only when needed
 
-These will be hardcoded alongside the existing bot token (as you requested for test credentials).
+### 3. Touch support for mobile controls
+- Add `onTouchStart` handler alongside `onMouseMove` for showing/hiding controls on mobile (mouse events don't fire on touch devices)
+- Add `playsInline` attribute to the `<video>` element to prevent iOS from auto-entering its native fullscreen player
 
-## What Changes
-
-### 1. Rewrite `telegram-stream` Edge Function (MTProto-based)
-
-Replace the current Bot API proxy with a GramJS-powered streaming proxy:
-- Connects to Telegram servers via **WebSocket** (MTProto protocol)
-- Authenticates as your bot using the bot token
-- Downloads file chunks with **no size limit**
-- Streams chunks directly to the browser via `ReadableStream`
-- Supports **Range requests** for video seeking/scrubbing
-- Detects content type from file extension for proper playback
-
-### 2. Update `telegram-bot` Edge Function
-
-- Remove the 20MB size warning/restriction
-- **Always** generate stream and download URLs for every file (regardless of size)
-- Bot reply will always include Stream URL, Download URL, and Channel Link
-- Simplified, consistent response format
-
-### 3. Add In-App Video Player Page
-
-Create a new `/watch` route that plays videos inside your app:
-- Uses the existing `VideoPlayer` component (already built with play/pause, seek, volume, fullscreen)
-- Loads the stream URL from the `telegram-stream` proxy
-- Full-screen video experience within the app
-- No need to open external links or Telegram
-
-### 4. Update ServerDrawer for In-App Playback
-
-When user clicks "Play" and selects "Main Server":
-- Instead of opening a new tab (`window.open`), navigate to the in-app `/watch` page
-- Pass the stream URL and movie title
-- Other servers (Telegram, MEGA) still open externally as before
+### 4. Improved fullscreen + orientation flow
+- Combine the separate fullscreen and orientation effects into one coordinated effect
+- Chain: mount -> request fullscreen -> on fullscreen granted -> lock orientation
+- Cleanup: unlock orientation -> exit fullscreen -> restore
 
 ## Technical Details
 
-### MTProto Streaming Flow
-
 ```text
-User clicks Play
-       |
-       v
-ServerDrawer -> "Main Server"
-       |
-       v
-Navigate to /watch?url=...&title=...
-       |
-       v
-VideoPlayer <video src="telegram-stream?file_id=xxx">
-       |
-       v
-telegram-stream Edge Function
-       |
-       v
-GramJS (MTProto via WebSocket) -> Telegram DC
-       |
-       v
-File chunks streamed back (ReadableStream)
-       |
-       v
-Browser plays video (supports seeking via Range headers)
+Mount sequence:
+  1. Component mounts
+  2. Request fullscreen on container div
+  3. Listen for fullscreenchange event
+  4. On fullscreen confirmed -> screen.orientation.lock('landscape')
+  5. Video displays in landscape
+
+Unmount sequence:
+  1. screen.orientation.unlock()
+  2. document.exitFullscreen()
+  3. Navigate back
 ```
 
-### Files to Create/Modify
+The CSS fallback rotation handles cases where the browser blocks fullscreen (e.g., user hasn't interacted with the page yet, or API not available):
 
-| File | Action | Description |
-|------|--------|-------------|
-| `supabase/functions/telegram-stream/index.ts` | Rewrite | MTProto-based streaming proxy using GramJS |
-| `supabase/functions/telegram-bot/index.ts` | Update | Always generate stream/download URLs, remove 20MB restriction |
-| `src/pages/Watch.tsx` | Create | In-app video player page |
-| `src/components/ServerDrawer.tsx` | Update | Navigate to /watch for Main Server instead of window.open |
-| `src/App.tsx` | Update | Add /watch route |
+```text
+If fullscreen fails AND device is in portrait:
+  - Container gets transform: rotate(90deg)
+  - Width becomes viewport height, height becomes viewport width
+  - Controls are repositioned accordingly
+```
 
-### Edge Function Dependencies
+## Files Modified
 
-The `telegram-stream` function will use:
-- `npm:telegram` (GramJS) - MTProto client for Deno
-- WebSocket transport mode (no TCP needed, compatible with edge functions)
-- `StringSession` for bot authentication
-
-### Important Notes
-
-- **api_id and api_hash** are required by Telegram for any MTProto connection -- these are free and permanent
-- The bot token you already have is reused for MTProto bot authentication
-- The existing channel forwarding flow stays the same
-- Files are stored permanently in the Telegram channel (unlimited storage, no cost)
-- Edge function acts as a pass-through proxy (no file stored on your server)
-
-### Potential Risk
-
-GramJS with WebSocket transport in Deno edge functions is a relatively new combination. If the WebSocket-based MTProto connection has issues in the Supabase Edge Function environment, we would need to explore alternative approaches (like a self-hosted Node.js proxy). However, this is the most promising approach that works within the current architecture.
+| File | Change |
+|------|--------|
+| `src/components/VideoPlayer.tsx` | Auto-fullscreen on mount, orientation lock after fullscreen, CSS rotation fallback, touch event support, playsInline attribute |
 
