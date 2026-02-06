@@ -11,12 +11,14 @@ import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { MovieQuickPreview } from '@/components/MovieQuickPreview';
 import { SkeletonRow } from '@/components/SkeletonCard';
 import { AnnouncementBanner } from '@/components/AnnouncementBanner';
+import { CategoryGrid } from '@/components/CategoryGrid';
 import { useAuth } from '@/hooks/useAuth';
 import { useFeaturedMovies, useMoviesByCategory, useWatchlist } from '@/hooks/useMovies';
 import { useContinueWatching, useRemoveFromHistory } from '@/hooks/useWatchHistory';
 import { useTrendingMovies } from '@/hooks/useTrending';
 import { useRecommendations } from '@/hooks/useRecommendations';
 import { useFilter } from '@/contexts/FilterContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { ChevronLeft, ChevronRight, Sparkles, RefreshCw } from 'lucide-react';
 import type { Movie } from '@/types/database';
 
@@ -24,6 +26,7 @@ const Index = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { data: featuredMovies } = useFeaturedMovies();
   const { data: moviesByCategory, isLoading, isError, error, refetch } = useMoviesByCategory();
   const { data: watchlistData } = useWatchlist();
@@ -33,7 +36,7 @@ const Index = () => {
   const removeFromHistory = useRemoveFromHistory();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [previewMovie, setPreviewMovie] = useState<Movie | null>(null);
-  const { searchQuery, selectedCategory, selectedYear } = useFilter();
+  const { searchQuery, selectedCategory, setSelectedCategory, selectedYear } = useFilter();
   const continueWatchingRef = useRef<HTMLDivElement>(null);
 
   // Get all unique categories and years for filters
@@ -169,6 +172,17 @@ const Index = () => {
         onPlay={handlePlay}
         onMoreInfo={handleMoreInfo}
       />
+
+      {/* Category Grid Section */}
+      <CategoryGrid onCategoryClick={(filter) => {
+        if (filter === 'movie' || filter === 'series') {
+          setSelectedCategory(filter === 'movie' ? 'Action' : 'K-Drama');
+        } else if (filter === 'trending' || filter === 'trending-series' || filter === 'featured') {
+          // Scroll to trending section
+        } else {
+          setSelectedCategory(filter);
+        }
+      }} />
 
       {/* Movie Rows */}
       <div className="py-8 relative z-30 bg-background">
