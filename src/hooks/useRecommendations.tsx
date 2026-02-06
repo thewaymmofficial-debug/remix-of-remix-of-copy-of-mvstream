@@ -23,7 +23,7 @@ export function useRecommendations(limit = 10) {
         .from('watch_history')
         .select('movie_id, movie:movies(*)')
         .eq('user_id', user.id)
-        .order('watched_at', { ascending: false })
+        .order('last_watched_at', { ascending: false })
         .limit(5);
 
       if (historyError) throw historyError;
