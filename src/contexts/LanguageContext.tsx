@@ -102,6 +102,32 @@ const translations = {
     views: 'views',
     downloads: 'downloads',
     
+    // Movie Request
+    requestHistory: 'Request History',
+    movieRequestTitle: 'Movie Request',
+    chooseContentType: 'Choose content type',
+    movieOrSeries: 'Movie or Series',
+    enterMovieName: 'Enter the movie name you want to request',
+    movieNamePlaceholder: 'e.g. Iron Man',
+    dontRequestIfAvailable: "Don't request if it's already available in the app",
+    next: 'Next',
+    submit: 'Submit',
+    requestSubmitted: 'Request Submitted',
+    noRequestsYet: 'No requests yet',
+    addRequest: 'Add Request',
+    pending: 'Pending',
+    approved: 'Approved',
+    rejected: 'Rejected',
+    
+    // TV Channels
+    tvChannels: 'TV Channels',
+    searchChannels: 'Search channels or categories...',
+    allTvChannels: 'All TV Channels',
+    sportsChannels: 'Sports Channels',
+    entertainmentChannels: 'Entertainment Channels',
+    newsChannels: 'News Channels',
+    noChannels: 'No channels available yet.',
+    
     // General
     loading: 'Loading...',
     tryAgain: 'Try Again',
@@ -208,6 +234,32 @@ const translations = {
     seasonsAndEpisodes: 'Seasons and Episodes',
     views: 'ကြည့်ရှုမှု',
     downloads: 'ဒေါင်းလုဒ်',
+    
+    // Movie Request
+    requestHistory: 'ဇာတ်ကားတောင်းဆိုရန်',
+    movieRequestTitle: 'ဇာတ်ကားတောင်းဆိုရန်',
+    chooseContentType: 'ဘာကြည့်ချင်တာလဲ ရွေးချယ်ပါ',
+    movieOrSeries: 'ရုပ်ရှင် လား၊ ဇာတ်လမ်းတွဲ လား',
+    enterMovieName: 'တောင်းချင်သော Movie Name ရေးပေးပါ',
+    movieNamePlaceholder: 'ဥပမာ - Iron Man',
+    dontRequestIfAvailable: 'မတောင်းခင် App ထဲကြည့်ပေးပါ မရှိမှတောင်းပေးပါ',
+    next: 'Next',
+    submit: 'Submit',
+    requestSubmitted: 'တောင်းဆိုမှု ပို့ပြီးပါပြီ',
+    noRequestsYet: 'တောင်းဆိုထားသော ဇာတ်လမ်းများ မရှိသေးပါ',
+    addRequest: 'ဇာတ်ကား တောင်းဆိုရန်',
+    pending: 'စောင့်ဆိုင်းနေ',
+    approved: 'အတည်ပြုပြီး',
+    rejected: 'ငြင်းပယ်ပြီး',
+    
+    // TV Channels
+    tvChannels: 'TV Channels',
+    searchChannels: 'ချန်နယ် ရှာဖွေ...',
+    allTvChannels: 'TV Channels အားလုံး',
+    sportsChannels: 'Sports Channels',
+    entertainmentChannels: 'Entertainment Channels',
+    newsChannels: 'News Channels',
+    noChannels: 'ချန်နယ်များ မရှိသေးပါ',
     
     // General
     loading: 'ခဏစောင့်ပါ...',

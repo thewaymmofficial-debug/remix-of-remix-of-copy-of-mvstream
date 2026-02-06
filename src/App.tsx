@@ -14,6 +14,8 @@ import Profile from "./pages/Profile";
 import Watchlist from "./pages/Watchlist";
 import History from "./pages/History";
 import PremiumRenewal from "./pages/PremiumRenewal";
+import MovieRequest from "./pages/MovieRequest";
+import TvChannels from "./pages/TvChannels";
 import AdminLayout from "./pages/admin/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
 import MoviesAdmin from "./pages/admin/MoviesAdmin";
@@ -60,6 +62,8 @@ const App = () => (
                   <Route path="/watchlist" element={<Watchlist />} />
                   <Route path="/history" element={<History />} />
                   <Route path="/premium-renewal" element={<PremiumRenewal />} />
+                  <Route path="/request" element={<MovieRequest />} />
+                  <Route path="/tv-channels" element={<TvChannels />} />
                   <Route path="/admin" element={<AdminLayout />}>
                     <Route index element={<Dashboard />} />
                     <Route path="movies" element={<MoviesAdmin />} />
