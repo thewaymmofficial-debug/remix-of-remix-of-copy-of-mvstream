@@ -458,14 +458,14 @@ export default function MoviesAdmin() {
 
       {/* Create/Edit Modal */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col glass">
+        <DialogContent className="max-w-2xl max-h-[90vh] !flex !flex-col overflow-hidden glass sm:max-h-[90vh] h-[100dvh] sm:h-auto">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle>
               {editingMovie ? 'Edit Movie' : 'Add New Movie'}
             </DialogTitle>
           </DialogHeader>
 
-          <form id="movie-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto space-y-4 mt-4 pb-4">
+          <form id="movie-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto space-y-4 mt-4 pb-4 min-h-0">
             {/* Content Type Selection */}
             <div className="space-y-2">
               <Label>Content Type</Label>
