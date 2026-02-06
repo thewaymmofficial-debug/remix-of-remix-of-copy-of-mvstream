@@ -43,7 +43,7 @@ export function InfoCarousel() {
   };
 
   return (
-    <section className="px-4 md:px-8 pt-6 md:pt-8 pb-4">
+    <section className="px-4 md:px-8 pt-20 md:pt-24 pb-4">
       <div
         className={`relative overflow-hidden rounded-2xl ${slide.redirect_link ? 'cursor-pointer' : ''}`}
         onClick={handleClick}
