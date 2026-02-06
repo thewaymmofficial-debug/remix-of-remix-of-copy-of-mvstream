@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Copy, Upload, FileText, Moon, Sun, HelpCircle } from 'lucide-react';
+import { ArrowLeft, Copy, Upload, FileText, Moon, Sun, HelpCircle, Shield, Mail, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useTheme } from 'next-themes';
 import { useLanguage } from '@/contexts/LanguageContext';
-
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
@@ -55,11 +54,17 @@ const paymentMethods: PaymentMethod[] = [
   },
 ];
 
+const pricingPlans = [
+  { duration: '1 Month', price: '5000 MMK' },
+  { duration: '6 Months', price: '25000 MMK' },
+  { duration: '1 Year', price: '50000 MMK' },
+];
+
 export default function PremiumRenewal() {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const { t, language } = useLanguage();
-  const { user } = useAuth();
+  const { user, role, premiumExpiresAt } = useAuth();
   const [transactionId, setTransactionId] = useState('');
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -84,9 +89,8 @@ export default function PremiumRenewal() {
       toast.error(language === 'mm' ? 'Screenshot ထည့်ပါ' : 'Please upload screenshot');
       return;
     }
-    
+
     setIsSubmitting(true);
-    // In a real app, this would upload to Supabase storage and create a renewal request
     setTimeout(() => {
       toast.success(language === 'mm' ? 'တင်သွင်းပြီးပါပြီ! စစ်ဆေးပြီးအကြောင်းကြားပါမည်' : 'Submitted! We will review and notify you.');
       setIsSubmitting(false);
@@ -100,12 +104,19 @@ export default function PremiumRenewal() {
     return null;
   }
 
+  const planLabel =
+    role === 'admin' ? 'Administrator' : role === 'premium' ? 'Gold Member' : 'Free User';
+
+  const expiryText = premiumExpiresAt
+    ? new Date(premiumExpiresAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    : 'N/A';
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border">
         <div className="flex items-center justify-between px-4 h-14">
-          <button onClick={() => navigate(-1)} className="p-2 -ml-2">
+          <button onClick={() => navigate('/welcome')} className="p-2 -ml-2">
             <ArrowLeft className="w-5 h-5 text-foreground" />
           </button>
           <h1 className="text-lg font-bold text-foreground">
@@ -128,6 +139,62 @@ export default function PremiumRenewal() {
       </header>
 
       <div className="px-4 py-6 max-w-lg mx-auto space-y-6">
+        {/* Current Plan Card - Orange gradient like reference */}
+        <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-5 text-white relative overflow-hidden">
+          {/* Decorative circles */}
+          <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white/10" />
+          <div className="absolute right-10 bottom-2 w-20 h-20 rounded-full bg-white/10" />
+
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-1">
+              <div>
+                <p className="text-white/80 text-sm">Current Plan</p>
+                <h2 className="text-2xl font-bold">{planLabel}</h2>
+              </div>
+              <span className="bg-white/20 px-3 py-1 rounded-full text-xs font-semibold">
+                1 Device
+              </span>
+            </div>
+
+            <div className="mt-4 bg-white/15 rounded-xl p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <Mail className="w-4 h-4 text-white/80" />
+                <span className="text-sm">{user?.email}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CalendarDays className="w-4 h-4 text-white/80" />
+                <span className="text-sm">Expires: {expiryText}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Pricing Plans Card - Orange gradient like reference */}
+        <div>
+          <h2 className="text-lg font-bold text-foreground mb-4">
+            {language === 'mm' ? 'သက်တမ်းတိုးရန် Plan များ' : 'Renewal Plans'}
+          </h2>
+          <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-5 text-white relative overflow-hidden">
+            <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-white/10" />
+
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-4">
+                <Shield className="w-6 h-6" />
+                <h3 className="text-xl font-bold">Gold Member</h3>
+              </div>
+
+              <div className="bg-white/15 rounded-xl divide-y divide-white/20">
+                {pricingPlans.map((plan) => (
+                  <div key={plan.duration} className="flex items-center justify-between px-4 py-3">
+                    <span className="text-sm font-medium">{plan.duration}</span>
+                    <span className="text-sm font-bold">{plan.price}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Step 1: Payment Accounts */}
         <div>
           <h2 className="text-lg font-bold text-foreground mb-4">
@@ -142,7 +209,7 @@ export default function PremiumRenewal() {
                 {/* Decorative circles */}
                 <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-white/10" />
                 <div className="absolute -right-2 bottom-4 w-16 h-16 rounded-full bg-white/10" />
-                
+
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-3">
                     <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm">
@@ -191,8 +258,8 @@ export default function PremiumRenewal() {
             />
             {screenshot ? (
               <div className="space-y-2">
-                <div className="w-16 h-16 mx-auto bg-cg-success/20 rounded-full flex items-center justify-center">
-                  <FileText className="w-8 h-8 text-cg-success" />
+                <div className="w-16 h-16 mx-auto bg-emerald-500/20 rounded-full flex items-center justify-center">
+                  <FileText className="w-8 h-8 text-emerald-500" />
                 </div>
                 <p className="text-sm font-medium text-foreground">{screenshot.name}</p>
                 <p className="text-xs text-muted-foreground">
@@ -230,7 +297,7 @@ export default function PremiumRenewal() {
         <Button
           onClick={handleSubmit}
           disabled={isSubmitting}
-          className="w-full h-14 text-lg font-bold rounded-xl bg-primary hover:bg-primary/90"
+          className="w-full h-14 text-lg font-bold rounded-xl"
         >
           {isSubmitting
             ? (language === 'mm' ? 'တင်သွင်းနေသည်...' : 'Submitting...')

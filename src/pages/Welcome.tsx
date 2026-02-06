@@ -1,7 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Crown, CalendarDays, Film, RefreshCw, Smartphone, Sun, Moon } from 'lucide-react';
+import { LogOut, Crown, CalendarDays, Film, RefreshCw, Smartphone, Sun, Moon, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+} from '@/components/ui/dialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from 'next-themes';
@@ -13,6 +17,7 @@ export default function Welcome() {
   const { user, profile, role, premiumExpiresAt, isLoading, signOut } = useAuth();
   const { t } = useLanguage();
   const { theme, setTheme } = useTheme();
+  const [showDevicesModal, setShowDevicesModal] = useState(false);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -44,6 +49,10 @@ export default function Welcome() {
   const expiryText = premiumExpiresAt
     ? new Date(premiumExpiresAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
     : 'N/A';
+
+  // Generate a device ID from user agent
+  const deviceName = profile?.display_name || 'User';
+  const deviceId = user?.id?.slice(0, 10)?.toUpperCase() || 'UNKNOWN';
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -128,7 +137,7 @@ export default function Welcome() {
           </div>
         </div>
 
-        {/* Action Buttons - matching reference style */}
+        {/* Action Buttons */}
         <div className="w-full max-w-sm space-y-3 mb-8">
           <Button
             onClick={() => navigate('/')}
@@ -140,7 +149,7 @@ export default function Welcome() {
 
           <Button
             variant="outline"
-            onClick={() => window.location.reload()}
+            onClick={() => navigate('/premium-renewal')}
             className="w-full h-14 rounded-2xl font-semibold text-base border-primary text-primary hover:bg-primary/5"
           >
             <RefreshCw className="w-5 h-5 mr-2" />
@@ -149,7 +158,7 @@ export default function Welcome() {
 
           <Button
             variant="outline"
-            onClick={() => navigate('/profile')}
+            onClick={() => setShowDevicesModal(true)}
             className="w-full h-14 rounded-2xl font-semibold text-base border-border"
           >
             <Smartphone className="w-5 h-5 mr-2" />
@@ -199,6 +208,39 @@ export default function Welcome() {
           Version 7.0.0
         </p>
       </div>
+
+      {/* Active Devices Modal */}
+      <Dialog open={showDevicesModal} onOpenChange={setShowDevicesModal}>
+        <DialogContent className="sm:max-w-sm rounded-2xl bg-background border-border p-6">
+          <h2 className="text-xl font-bold text-foreground mb-4">Active Devices</h2>
+
+          {/* Device entry */}
+          <div className="border border-border rounded-xl p-4 flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center flex-shrink-0">
+              <Smartphone className="w-6 h-6 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-foreground text-sm">{deviceName}</p>
+              <p className="text-xs text-muted-foreground">{deviceId}</p>
+            </div>
+            <button className="p-2 text-destructive hover:text-destructive/80 transition-colors">
+              <Trash2 className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="border-t border-border pt-3 text-center">
+            <p className="text-sm text-muted-foreground mb-1">နောက်ဆုံး Logout ထုတ်ထားသောနေ့</p>
+            <p className="text-sm text-muted-foreground">null</p>
+          </div>
+
+          <button
+            onClick={() => setShowDevicesModal(false)}
+            className="w-full text-center text-primary font-medium mt-4 py-2"
+          >
+            Close
+          </button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
