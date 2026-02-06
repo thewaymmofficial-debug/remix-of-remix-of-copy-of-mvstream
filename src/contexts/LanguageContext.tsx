@@ -35,6 +35,11 @@ const translations = {
     yourName: 'Your name',
     backToHome: '← Back to Home',
     followUs: 'Follow us on',
+    browseFirst: 'Browse First',
+    loginRequired: 'Login Required',
+    loginRequiredDesc: 'feature ကို အသုံးပြုရန် Login ဝင်ရန် (သို့) အကောင့်သစ်ဖွင့်ရန် လိုအပ်ပါသည်။',
+    cancel: 'Cancel',
+    registerNow: 'Register Now',
     
     // Home page
     entertainment: '🎬 Entertainment',
@@ -168,6 +173,11 @@ const translations = {
     yourName: 'သင့်အမည်',
     backToHome: '← ပင်မသို့',
     followUs: 'Follow us on',
+    browseFirst: 'ဘာတွေရှိလဲကြည့်မယ်',
+    loginRequired: 'Login Required',
+    loginRequiredDesc: 'feature ကို အသုံးပြုရန် Login ဝင်ရန် (သို့) အကောင့်သစ်ဖွင့်ရန် လိုအပ်ပါသည်။',
+    cancel: 'Cancel',
+    registerNow: 'Register Now',
     
     // Home page
     entertainment: '🎬 Entertainment',
