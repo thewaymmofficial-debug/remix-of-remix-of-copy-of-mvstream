@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Film, Tv, Star, TrendingUp, Award, UserCheck, MousePointerClick, Clapperboard, Sparkles, Popcorn } from 'lucide-react';
+import { Film, Tv, Star, TrendingUp, Award, UserCheck, MousePointerClick, Clapperboard, Sparkles, Popcorn, Radio } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface CategoryItem {
@@ -81,6 +81,13 @@ const entertainmentCategories: CategoryItem[] = [
     labelMm: 'ရုပ်ရှင်တောင်းဆို',
     path: '/request',
     color: 'text-yellow-500',
+  },
+  {
+    icon: <Radio className="w-8 h-8" />,
+    labelEn: 'TV Channels',
+    labelMm: 'TV Channels',
+    path: '/tv-channels',
+    color: 'text-cyan-500',
   },
 ];
 
