@@ -1,3 +1,4 @@
+import React from 'react';
 import { Crown, Play, Star } from 'lucide-react';
 import type { Movie } from '@/types/database';
 import { cn } from '@/lib/utils';
@@ -14,15 +15,17 @@ function isNewArrival(createdAt: string): boolean {
   return new Date(createdAt) > sevenDaysAgo;
 }
 
-export function MovieCard({ movie, onClick }: MovieCardProps) {
+export const MovieCard = React.forwardRef<HTMLButtonElement, MovieCardProps>(
+  function MovieCard({ movie, onClick }, ref) {
   const isNew = isNewArrival(movie.created_at);
   const hasRating = movie.average_rating > 0;
 
   return (
-    <button
-      onClick={onClick}
-      className="movie-card group relative flex-shrink-0 w-[calc(33.333%-8px)] min-w-[105px] max-w-[140px] sm:w-[140px] sm:max-w-none md:w-[160px] aspect-[2/3] bg-card focus:outline-none tv-focus"
-    >
+      <button
+        ref={ref}
+        onClick={onClick}
+        className="movie-card group relative flex-shrink-0 w-[calc(33.333%-8px)] min-w-[105px] max-w-[140px] sm:w-[140px] sm:max-w-none md:w-[160px] aspect-[2/3] bg-card focus:outline-none tv-focus"
+      >
       {/* Poster Image */}
       {movie.poster_url ? (
         <img
@@ -93,4 +96,4 @@ export function MovieCard({ movie, onClick }: MovieCardProps) {
       </div>
     </button>
   );
-}
+});
