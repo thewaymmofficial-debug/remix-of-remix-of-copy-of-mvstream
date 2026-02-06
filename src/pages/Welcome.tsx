@@ -71,11 +71,21 @@ export default function Welcome() {
     toast.success('Device removed successfully');
   };
 
+  // Map premium_type to display label
+  const getPremiumLabel = (type: string | null | undefined): string => {
+    if (!type) return 'Premium';
+    const lower = type.toLowerCase();
+    if (lower === 'gold' || lower.includes('gold')) return 'Gold';
+    if (lower === 'platinum' || lower.includes('platinum')) return 'Platinum';
+    // Capitalize first letter for any other type
+    return type.charAt(0).toUpperCase() + type.slice(1);
+  };
+
   const planLabel =
     role === 'admin'
       ? 'Administrator'
       : role === 'premium'
-      ? `${premiumType ? premiumType.charAt(0).toUpperCase() + premiumType.slice(1) : ''} Member`
+      ? `${getPremiumLabel(premiumType)} Member`
       : 'Normal Member';
 
   // Check if user is premium or admin (shows premium welcome)
