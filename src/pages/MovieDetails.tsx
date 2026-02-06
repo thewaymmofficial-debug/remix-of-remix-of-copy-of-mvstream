@@ -8,8 +8,6 @@ import {
   ArrowLeft,
   Heart,
   Film,
-  Volume2,
-  ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +18,7 @@ import { SeasonEpisodeList } from '@/components/SeasonEpisodeList';
 import { RelatedMovies } from '@/components/RelatedMovies';
 import { ServerDrawer } from '@/components/ServerDrawer';
 import { LoginRequiredModal } from '@/components/LoginRequiredModal';
+import { CastSection } from '@/components/CastSection';
 import { useAuth } from '@/hooks/useAuth';
 import { useMovie, useIsInWatchlist, useAddToWatchlist, useRemoveFromWatchlist } from '@/hooks/useMovies';
 import { useUpdateProgress } from '@/hooks/useWatchHistory';
@@ -315,25 +314,7 @@ export default function MovieDetails() {
       )}
 
       {/* Cast & Actors */}
-      {movie.actors && movie.actors.length > 0 && (
-        <div className="px-4 mb-6">
-          <h2 className="text-xl font-bold text-foreground mb-4">{t('castAndActors')}</h2>
-          <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2">
-            {movie.actors.map((actor, index) => (
-              <div key={index} className="flex flex-col items-center min-w-[100px]">
-                <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-2 overflow-hidden">
-                  <span className="text-2xl font-bold text-muted-foreground">
-                    {actor.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-                <span className="text-sm font-semibold text-foreground text-center leading-tight">
-                  {actor}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <CastSection movieId={movie.id} fallbackActors={movie.actors} />
 
       {/* Seasons and Episodes for Series */}
       {movie.content_type === 'series' && (
