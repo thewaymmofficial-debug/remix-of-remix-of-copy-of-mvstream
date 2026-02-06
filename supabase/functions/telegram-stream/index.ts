@@ -37,28 +37,65 @@ function getContentType(fileName: string): string {
   return contentTypeMap[ext] || "application/octet-stream";
 }
 
+// ─── Cached GramJS session (persists across requests in the same isolate) ───
+
+let cachedSessionString = "";
+let cachedClient: any = null;
+let clientReady = false;
+let connectPromise: Promise<void> | null = null;
+
+async function getOrCreateClient() {
+  const telegramModule = await import("npm:telegram@2");
+  const TelegramClient = telegramModule.TelegramClient;
+  const { StringSession } = await import("npm:telegram@2/sessions/index.js");
+
+  // If we already have a connected client, reuse it
+  if (cachedClient && clientReady) {
+    console.log("Reusing cached GramJS client");
+    return { client: cachedClient, Api: telegramModule.Api };
+  }
+
+  // If another request is already connecting, wait for it
+  if (connectPromise) {
+    console.log("Waiting for existing connection...");
+    await connectPromise;
+    if (cachedClient && clientReady) {
+      return { client: cachedClient, Api: telegramModule.Api };
+    }
+  }
+
+  // Create new client with cached session (avoids re-auth if session is saved)
+  console.log(`Creating new GramJS client (session length: ${cachedSessionString.length})`);
+  const session = new StringSession(cachedSessionString);
+  const client = new TelegramClient(session, API_ID, API_HASH, {
+    connectionRetries: 3,
+    useWSS: true,
+  });
+
+  connectPromise = (async () => {
+    await client.start({ botAuthToken: BOT_TOKEN });
+    // Save the authenticated session for future reuse
+    cachedSessionString = client.session.save() as string;
+    cachedClient = client;
+    clientReady = true;
+    console.log(`GramJS client connected, session cached (length: ${cachedSessionString.length})`);
+  })();
+
+  await connectPromise;
+  connectPromise = null;
+
+  return { client: cachedClient!, Api: telegramModule.Api };
+}
+
 // ─── MTProto streaming via GramJS (unlimited file size) ───
 
 async function handleMTProtoStream(req: Request, msgId: number) {
-  const telegramModule = await import("npm:telegram@2");
-  const TelegramClient = telegramModule.TelegramClient;
-  const Api = telegramModule.Api;
-  const { StringSession } = await import("npm:telegram@2/sessions/index.js");
   const bigInt = (await import("npm:big-integer")).default;
-
-  let client: InstanceType<typeof TelegramClient> | null = null;
 
   try {
     console.log(`MTProto stream request for msg_id: ${msgId}`);
 
-    const session = new StringSession("");
-    client = new TelegramClient(session, API_ID, API_HASH, {
-      connectionRetries: 3,
-      useWSS: true,
-    });
-
-    await client.start({ botAuthToken: BOT_TOKEN });
-    console.log("GramJS client connected as bot");
+    const { client, Api } = await getOrCreateClient();
 
     // Resolve channel entity and get the message
     const channelEntity = await client.getEntity(CHANNEL_ID);
@@ -68,7 +105,6 @@ async function handleMTProtoStream(req: Request, msgId: number) {
     const message = messages[0];
 
     if (!message || !message.media) {
-      await client.disconnect().catch(() => {});
       return new Response(
         JSON.stringify({ error: "Message not found or has no media" }),
         {
@@ -85,7 +121,6 @@ async function handleMTProtoStream(req: Request, msgId: number) {
     if (media.className === "MessageMediaDocument" && media.document?.className === "Document") {
       document = media.document;
     } else {
-      await client.disconnect().catch(() => {});
       return new Response(
         JSON.stringify({ error: "Unsupported media type — only documents/videos supported" }),
         {
@@ -139,14 +174,13 @@ async function handleMTProtoStream(req: Request, msgId: number) {
       thumbSize: "",
     });
 
-    const clientRef = client;
     const stream = new ReadableStream({
       async start(controller) {
         try {
           let bytesWritten = 0;
           let isFirstChunk = true;
 
-          for await (const chunk of clientRef.iterDownload({
+          for await (const chunk of client.iterDownload({
             file: inputLocation,
             offset: bigInt(alignedStart),
             requestSize: REQUEST_SIZE,
@@ -180,10 +214,8 @@ async function handleMTProtoStream(req: Request, msgId: number) {
         } catch (err) {
           console.error("Stream chunk error:", err);
           controller.error(err);
-        } finally {
-          await clientRef.disconnect().catch(() => {});
-          console.log("GramJS client disconnected");
         }
+        // NOTE: Do NOT disconnect — client is cached for reuse
       },
     });
 
@@ -206,9 +238,38 @@ async function handleMTProtoStream(req: Request, msgId: number) {
     }
 
     return new Response(stream, { status: 200, headers });
-  } catch (error) {
+  } catch (error: any) {
     console.error("MTProto stream error:", error);
-    if (client) await client.disconnect().catch(() => {});
+
+    // If we got a FloodWaitError, invalidate cached client so next request retries fresh
+    if (error?.errorMessage === "FLOOD" || error?.message?.includes("FloodWaitError")) {
+      cachedClient = null;
+      clientReady = false;
+      // Keep cachedSessionString — it's still valid, just rate-limited
+      const waitSeconds = error?.seconds || 0;
+      return new Response(
+        JSON.stringify({
+          error: "Telegram rate limit — please try again later",
+          retry_after_seconds: waitSeconds,
+        }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "Retry-After": String(waitSeconds),
+          },
+        }
+      );
+    }
+
+    // For auth errors, invalidate the session entirely
+    if (error?.message?.includes("auth") || error?.message?.includes("AUTH")) {
+      cachedClient = null;
+      clientReady = false;
+      cachedSessionString = "";
+    }
+
     return new Response(
       JSON.stringify({
         error: "Failed to stream file via MTProto",
