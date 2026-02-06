@@ -1,91 +1,116 @@
 
-# Telegram Bot for File-to-Link Generation
 
-## Overview
-Create a Telegram bot that receives files from authorized admins, forwards them to a designated Telegram channel, and returns stream/download links that can be pasted into the admin panel.
+# Unlimited Telegram File Streaming via MTProto
 
-## How It Works
+## The Problem
 
-**Flow:**
-1. Admin sends a file (video, document, etc.) to the bot on Telegram
-2. Bot verifies the sender is an authorized admin (by Telegram user ID)
-3. Bot forwards the file to a designated Telegram channel
-4. Bot replies with:
-   - A direct Telegram file download link (via Bot API `getFile` for files under 20MB)
-   - A channel message link (for all file sizes, never expires)
-5. Admin copies the link and pastes it into the Movies Admin panel as `stream_url`, `telegram_url`, or `download_url`
+The current `telegram-stream` edge function uses the Telegram **Bot API** `getFile` endpoint, which has a hard **20MB file size limit**. Most movie files (1-5GB) are way above this limit, so the stream/download URLs don't work for real content. Only the channel link works, but it just opens Telegram -- not your app.
 
-**Why forward to a channel?**
-- Telegram Bot API `getFile` only works for files up to 20MB
-- Channel message links work for any file size and don't expire
-- Provides a permanent archive of all uploaded files
+## The Solution
 
-## Setup Requirements (Before Building)
+Replace the Bot API-based proxy with **MTProto protocol** streaming using the **GramJS** library (a JavaScript MTProto implementation). MTProto is the core Telegram protocol and has **no file size limit** -- it can stream files of any size directly to your app's video player.
 
-You will need to provide **3 secrets**:
+## One-Time Setup Required
 
-1. **TELEGRAM_BOT_TOKEN** -- Create a bot via [@BotFather](https://t.me/BotFather) on Telegram, use the `/newbot` command, and copy the token
-2. **TELEGRAM_CHANNEL_ID** -- The numeric ID of a Telegram channel where files will be forwarded (the bot must be added as an admin to this channel). You can get the ID by forwarding a message from the channel to [@userinfobot](https://t.me/userinfobot)
-3. **TELEGRAM_ADMIN_IDS** -- Comma-separated Telegram user IDs of people allowed to use the bot (get your ID from [@userinfobot](https://t.me/userinfobot))
+You need to get **two credentials** from Telegram (free, takes 2 minutes):
+
+1. Go to [https://my.telegram.org](https://my.telegram.org)
+2. Log in with your phone number
+3. Click "API development tools"
+4. Create an application (any name/description)
+5. Copy the **api_id** (a number) and **api_hash** (a string)
+
+These will be hardcoded alongside the existing bot token (as you requested for test credentials).
+
+## What Changes
+
+### 1. Rewrite `telegram-stream` Edge Function (MTProto-based)
+
+Replace the current Bot API proxy with a GramJS-powered streaming proxy:
+- Connects to Telegram servers via **WebSocket** (MTProto protocol)
+- Authenticates as your bot using the bot token
+- Downloads file chunks with **no size limit**
+- Streams chunks directly to the browser via `ReadableStream`
+- Supports **Range requests** for video seeking/scrubbing
+- Detects content type from file extension for proper playback
+
+### 2. Update `telegram-bot` Edge Function
+
+- Remove the 20MB size warning/restriction
+- **Always** generate stream and download URLs for every file (regardless of size)
+- Bot reply will always include Stream URL, Download URL, and Channel Link
+- Simplified, consistent response format
+
+### 3. Add In-App Video Player Page
+
+Create a new `/watch` route that plays videos inside your app:
+- Uses the existing `VideoPlayer` component (already built with play/pause, seek, volume, fullscreen)
+- Loads the stream URL from the `telegram-stream` proxy
+- Full-screen video experience within the app
+- No need to open external links or Telegram
+
+### 4. Update ServerDrawer for In-App Playback
+
+When user clicks "Play" and selects "Main Server":
+- Instead of opening a new tab (`window.open`), navigate to the in-app `/watch` page
+- Pass the stream URL and movie title
+- Other servers (Telegram, MEGA) still open externally as before
 
 ## Technical Details
 
-### New Edge Function: `telegram-bot`
+### MTProto Streaming Flow
 
-**File:** `supabase/functions/telegram-bot/index.ts`
-
-Handles incoming Telegram webhook updates:
-
-- **POST /telegram-bot** -- Receives Telegram updates
-  - Validates the sender's Telegram user ID against `TELEGRAM_ADMIN_IDS`
-  - If the message contains a file (document, video, audio, photo):
-    - Forwards the file to the channel specified by `TELEGRAM_CHANNEL_ID`
-    - For files under 20MB: calls Telegram `getFile` API to generate a direct download link
-    - Generates a channel message link from the forwarded message
-    - Replies to the admin with both links formatted for easy copying
-  - If the sender is not authorized, replies with "Unauthorized"
-  - Supports `/start` command with a welcome message
-
-### New Edge Function: `telegram-bot-setup`
-
-**File:** `supabase/functions/telegram-bot-setup/index.ts`
-
-One-time setup endpoint to register the webhook URL with Telegram:
-
-- **POST /telegram-bot-setup** -- Calls Telegram's `setWebhook` API to point to the `telegram-bot` edge function URL
-- Only needs to be called once after deployment
-
-### Config Update
-
-**File:** `supabase/config.toml`
-
-Add both new functions with `verify_jwt = false` (Telegram sends webhooks directly, authentication is handled by checking admin IDs in code).
-
-### Bot Reply Format
-
-When an admin sends a file, the bot replies with a message like:
-
-```
--- File Received --
-Name: movie-file.mkv
-Size: 1.5 GB
-
-Stream/Download Links:
-- Channel Link: https://t.me/c/CHANNEL_ID/MSG_ID
-- Direct Link: https://api.telegram.org/file/bot.../path (only for files under 20MB)
-
-Copy the Channel Link and paste it as telegram_url in the admin panel.
+```text
+User clicks Play
+       |
+       v
+ServerDrawer -> "Main Server"
+       |
+       v
+Navigate to /watch?url=...&title=...
+       |
+       v
+VideoPlayer <video src="telegram-stream?file_id=xxx">
+       |
+       v
+telegram-stream Edge Function
+       |
+       v
+GramJS (MTProto via WebSocket) -> Telegram DC
+       |
+       v
+File chunks streamed back (ReadableStream)
+       |
+       v
+Browser plays video (supports seeking via Range headers)
 ```
 
-### No UI Changes Needed
+### Files to Create/Modify
 
-Since you selected "just return links," no changes to the admin panel or movie forms are needed. You will simply copy the links from the Telegram bot chat and paste them into the existing URL fields in Movies Admin.
+| File | Action | Description |
+|------|--------|-------------|
+| `supabase/functions/telegram-stream/index.ts` | Rewrite | MTProto-based streaming proxy using GramJS |
+| `supabase/functions/telegram-bot/index.ts` | Update | Always generate stream/download URLs, remove 20MB restriction |
+| `src/pages/Watch.tsx` | Create | In-app video player page |
+| `src/components/ServerDrawer.tsx` | Update | Navigate to /watch for Main Server instead of window.open |
+| `src/App.tsx` | Update | Add /watch route |
 
-## Summary of Changes
+### Edge Function Dependencies
 
-| What | Action |
-|------|--------|
-| `supabase/functions/telegram-bot/index.ts` | Create -- webhook handler for Telegram bot |
-| `supabase/functions/telegram-bot-setup/index.ts` | Create -- one-time webhook registration |
-| `supabase/config.toml` | Update -- add both new functions |
-| 3 new secrets | Add TELEGRAM_BOT_TOKEN, TELEGRAM_CHANNEL_ID, TELEGRAM_ADMIN_IDS |
+The `telegram-stream` function will use:
+- `npm:telegram` (GramJS) - MTProto client for Deno
+- WebSocket transport mode (no TCP needed, compatible with edge functions)
+- `StringSession` for bot authentication
+
+### Important Notes
+
+- **api_id and api_hash** are required by Telegram for any MTProto connection -- these are free and permanent
+- The bot token you already have is reused for MTProto bot authentication
+- The existing channel forwarding flow stays the same
+- Files are stored permanently in the Telegram channel (unlimited storage, no cost)
+- Edge function acts as a pass-through proxy (no file stored on your server)
+
+### Potential Risk
+
+GramJS with WebSocket transport in Deno edge functions is a relatively new combination. If the WebSocket-based MTProto connection has issues in the Supabase Edge Function environment, we would need to explore alternative approaches (like a self-hosted Node.js proxy). However, this is the most promising approach that works within the current architecture.
+
