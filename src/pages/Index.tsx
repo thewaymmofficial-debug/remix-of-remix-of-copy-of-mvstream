@@ -319,12 +319,6 @@ const Index = () => {
       </div>
       )}
 
-      {/* Footer */}
-      <footer className="py-8 border-t border-border">
-        <div className="text-center text-sm text-muted-foreground">
-          <p>© 2024 Cineverse Premium. All rights reserved.</p>
-        </div>
-      </footer>
 
       <MobileBottomNav />
       <LoginRequiredModal open={showLoginModal} onOpenChange={setShowLoginModal} />
