@@ -4,13 +4,14 @@ import { toast } from 'sonner';
 
 export interface InfoSlide {
   id: string;
-  title: string;
+  title: string | null;
   description: string | null;
   image_url: string | null;
   bg_color: string;
   accent_color: string;
   display_order: number;
   is_active: boolean;
+  redirect_link: string;
   created_at: string;
   updated_at: string;
 }
