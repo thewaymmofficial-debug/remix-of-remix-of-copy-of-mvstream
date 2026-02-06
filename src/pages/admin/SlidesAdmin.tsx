@@ -68,6 +68,8 @@ export default function SlidesAdmin() {
       display_order: slide.display_order,
       is_active: slide.is_active,
     });
+    // Scroll to form on mobile so user sees the edit form
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const isSaveDisabled = !form.image_url || !form.redirect_link || createSlide.isPending || updateSlide.isPending;
@@ -254,16 +256,16 @@ export default function SlidesAdmin() {
           Current Slides ({slides?.length ?? 0})
         </h2>
         {slides?.map((slide) => (
-          <Card key={slide.id} className={`glass ${!slide.is_active ? 'opacity-50' : ''}`}>
+          <Card key={slide.id} className={`border border-border bg-card ${!slide.is_active ? 'opacity-50' : ''}`}>
             <CardContent className="p-3 sm:p-4">
-              <div className="flex items-start gap-3">
-                <div className="flex items-center gap-1 text-muted-foreground pt-1">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="flex items-center gap-1 text-muted-foreground shrink-0">
                   <GripVertical className="w-4 h-4" />
                   <span className="text-xs font-mono">#{slide.display_order}</span>
                 </div>
 
                 {/* Thumbnail */}
-                <div className={`w-20 h-14 rounded-lg overflow-hidden shrink-0 flex items-center justify-center ${
+                <div className={`w-16 h-12 sm:w-20 sm:h-14 rounded-lg overflow-hidden shrink-0 flex items-center justify-center ${
                   slide.image_url ? '' : `bg-gradient-to-br ${slide.bg_color}`
                 }`}>
                   {slide.image_url ? (
@@ -289,23 +291,29 @@ export default function SlidesAdmin() {
                   )}
                 </div>
 
-                <div className="flex gap-1 shrink-0">
+                <div className="flex gap-1.5 shrink-0 relative z-10">
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleEdit(slide)}
-                    className="h-8 px-2 text-xs"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEdit(slide);
+                    }}
+                    className="h-10 px-3 text-xs touch-manipulation"
                   >
                     Edit
                   </Button>
                   <Button
                     variant="destructive"
                     size="sm"
-                    onClick={() => deleteSlide.mutate(slide.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteSlide.mutate(slide.id);
+                    }}
                     disabled={deleteSlide.isPending}
-                    className="h-8 px-2"
+                    className="h-10 px-3 touch-manipulation"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
