@@ -31,6 +31,30 @@ export function VideoPlayer({ url, title, onClose }: VideoPlayerProps) {
   const [showControls, setShowControls] = useState(true);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Lock to landscape on mount, unlock on unmount
+  useEffect(() => {
+    const lockOrientation = async () => {
+      try {
+        const orientation = screen.orientation;
+        if (orientation?.lock) {
+          await orientation.lock('landscape');
+        }
+      } catch (e) {
+        // Orientation lock not supported or denied – ignore
+        console.log('Orientation lock not available:', e);
+      }
+    };
+    lockOrientation();
+
+    return () => {
+      try {
+        screen.orientation?.unlock?.();
+      } catch (e) {
+        // ignore
+      }
+    };
+  }, []);
+
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
