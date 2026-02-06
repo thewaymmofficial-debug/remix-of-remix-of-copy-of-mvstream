@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Image, Trash2, Save, Loader2, GripVertical, Eye, EyeOff } from 'lucide-react';
+import { Image, Trash2, Save, Loader2, GripVertical, Eye, EyeOff, Link } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -35,6 +35,7 @@ export default function SlidesAdmin() {
     title: '',
     description: '',
     image_url: '',
+    redirect_link: '',
     bg_color: 'from-red-600 to-red-800',
     accent_color: 'text-yellow-300',
     display_order: 0,
@@ -46,6 +47,7 @@ export default function SlidesAdmin() {
       title: '',
       description: '',
       image_url: '',
+      redirect_link: '',
       bg_color: 'from-red-600 to-red-800',
       accent_color: 'text-yellow-300',
       display_order: (slides?.length ?? 0) + 1,
@@ -57,9 +59,10 @@ export default function SlidesAdmin() {
   const handleEdit = (slide: any) => {
     setEditingId(slide.id);
     setForm({
-      title: slide.title,
+      title: slide.title || '',
       description: slide.description || '',
       image_url: slide.image_url || '',
+      redirect_link: slide.redirect_link || '',
       bg_color: slide.bg_color,
       accent_color: slide.accent_color,
       display_order: slide.display_order,
@@ -67,11 +70,15 @@ export default function SlidesAdmin() {
     });
   };
 
+  const isSaveDisabled = !form.image_url || !form.redirect_link || createSlide.isPending || updateSlide.isPending;
+
   const handleSave = () => {
     const payload = {
       ...form,
+      title: form.title || null,
       image_url: form.image_url || null,
       description: form.description || null,
+      redirect_link: form.redirect_link,
     };
 
     if (editingId) {
@@ -104,8 +111,32 @@ export default function SlidesAdmin() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 px-3 sm:px-6">
+          {/* Image (required) */}
           <div className="space-y-2">
-            <Label className="text-sm">Title</Label>
+            <Label className="text-sm">Image <span className="text-destructive">*</span></Label>
+            <SlideImageUpload
+              imageUrl={form.image_url}
+              onImageChange={(url) => setForm({ ...form, image_url: url })}
+            />
+          </div>
+
+          {/* Redirect Link (required) */}
+          <div className="space-y-2">
+            <Label className="text-sm">Redirect Link <span className="text-destructive">*</span></Label>
+            <div className="flex items-center gap-2">
+              <Link className="w-4 h-4 text-muted-foreground shrink-0" />
+              <Input
+                value={form.redirect_link}
+                onChange={(e) => setForm({ ...form, redirect_link: e.target.value })}
+                placeholder="https://example.com or /movies/123"
+                className="text-sm"
+              />
+            </div>
+          </div>
+
+          {/* Title (optional) */}
+          <div className="space-y-2">
+            <Label className="text-sm">Title <span className="text-muted-foreground text-xs">(optional)</span></Label>
             <Input
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
@@ -114,8 +145,9 @@ export default function SlidesAdmin() {
             />
           </div>
 
+          {/* Description (optional) */}
           <div className="space-y-2">
-            <Label className="text-sm">Description</Label>
+            <Label className="text-sm">Description <span className="text-muted-foreground text-xs">(optional)</span></Label>
             <Textarea
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
@@ -124,14 +156,7 @@ export default function SlidesAdmin() {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-sm">Image (optional - overrides background color)</Label>
-            <SlideImageUpload
-              imageUrl={form.image_url}
-              onImageChange={(url) => setForm({ ...form, image_url: url })}
-            />
-          </div>
-
+          {/* Background color fallback */}
           {!form.image_url && (
             <div className="space-y-2">
               <Label className="text-sm">Background Color</Label>
@@ -183,10 +208,17 @@ export default function SlidesAdmin() {
                 </>
               )}
               <div className="relative z-10 p-4 flex flex-col justify-center">
-                <h3 className="text-base font-bold text-white">{form.title || 'Title'}</h3>
+                {form.title && (
+                  <h3 className="text-base font-bold text-white">{form.title}</h3>
+                )}
                 {form.description && (
                   <p className={`text-sm mt-1 ${form.image_url ? 'text-white/90' : form.accent_color}`}>
                     {form.description}
+                  </p>
+                )}
+                {form.redirect_link && (
+                  <p className="text-xs text-white/60 mt-2 flex items-center gap-1">
+                    <Link className="w-3 h-3" /> {form.redirect_link}
                   </p>
                 )}
               </div>
@@ -196,7 +228,7 @@ export default function SlidesAdmin() {
           <div className="flex gap-2">
             <Button
               onClick={handleSave}
-              disabled={!form.title || createSlide.isPending || updateSlide.isPending}
+              disabled={isSaveDisabled}
               className="flex-1"
               size="sm"
             >
@@ -237,22 +269,22 @@ export default function SlidesAdmin() {
                   {slide.image_url ? (
                     <img src={slide.image_url} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-white text-xs font-bold px-1 text-center">{slide.title.slice(0, 15)}</span>
+                    <span className="text-white text-xs font-bold px-1 text-center">{(slide.title || 'Slide').slice(0, 15)}</span>
                   )}
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold truncate">{slide.title}</h3>
+                    <h3 className="text-sm font-semibold truncate">{slide.title || 'No title'}</h3>
                     {slide.is_active ? (
                       <Eye className="w-3.5 h-3.5 text-green-500 shrink-0" />
                     ) : (
                       <EyeOff className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                     )}
                   </div>
-                  {slide.description && (
-                    <p className="text-xs text-muted-foreground truncate mt-0.5">
-                      {slide.description}
+                  {slide.redirect_link && (
+                    <p className="text-xs text-muted-foreground truncate mt-0.5 flex items-center gap-1">
+                      <Link className="w-3 h-3 shrink-0" /> {slide.redirect_link}
                     </p>
                   )}
                 </div>
