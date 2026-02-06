@@ -1,63 +1,60 @@
 
 
-# Fix Video Player Landscape Mode on Mobile
+# Embed Streaming Server Player via iframe
 
-## The Problem
+## Problem
+The current `/watch` page uses a custom HTML5 `<video>` player which cannot play MKV files or HTTP sources from an HTTPS app. But the streaming server already has its own working video player UI -- we just need to display it.
 
-The `screen.orientation.lock('landscape')` API only works when the page is already in **fullscreen mode** on mobile browsers. The current code tries to lock orientation on mount but fullscreen hasn't been requested yet, so it silently fails and the video stays in portrait mode.
+## Solution
+Replace the custom `<video>` player on the `/watch` page with a **fullscreen iframe** that loads the streaming server's own player. Keep the auto-landscape behavior and add a close/back button overlay.
 
-## The Fix
+## Changes
 
-Redesign the video player's mount behavior to properly enter fullscreen first, then lock orientation. Add a CSS-based fallback for browsers that don't support the Fullscreen API.
+### 1. Rewrite `src/pages/Watch.tsx`
+- Remove the `VideoPlayer` component usage
+- Replace with a fullscreen page containing:
+  - An `<iframe>` that loads the streaming URL directly
+  - A floating back/close button in the top-left corner
+  - Auto-landscape using the existing `useFullscreenLandscape` hook
+  - CSS rotation fallback for devices that don't support fullscreen API
 
-## Changes to `src/components/VideoPlayer.tsx`
+### 2. Simplify `src/components/VideoPlayer.tsx` (or remove)
+- Since the iframe approach replaces the custom player, the `VideoPlayer` component is no longer needed for streaming playback
+- We can keep it as a fallback or remove it entirely -- the Watch page will handle everything itself
 
-### 1. Auto-enter fullscreen on mount (mobile only)
-- On mount, immediately request fullscreen on the container element
-- Once fullscreen is confirmed (via `fullscreenchange` event), lock orientation to landscape
-- On unmount, exit fullscreen and unlock orientation
+### 3. Keep `src/hooks/useFullscreenLandscape.tsx` as-is
+- The hook already handles fullscreen + orientation lock + CSS rotation fallback
+- It will be used directly in the Watch page
 
-### 2. CSS rotation fallback
-- If fullscreen request fails (some browsers restrict it), apply a CSS `transform: rotate(90deg)` with swapped width/height to force landscape layout
-- Detect portrait orientation using `window.matchMedia('(orientation: portrait)')` and apply the rotation only when needed
+## What the Watch page will look like
 
-### 3. Touch support for mobile controls
-- Add `onTouchStart` handler alongside `onMouseMove` for showing/hiding controls on mobile (mouse events don't fire on touch devices)
-- Add `playsInline` attribute to the `<video>` element to prevent iOS from auto-entering its native fullscreen player
+```text
++------------------------------------------+
+| [X Back]                                 |
+|                                          |
+|          (iframe fills screen)           |
+|     Streaming server's own player        |
+|     handles video controls, seek,        |
+|     play/pause, etc.                     |
+|                                          |
++------------------------------------------+
+```
 
-### 4. Improved fullscreen + orientation flow
-- Combine the separate fullscreen and orientation effects into one coordinated effect
-- Chain: mount -> request fullscreen -> on fullscreen granted -> lock orientation
-- Cleanup: unlock orientation -> exit fullscreen -> restore
+- Fullscreen black background
+- iframe takes 100% width and height
+- Small back button floats in the top-left corner
+- On mobile: auto-enters fullscreen and locks to landscape (same as before)
+- No custom video controls needed -- the streaming server provides them
 
 ## Technical Details
 
-```text
-Mount sequence:
-  1. Component mounts
-  2. Request fullscreen on container div
-  3. Listen for fullscreenchange event
-  4. On fullscreen confirmed -> screen.orientation.lock('landscape')
-  5. Video displays in landscape
-
-Unmount sequence:
-  1. screen.orientation.unlock()
-  2. document.exitFullscreen()
-  3. Navigate back
-```
-
-The CSS fallback rotation handles cases where the browser blocks fullscreen (e.g., user hasn't interacted with the page yet, or API not available):
-
-```text
-If fullscreen fails AND device is in portrait:
-  - Container gets transform: rotate(90deg)
-  - Width becomes viewport height, height becomes viewport width
-  - Controls are repositioned accordingly
-```
-
-## Files Modified
-
 | File | Change |
 |------|--------|
-| `src/components/VideoPlayer.tsx` | Auto-fullscreen on mount, orientation lock after fullscreen, CSS rotation fallback, touch event support, playsInline attribute |
+| `src/pages/Watch.tsx` | Replace VideoPlayer with fullscreen iframe + back button + useFullscreenLandscape hook |
+| `src/components/VideoPlayer.tsx` | Can be deleted (no longer used) |
 
+The iframe approach works because:
+- The streaming server handles format decoding (MKV, etc.)
+- No mixed content issue since the iframe loads HTTP content directly
+- The server's own player UI provides all controls (play, pause, seek, volume)
+- We just wrap it in a fullscreen landscape container with a back button
