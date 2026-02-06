@@ -95,7 +95,7 @@ export default function MovieDetails() {
       setShowLoginModal(true);
       return;
     }
-    if (movie.is_premium && !isPremium) {
+    if (!isPremium) {
       setShowPremiumModal(true);
     } else {
       setShowPlayDrawer(true);
@@ -108,7 +108,7 @@ export default function MovieDetails() {
       setShowLoginModal(true);
       return;
     }
-    if (movie.is_premium && !isPremium) {
+    if (!isPremium) {
       setShowPremiumModal(true);
     } else {
       setShowDownloadDrawer(true);
@@ -253,7 +253,7 @@ export default function MovieDetails() {
           size="lg"
         >
           <Play className="w-6 h-6 fill-current" />
-          {movie.is_premium && !isPremium ? 'Premium Only' : t('play')}
+          {!isPremium ? 'Premium Only' : t('play')}
         </Button>
       </div>
 

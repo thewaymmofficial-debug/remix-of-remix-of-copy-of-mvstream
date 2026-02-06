@@ -36,7 +36,7 @@ export function SeasonEpisodeList({
   };
 
   const handlePlay = (episode: Episode) => {
-    if (isPremium && !userIsPremium) {
+    if (!userIsPremium) {
       onPremiumRequired();
     } else if (episode.stream_url) {
       window.open(episode.stream_url, '_blank', 'noopener,noreferrer');
@@ -44,7 +44,7 @@ export function SeasonEpisodeList({
   };
 
   const handleDownload = (episode: Episode) => {
-    if (isPremium && !userIsPremium) {
+    if (!userIsPremium) {
       onPremiumRequired();
     } else if (episode.mega_url) {
       window.open(episode.mega_url, '_blank', 'noopener,noreferrer');

@@ -20,7 +20,7 @@ export default function Profile() {
   const handleLogout = async () => {
     await signOut();
     toast.success('Logged out successfully');
-    navigate('/');
+    navigate('/auth');
   };
 
   if (!isLoading && !user) {
