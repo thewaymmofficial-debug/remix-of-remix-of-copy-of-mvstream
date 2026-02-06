@@ -1,5 +1,8 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
 
+const SUPABASE_URL = "https://icnfjixjohbxjxqbnnac.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljbmZqaXhqb2hieGp4cWJubmFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzMTYyNjMsImV4cCI6MjA4NTg5MjI2M30.aiU4qAgb1wicSC17EneEs4qAlLtFZbYeyMnhi4NHI7Y";
+
 export interface DownloadEntry {
   id: string;
   movieId: string;
@@ -94,18 +97,24 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
     controllersRef.current.set(id, controller);
 
     try {
-      const headers: HeadersInit = {};
+      // Build proxy URL through Supabase edge function to avoid CORS
+      const proxyUrl = `${SUPABASE_URL}/functions/v1/download-proxy?url=${encodeURIComponent(url)}`;
+      
+      const headers: HeadersInit = {
+        'apikey': SUPABASE_KEY,
+      };
       if (startByte > 0) {
         headers['Range'] = `bytes=${startByte}-`;
       }
 
-      const response = await fetch(url, {
+      const response = await fetch(proxyUrl, {
         signal: controller.signal,
         headers,
       });
 
       if (!response.ok && response.status !== 206) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const errorBody = await response.text().catch(() => '');
+        throw new Error(`HTTP ${response.status}: ${response.statusText} ${errorBody}`);
       }
 
       const contentLength = response.headers.get('Content-Length');
