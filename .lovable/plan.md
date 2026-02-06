@@ -1,155 +1,114 @@
 
+# Implementation Plan: Search Page, Welcome Screen, Download Manager, and Login Warning
 
-# Advanced Cast System with Photos and Actor Pages
+This plan covers 4 features based on the reference screenshots you shared from the M-Sub Movie app.
 
-## Overview
-This plan upgrades the cast system from simple text-based actor names to a full cast management system with profile photos, character names, and dedicated actor pages -- matching the reference app's design.
+---
 
-## What Changes
+## 1. Full-Page Search Page
 
-### 1. New Database Tables
-Two new tables will be created:
+A dedicated search page with list-style results matching the reference screenshot.
 
-**`cast_members` table** -- stores individual actors/cast members:
-- `id` (uuid, primary key)
-- `name` (text, required)
-- `photo_url` (text, nullable)
-- `created_at` (timestamp)
+**What you'll see:**
+- A new `/search` page with a header ("Search Movies"), back arrow, and theme toggle
+- A search input with a search icon on the left and clear (X) button on the right, bordered in red like the reference
+- Results displayed as horizontal cards: movie poster on the left (with rating badge overlay), title, year, and resolution text in green on the right
+- Real-time filtering as you type
+- Mobile bottom nav updated with a Search tab
 
-**`movie_cast` junction table** -- links cast members to movies with their character name:
-- `id` (uuid, primary key)
-- `movie_id` (uuid, references movies)
-- `cast_member_id` (uuid, references cast_members)
-- `character_name` (text, nullable) -- e.g., "Millie Calloway"
-- `display_order` (integer, default 0)
-- `created_at` (timestamp)
+**Files involved:**
+- **New: `src/pages/Search.tsx`** -- Full search page with list-style results
+- **Modify: `src/components/MobileBottomNav.tsx`** -- Add Search tab icon between Home and Watchlist
+- **Modify: `src/components/Navbar.tsx`** -- Mobile search button navigates to `/search` instead of opening a sheet
+- **Modify: `src/App.tsx`** -- Add `/search` route
 
-RLS policies will allow anyone to view cast data, and admins to insert/update/delete.
+---
 
-### 2. Storage for Cast Photos
-Cast member photos will be uploaded to the existing `movie-posters` storage bucket under a `cast/` folder path, reusing the same infrastructure already in place.
+## 2. Welcome Screen After Login
 
-### 3. Admin Movie Form -- Cast Management
-The movie create/edit dialog in the admin panel will be updated:
-- Replace the simple "Actors (comma separated)" text input with a dynamic cast section
-- Each cast entry will have:
-  - Actor name (text input, with auto-suggest from existing cast_members)
-  - Character name (text input, e.g., "Nina Winchester")
-  - Photo upload button (circular preview)
-- Admins can add/remove cast entries
-- When saving, the system will:
-  - Create new `cast_members` records if the actor doesn't exist yet
-  - Create `movie_cast` junction records linking the actor to the movie
+A welcome/profile screen shown immediately after login, before entering the homepage.
 
-### 4. Movie Details Page -- Cast Display
-The "Cast and Actors" section on the movie detail page will be updated to:
-- Show circular profile photos (not just initials)
-- Display the actor's real name below the photo
-- Display the character name in smaller muted text below
-- Each cast member is clickable, navigating to `/actor/:id`
+**What you'll see:**
+- A green success banner at the top saying "Login Successful"
+- User avatar/logo in the center with edit icon
+- User display name and email below
+- A card showing Plan (Free/Premium/Admin) and expiry date
+- Action buttons: "Browse Movies", "Refresh News", "Active Devices"
+- Social media links (Facebook, TikTok, Telegram) at the bottom
+- Version number at the very bottom
+- Auto-redirects to homepage after 5 seconds, or user can tap "Browse Movies"
 
-### 5. New Actor Detail Page (`/actor/:id`)
-A new page matching the reference design:
-- Header with actor name and back button
-- Tabs for "Movies" and "Series"
-- Grid of movie cards (2 columns on mobile) showing all movies/series the actor appears in
-- Each card shows poster, title (year), and rating badge
+**Files involved:**
+- **New: `src/pages/Welcome.tsx`** -- Post-login welcome screen
+- **Modify: `src/pages/Auth.tsx`** -- Navigate to `/welcome` instead of `/` after login
+- **Modify: `src/components/LoginModal.tsx`** -- Same redirect change
+- **Modify: `src/App.tsx`** -- Add `/welcome` as a protected route
 
-### 6. New Route
-Add `/actor/:id` route in App.tsx.
+---
 
-## Technical Details
+## 3. Download Manager Page
 
-### Database Migration SQL
-```text
--- Create cast_members table
-CREATE TABLE public.cast_members (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  name text NOT NULL,
-  photo_url text,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
+A download tracking page that records movies the user has clicked to download.
 
-ALTER TABLE public.cast_members ENABLE ROW LEVEL SECURITY;
+**What you'll see:**
+- A `/downloads` page with header "Download Manager", back arrow, and theme toggle
+- Each download entry displayed as a card with:
+  - A file/document icon (red) on the left
+  - Movie filename (formatted like "Title.Year.Resolution.Web-Dl(cineverse).mkv")
+  - "Waiting for size..." or file size text
+  - A dark progress bar
+  - Status text ("Paused" / "Complete")
+  - Play button icon on the right
+- Downloads tracked in localStorage (since this is a web app, not native)
+- Empty state when no downloads exist
 
--- RLS: Anyone can view, admins can manage
-CREATE POLICY "Anyone can view cast members"
-  ON public.cast_members FOR SELECT USING (true);
-CREATE POLICY "Admins can insert cast members"
-  ON public.cast_members FOR INSERT
-  WITH CHECK (has_role(auth.uid(), 'admin'));
-CREATE POLICY "Admins can update cast members"
-  ON public.cast_members FOR UPDATE
-  USING (has_role(auth.uid(), 'admin'));
-CREATE POLICY "Admins can delete cast members"
-  ON public.cast_members FOR DELETE
-  USING (has_role(auth.uid(), 'admin'));
+**Files involved:**
+- **New: `src/hooks/useDownloads.tsx`** -- Custom hook managing download history in localStorage
+- **New: `src/pages/Downloads.tsx`** -- Download manager page UI
+- **Modify: `src/components/ServerDrawer.tsx`** -- When download link is clicked, save movie to download history
+- **Modify: `src/components/MobileBottomNav.tsx`** -- Add Downloads tab
+- **Modify: `src/App.tsx`** -- Add `/downloads` route (protected)
 
--- Create movie_cast junction table
-CREATE TABLE public.movie_cast (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  movie_id uuid NOT NULL REFERENCES public.movies(id) ON DELETE CASCADE,
-  cast_member_id uuid NOT NULL REFERENCES public.cast_members(id) ON DELETE CASCADE,
-  character_name text,
-  display_order integer DEFAULT 0,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE(movie_id, cast_member_id)
-);
+---
 
-ALTER TABLE public.movie_cast ENABLE ROW LEVEL SECURITY;
+## 4. Login Warning for Guest Users
 
-CREATE POLICY "Anyone can view movie cast"
-  ON public.movie_cast FOR SELECT USING (true);
-CREATE POLICY "Admins can insert movie cast"
-  ON public.movie_cast FOR INSERT
-  WITH CHECK (has_role(auth.uid(), 'admin'));
-CREATE POLICY "Admins can update movie cast"
-  ON public.movie_cast FOR UPDATE
-  USING (has_role(auth.uid(), 'admin'));
-CREATE POLICY "Admins can delete movie cast"
-  ON public.movie_cast FOR DELETE
-  USING (has_role(auth.uid(), 'admin'));
-```
+Show a login-required modal when non-authenticated users click on movie cards, matching the reference screenshot with the lock icon.
 
-### Files to Create
-- `src/pages/ActorDetail.tsx` -- new actor page with Movies/Series tabs and grid layout
-- `src/hooks/useCast.tsx` -- hooks for fetching cast members, movie cast, and actor filmography
+**What you'll see:**
+- When a guest taps any movie card on the homepage, a centered modal appears
+- Lock icon (red/primary colored) in a circular background at the top
+- "Login Required" heading
+- Description text explaining login is needed
+- Two buttons: "Cancel" (ghost) and "Register Now" (primary/red)
+- The existing `LoginRequiredModal` component already matches this design
 
-### Files to Modify
-- `src/App.tsx` -- add `/actor/:id` route
-- `src/pages/admin/MoviesAdmin.tsx` -- replace actors text input with advanced cast management UI (add/remove cast entries with name, character name, photo upload)
-- `src/pages/MovieDetails.tsx` -- update cast section to show photos, character names, and make clickable
-- `src/types/database.ts` -- add CastMember and MovieCast type interfaces
+**Files involved:**
+- **Modify: `src/pages/Index.tsx`** -- Replace `LoginModal` with `LoginRequiredModal` for guest movie card clicks
 
-### Data Flow
-```text
-Admin adds movie:
-  Admin Form --> enters cast name + character + uploads photo
-       |
-       v
-  cast_members table (create if new actor)
-       |
-       v
-  movie_cast table (link actor to movie with character_name)
+---
 
-User views movie details:
-  MovieDetails --> query movie_cast JOIN cast_members
-       |
-       v
-  Display circular photos + name + character name
-       |
-  Click on actor --> navigate to /actor/:id
+## 5. Translation Keys
 
-Actor detail page:
-  /actor/:id --> query movie_cast for this cast_member_id
-       |
-       v
-  JOIN movies table --> filter by content_type (movie/series)
-       |
-       v
-  Display in 2-column grid with Movies/Series tabs
-```
+- **Modify: `src/contexts/LanguageContext.tsx`** -- Add new keys: `searchMovies`, `welcome`, `loginSuccess`, `browseMoviesBtn`, `downloadManager`, `noDownloads`, `welcomeBack`, `plan`, `expiresOn`, `refreshNews`, `activeDevicesBtn`
 
-### Backward Compatibility
-The existing `actors` text array column on the `movies` table will remain untouched so no data is lost. The new cast system runs in parallel. The movie details page will prioritize the new `movie_cast` data when available, and fall back to the old `actors` array if no cast records exist.
+---
 
+## Summary of All Changes
+
+| Action | File | Purpose |
+|--------|------|---------|
+| Create | `src/pages/Search.tsx` | Full-page search with list-style results |
+| Create | `src/pages/Welcome.tsx` | Post-login welcome/profile screen |
+| Create | `src/pages/Downloads.tsx` | Download manager page |
+| Create | `src/hooks/useDownloads.tsx` | LocalStorage download tracking hook |
+| Modify | `src/App.tsx` | Add 3 new routes (/search, /welcome, /downloads) |
+| Modify | `src/components/MobileBottomNav.tsx` | Add Search and Downloads nav tabs |
+| Modify | `src/components/Navbar.tsx` | Mobile search navigates to /search |
+| Modify | `src/pages/Index.tsx` | Use LoginRequiredModal for guest card clicks |
+| Modify | `src/pages/Auth.tsx` | Redirect to /welcome after login |
+| Modify | `src/components/LoginModal.tsx` | Redirect to /welcome after login |
+| Modify | `src/components/ServerDrawer.tsx` | Track downloads in history |
+| Modify | `src/contexts/LanguageContext.tsx` | Add new translation keys |
+
+No database changes are needed -- downloads are stored in localStorage and all other features use existing data.
