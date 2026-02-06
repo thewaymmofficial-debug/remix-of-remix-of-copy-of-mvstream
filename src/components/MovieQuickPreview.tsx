@@ -40,7 +40,7 @@ export function MovieQuickPreview({ movie, open, onOpenChange }: MovieQuickPrevi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="p-0 gap-0 max-w-md overflow-hidden border-0 bg-card">
+      <DialogContent className="p-0 gap-0 w-[calc(100vw-2rem)] max-w-md overflow-hidden border-0 bg-card rounded-xl">
         {/* Hidden title for accessibility */}
         <DialogTitle className="sr-only">{movie.title} - Quick Preview</DialogTitle>
         
@@ -127,7 +127,7 @@ export function MovieQuickPreview({ movie, open, onOpenChange }: MovieQuickPrevi
           )}
 
           {/* Action buttons */}
-          <div className="flex gap-3 mt-4">
+          <div className="flex flex-col sm:flex-row gap-3 mt-4">
             <Button 
               onClick={handlePlayNow}
               className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"

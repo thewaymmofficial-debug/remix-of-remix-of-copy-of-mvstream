@@ -283,9 +283,9 @@
     transition: opacity 150ms ease-in;
   }
 
-  /* Fix tall dialogs on mobile - ensure they fit in viewport */
+  /* Fix tall admin dialogs on mobile - ensure they fit in viewport */
   @media (max-width: 640px) {
-    [role="dialog"][data-state="open"] {
+    .admin-fullscreen-dialog[role="dialog"][data-state="open"] {
       top: 0 !important;
       left: 0 !important;
       transform: none !important;

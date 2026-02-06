@@ -458,7 +458,7 @@ export default function MoviesAdmin() {
 
       {/* Create/Edit Modal */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="max-w-2xl max-h-[90vh] !flex !flex-col overflow-hidden glass sm:max-h-[90vh] h-[100dvh] sm:h-auto">
+        <DialogContent className="admin-fullscreen-dialog max-w-2xl max-h-[90vh] !flex !flex-col overflow-hidden glass sm:max-h-[90vh] h-[100dvh] sm:h-auto">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle>
               {editingMovie ? 'Edit Movie' : 'Add New Movie'}
