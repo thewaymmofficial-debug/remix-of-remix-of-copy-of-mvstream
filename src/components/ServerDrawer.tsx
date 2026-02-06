@@ -7,6 +7,7 @@ import {
 } from '@/components/ui/drawer';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useDownloads } from '@/hooks/useDownloads';
+import { useNavigate } from 'react-router-dom';
 
 interface ServerDrawerProps {
   open: boolean;
@@ -38,8 +39,9 @@ export function ServerDrawer({
 }: ServerDrawerProps) {
   const { t } = useLanguage();
   const { addDownload } = useDownloads();
+  const navigate = useNavigate();
 
-  const handleOpen = (url: string) => {
+  const handleOpen = (url: string, useInAppPlayer: boolean = false) => {
     // Track download if it's a download action and movieInfo is provided
     if (type === 'download' && movieInfo) {
       addDownload({
@@ -52,15 +54,21 @@ export function ServerDrawer({
         url,
       });
     }
-    window.open(url, '_blank', 'noopener,noreferrer');
+
+    if (useInAppPlayer && type === 'play') {
+      const title = movieInfo?.title || 'Video';
+      navigate(`/watch?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}`);
+    } else {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
     onOpenChange(false);
   };
 
   const servers = [
-    ...(downloadUrl ? [{ name: 'Direct Download', url: downloadUrl, icon: 'download' as const }] : []),
-    ...(streamUrl ? [{ name: 'Main Server', url: streamUrl, icon: 'main' as const }] : []),
-    ...(telegramUrl ? [{ name: 'Telegram', url: telegramUrl, icon: 'telegram' as const }] : []),
-    ...(megaUrl ? [{ name: 'MEGA', url: megaUrl, icon: 'mega' as const }] : []),
+    ...(downloadUrl ? [{ name: 'Direct Download', url: downloadUrl, icon: 'download' as const, inApp: false }] : []),
+    ...(streamUrl ? [{ name: 'Main Server', url: streamUrl, icon: 'main' as const, inApp: true }] : []),
+    ...(telegramUrl ? [{ name: 'Telegram', url: telegramUrl, icon: 'telegram' as const, inApp: false }] : []),
+    ...(megaUrl ? [{ name: 'MEGA', url: megaUrl, icon: 'mega' as const, inApp: false }] : []),
   ];
 
   if (servers.length === 0) return null;
@@ -80,7 +88,7 @@ export function ServerDrawer({
           {servers.map((server) => (
             <button
               key={server.name}
-              onClick={() => handleOpen(server.url)}
+              onClick={() => handleOpen(server.url, server.inApp)}
               className="w-full flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:bg-muted/50 transition-colors"
             >
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">

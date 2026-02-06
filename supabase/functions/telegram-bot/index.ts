@@ -5,7 +5,8 @@ const CHANNEL_ID = "-1003139915696";
 const ADMIN_IDS = ["6158106622"];
 
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
-const STREAM_BASE_URL = "https://icnfjixjohbxjxqbnnac.supabase.co/functions/v1/telegram-stream";
+const STREAM_BASE_URL =
+  "https://icnfjixjohbxjxqbnnac.supabase.co/functions/v1/telegram-stream";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,22 +14,26 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-async function sendMessage(chatId: number | string, text: string, parseMode = "HTML") {
+async function sendMessage(
+  chatId: number | string,
+  text: string,
+  parseMode = "HTML"
+) {
   const res = await fetch(`${TELEGRAM_API}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text,
-      parse_mode: parseMode,
-    }),
+    body: JSON.stringify({ chat_id: chatId, text, parse_mode: parseMode }),
   });
   const data = await res.json();
   console.log("sendMessage response:", JSON.stringify(data));
   return data;
 }
 
-async function forwardMessage(chatId: string, fromChatId: number, messageId: number) {
+async function forwardMessage(
+  chatId: string,
+  fromChatId: number,
+  messageId: number
+) {
   const res = await fetch(`${TELEGRAM_API}/forwardMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -43,7 +48,9 @@ async function forwardMessage(chatId: string, fromChatId: number, messageId: num
   return data;
 }
 
-function getFileInfo(message: any): { fileId: string; fileName: string; fileSize: number } | null {
+function getFileInfo(
+  message: any
+): { fileId: string; fileName: string; fileSize: number } | null {
   if (message.document) {
     return {
       fileId: message.document.file_id,
@@ -113,79 +120,80 @@ Deno.serve(async (req) => {
     const userId = String(message.from?.id);
     const chatId = message.chat.id;
 
-    // Check if user is authorized
+    // Auth check
     if (!ADMIN_IDS.includes(userId)) {
       console.log(`Unauthorized user: ${userId}`);
-      await sendMessage(chatId, "⛔ Unauthorized. You are not allowed to use this bot.");
-      return new Response(JSON.stringify({ ok: true }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Handle /start command
-    if (message.text === "/start") {
       await sendMessage(
         chatId,
-        "🎬 <b>Cineverse File Bot</b>\n\n" +
-          "Send me any file (video, document, audio, photo) and I'll generate stream/download links for you.\n\n" +
-          "You'll get:\n" +
-          "• 🎬 <b>Stream URL</b> — paste as stream_url for in-app playback\n" +
-          "• 📥 <b>Download URL</b> — paste as download_url\n" +
-          "• 📢 <b>Channel Link</b> — paste as telegram_url\n\n" +
-          "⚠️ Stream/Download URLs only work for files under 20MB (Telegram Bot API limit).\n" +
-          "For larger files, use the Channel Link or upload to external hosting."
+        "⛔ Unauthorized. You are not allowed to use this bot."
       );
       return new Response(JSON.stringify({ ok: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Check for file in message
-    const fileInfo = getFileInfo(message);
-    if (!fileInfo) {
-      await sendMessage(chatId, "📎 Please send me a file (video, document, audio, or photo) to get links.");
+    // /start command
+    if (message.text === "/start") {
+      await sendMessage(
+        chatId,
+        "🎬 <b>Cineverse File Bot</b>\n\n" +
+          "Send me any file (video, document, audio, photo) and I'll generate stream/download links.\n\n" +
+          "You'll get:\n" +
+          "• 🎬 <b>Stream URL</b> — paste as stream_url for in-app playback\n" +
+          "• 📥 <b>Download URL</b> — paste as download_url\n" +
+          "• 📢 <b>Channel Link</b> — paste as telegram_url\n\n" +
+          "✅ <b>Unlimited file size!</b> Streaming uses MTProto — no 20MB limit."
+      );
       return new Response(JSON.stringify({ ok: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Forward file to channel
-    const forwardResult = await forwardMessage(CHANNEL_ID, chatId, message.message_id);
-
-    let channelLink = "❌ Failed to forward";
-    if (forwardResult.ok && forwardResult.result?.message_id) {
-      channelLink = buildChannelLink(CHANNEL_ID, forwardResult.result.message_id);
+    // Check for file
+    const fileInfo = getFileInfo(message);
+    if (!fileInfo) {
+      await sendMessage(
+        chatId,
+        "📎 Please send me a file (video, document, audio, or photo) to get links."
+      );
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    const isSmallFile = fileInfo.fileSize > 0 && fileInfo.fileSize <= 20 * 1024 * 1024;
+    // Forward to channel
+    const forwardResult = await forwardMessage(
+      CHANNEL_ID,
+      chatId,
+      message.message_id
+    );
 
-    // Build stream and download URLs using the proxy
-    const streamUrl = `${STREAM_BASE_URL}?file_id=${encodeURIComponent(fileInfo.fileId)}`;
-    const downloadUrl = `${STREAM_BASE_URL}?file_id=${encodeURIComponent(fileInfo.fileId)}&download=true&name=${encodeURIComponent(fileInfo.fileName)}`;
+    if (!forwardResult.ok || !forwardResult.result?.message_id) {
+      await sendMessage(
+        chatId,
+        "❌ Failed to forward file to channel. Check bot permissions."
+      );
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    // Build reply message
-    let replyText =
+    const channelMsgId = forwardResult.result.message_id;
+    const channelLink = buildChannelLink(CHANNEL_ID, channelMsgId);
+
+    // Build MTProto-based stream/download URLs (unlimited size)
+    const streamUrl = `${STREAM_BASE_URL}?msg_id=${channelMsgId}`;
+    const downloadUrl = `${STREAM_BASE_URL}?msg_id=${channelMsgId}&download=true&name=${encodeURIComponent(fileInfo.fileName)}`;
+
+    const replyText =
       `📁 <b>File Received</b>\n\n` +
       `<b>Name:</b> <code>${fileInfo.fileName}</code>\n` +
-      `<b>Size:</b> ${formatFileSize(fileInfo.fileSize)}\n\n`;
-
-    if (isSmallFile) {
-      replyText +=
-        `🔗 <b>Links:</b>\n\n` +
-        `🎬 <b>Stream URL (for stream_url):</b>\n<code>${streamUrl}</code>\n\n` +
-        `📥 <b>Download URL (for download_url):</b>\n<code>${downloadUrl}</code>\n\n` +
-        `📢 <b>Channel Link (for telegram_url):</b>\n<code>${channelLink}</code>\n\n` +
-        `✅ All links are ready! Copy and paste into the admin panel.`;
-    } else {
-      replyText +=
-        `⚠️ <b>File exceeds 20MB — Bot API streaming limit</b>\n\n` +
-        `📢 <b>Channel Link (for telegram_url):</b>\n<code>${channelLink}</code>\n\n` +
-        `❌ Stream/Download URLs are NOT available for files over 20MB.\n\n` +
-        `💡 <b>For large files, you can:</b>\n` +
-        `• Upload to Google Drive / Mega and use that URL as stream_url\n` +
-        `• Use a direct hosting service for the video file\n` +
-        `• The Channel Link is saved for reference`;
-    }
+      `<b>Size:</b> ${formatFileSize(fileInfo.fileSize)}\n\n` +
+      `🔗 <b>Links (unlimited file size):</b>\n\n` +
+      `🎬 <b>Stream URL (for stream_url):</b>\n<code>${streamUrl}</code>\n\n` +
+      `📥 <b>Download URL (for download_url):</b>\n<code>${downloadUrl}</code>\n\n` +
+      `📢 <b>Channel Link (for telegram_url):</b>\n<code>${channelLink}</code>\n\n` +
+      `✅ All links ready! Copy and paste into the admin panel.`;
 
     await sendMessage(chatId, replyText);
 
