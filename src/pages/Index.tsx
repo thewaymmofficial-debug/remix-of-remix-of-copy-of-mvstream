@@ -2,7 +2,7 @@ import { useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Navbar } from '@/components/Navbar';
-import { HeroBanner } from '@/components/HeroBanner';
+
 import { MovieRow } from '@/components/MovieRow';
 import { MovieCard } from '@/components/MovieCard';
 import { ContinueWatchingCard } from '@/components/ContinueWatchingCard';
@@ -14,12 +14,12 @@ import { AnnouncementBanner } from '@/components/AnnouncementBanner';
 import { CategoryGrid } from '@/components/CategoryGrid';
 import { InfoCarousel } from '@/components/InfoCarousel';
 import { useAuth } from '@/hooks/useAuth';
-import { useFeaturedMovies, useMoviesByCategory, useWatchlist } from '@/hooks/useMovies';
+import { useMoviesByCategory, useWatchlist } from '@/hooks/useMovies';
 import { useContinueWatching, useRemoveFromHistory } from '@/hooks/useWatchHistory';
 import { useTrendingMovies } from '@/hooks/useTrending';
 import { useRecommendations } from '@/hooks/useRecommendations';
 import { useFilter } from '@/contexts/FilterContext';
-import { useLanguage } from '@/contexts/LanguageContext';
+
 import { ChevronLeft, ChevronRight, Sparkles, RefreshCw } from 'lucide-react';
 import type { Movie } from '@/types/database';
 
@@ -27,8 +27,6 @@ const Index = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const { t } = useLanguage();
-  const { data: featuredMovies } = useFeaturedMovies();
   const { data: moviesByCategory, isLoading, isError, error, refetch } = useMoviesByCategory();
   const { data: watchlistData } = useWatchlist();
   const { data: continueWatching } = useContinueWatching();
@@ -37,8 +35,7 @@ const Index = () => {
   const removeFromHistory = useRemoveFromHistory();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [previewMovie, setPreviewMovie] = useState<Movie | null>(null);
-  const { searchQuery, selectedCategory, setSelectedCategory, selectedYear } = useFilter();
-  const [browsing, setBrowsing] = useState(false);
+  const { searchQuery, selectedCategory, selectedYear } = useFilter();
   const continueWatchingRef = useRef<HTMLDivElement>(null);
 
   // Get all unique categories and years for filters
@@ -157,7 +154,6 @@ const Index = () => {
 
   const hasNoResults = Object.keys(filteredMoviesByCategory).length === 0 && !isLoading;
   const isFiltering = searchQuery.trim() || selectedCategory !== 'all' || selectedYear !== 'all';
-  const showMovies = browsing || isFiltering;
 
   const handleRefresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ['movies'] });
@@ -173,19 +169,10 @@ const Index = () => {
       <InfoCarousel />
 
       {/* Category Grid Section */}
-      <CategoryGrid onCategoryClick={(filter) => {
-        setBrowsing(true);
-        if (filter === 'movie' || filter === 'series') {
-          setSelectedCategory(filter === 'movie' ? 'Action' : 'K-Drama');
-        } else if (filter === 'trending' || filter === 'trending-series' || filter === 'featured') {
-          setSelectedCategory('all');
-        } else {
-          setSelectedCategory(filter);
-        }
-      }} />
+      <CategoryGrid />
 
-      {/* Movie Rows - only show when a category is clicked */}
-      {showMovies && (
+      {/* Movie Rows - show when filtering via search/navbar */}
+      {isFiltering && (
       <div className="py-8 relative z-30 bg-background">
         {isLoading ? (
           <div className="px-4 md:px-8">
