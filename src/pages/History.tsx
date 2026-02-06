@@ -121,12 +121,12 @@ export default function History() {
                     )}
                     
                     {/* Progress bar */}
-                    {item.duration_seconds && item.progress_seconds > 0 && (
+                    {item.duration && item.progress > 0 && (
                       <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/30">
                         <div
                           className="h-full bg-primary"
                           style={{
-                            width: `${Math.min((item.progress_seconds / item.duration_seconds) * 100, 100)}%`,
+                            width: `${Math.min((item.progress / item.duration) * 100, 100)}%`,
                           }}
                         />
                       </div>
@@ -145,9 +145,9 @@ export default function History() {
                       {item.movie.year} • {item.movie.category}
                     </p>
                     <p className="text-xs text-muted-foreground mt-2">
-                      Watched {formatDistanceToNow(new Date(item.watched_at), { addSuffix: true })}
+                      Watched {formatDistanceToNow(new Date(item.last_watched_at), { addSuffix: true })}
                     </p>
-                    {item.completed && (
+                    {item.duration && item.progress >= item.duration * 0.9 && (
                       <span className="inline-block mt-2 px-2 py-0.5 text-xs bg-cg-success/20 text-cg-success rounded">
                         Completed
                       </span>

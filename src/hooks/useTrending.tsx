@@ -4,7 +4,7 @@ import type { Movie } from '@/types/database';
 
 interface MovieWithViews extends Movie {
   view_count: number;
-  week_views: number;
+  weekly_views: number;
 }
 
 // Get trending movies based on weekly views
@@ -12,11 +12,11 @@ export function useTrendingMovies(limit = 10) {
   return useQuery({
     queryKey: ['trending-movies', limit],
     queryFn: async () => {
-      // First get movie_views sorted by week_views
+      // First get movie_views sorted by weekly_views
       const { data: viewsData, error: viewsError } = await supabase
         .from('movie_views')
-        .select('movie_id, view_count, week_views')
-        .order('week_views', { ascending: false })
+        .select('movie_id, view_count, weekly_views')
+        .order('weekly_views', { ascending: false })
         .limit(limit);
 
       if (viewsError) throw viewsError;
@@ -32,12 +32,12 @@ export function useTrendingMovies(limit = 10) {
         return (latestMovies || []).map((m) => ({
           ...m,
           view_count: 0,
-          week_views: 0,
+          weekly_views: 0,
         })) as MovieWithViews[];
       }
 
       // Get movie details for the trending movies
-      const movieIds = viewsData.map((v) => v.movie_id);
+      const movieIds = viewsData.map((v: any) => v.movie_id);
       const { data: movies, error: moviesError } = await supabase
         .from('movies')
         .select('*')
@@ -48,13 +48,13 @@ export function useTrendingMovies(limit = 10) {
       // Combine movie data with view counts and maintain order
       const movieMap = new Map((movies || []).map((m) => [m.id, m]));
       return viewsData
-        .map((v) => {
+        .map((v: any) => {
           const movie = movieMap.get(v.movie_id);
           if (!movie) return null;
           return {
             ...movie,
             view_count: v.view_count,
-            week_views: v.week_views,
+            weekly_views: v.weekly_views,
           };
         })
         .filter(Boolean) as MovieWithViews[];
@@ -70,14 +70,14 @@ export function useMostViewedMovies(limit = 10) {
     queryFn: async () => {
       const { data: viewsData, error: viewsError } = await supabase
         .from('movie_views')
-        .select('movie_id, view_count, week_views')
+        .select('movie_id, view_count, weekly_views')
         .order('view_count', { ascending: false })
         .limit(limit);
 
       if (viewsError) throw viewsError;
       if (!viewsData || viewsData.length === 0) return [];
 
-      const movieIds = viewsData.map((v) => v.movie_id);
+      const movieIds = viewsData.map((v: any) => v.movie_id);
       const { data: movies, error: moviesError } = await supabase
         .from('movies')
         .select('*')
@@ -87,13 +87,13 @@ export function useMostViewedMovies(limit = 10) {
 
       const movieMap = new Map((movies || []).map((m) => [m.id, m]));
       return viewsData
-        .map((v) => {
+        .map((v: any) => {
           const movie = movieMap.get(v.movie_id);
           if (!movie) return null;
           return {
             ...movie,
             view_count: v.view_count,
-            week_views: v.week_views,
+            weekly_views: v.weekly_views,
           };
         })
         .filter(Boolean) as MovieWithViews[];
@@ -112,16 +112,16 @@ export function useViewAnalytics() {
         .select(`
           movie_id,
           view_count,
-          week_views,
-          last_updated
+          weekly_views,
+          last_viewed_at
         `)
         .order('view_count', { ascending: false })
         .limit(50);
 
       if (error) throw error;
 
-      const totalViews = (data || []).reduce((sum, m) => sum + m.view_count, 0);
-      const weeklyViews = (data || []).reduce((sum, m) => sum + m.week_views, 0);
+      const totalViews = (data || []).reduce((sum, m: any) => sum + m.view_count, 0);
+      const weeklyViews = (data || []).reduce((sum, m: any) => sum + m.weekly_views, 0);
 
       return {
         topMovies: data || [],

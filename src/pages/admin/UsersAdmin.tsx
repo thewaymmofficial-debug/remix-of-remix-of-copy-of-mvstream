@@ -40,7 +40,6 @@ interface UserWithRole {
   email: string | null;
   display_name: string | null;
   premium_type: string | null;
-  premium_started_at: string | null;
   premium_expires_at: string | null;
 }
 
@@ -57,7 +56,7 @@ export default function UsersAdmin() {
       // Get all user roles with profile data
       const { data: roles, error: rolesError } = await supabase
         .from('user_roles')
-        .select('user_id, role, created_at, premium_type, premium_started_at, premium_expires_at');
+        .select('user_id, role, created_at, premium_type, premium_expires_at');
 
       if (rolesError) throw rolesError;
 
@@ -69,8 +68,8 @@ export default function UsersAdmin() {
       if (profilesError) throw profilesError;
 
       // Merge the data
-      const usersWithRoles: UserWithRole[] = (roles || []).map((role) => {
-        const profile = profiles?.find((p) => p.id === role.user_id);
+      const usersWithRoles: UserWithRole[] = (roles || []).map((role: any) => {
+        const profile = profiles?.find((p: any) => p.id === role.user_id);
         return {
           user_id: role.user_id,
           role: role.role as AppRole,
@@ -78,7 +77,6 @@ export default function UsersAdmin() {
           email: profile?.email || null,
           display_name: profile?.display_name || null,
           premium_type: role.premium_type,
-          premium_started_at: role.premium_started_at,
           premium_expires_at: role.premium_expires_at,
         };
       });
@@ -96,9 +94,8 @@ export default function UsersAdmin() {
           .update({ 
             role: newRole,
             premium_type: null,
-            premium_started_at: null,
             premium_expires_at: null,
-          })
+          } as any)
           .eq('user_id', userId);
 
         if (error) throw error;
@@ -106,7 +103,7 @@ export default function UsersAdmin() {
         // Admin role - just update role
         const { error } = await supabase
           .from('user_roles')
-          .update({ role: newRole })
+          .update({ role: newRole } as any)
           .eq('user_id', userId);
 
         if (error) throw error;
@@ -140,9 +137,8 @@ export default function UsersAdmin() {
         .update({
           role: 'premium',
           premium_type: duration,
-          premium_started_at: now.toISOString(),
           premium_expires_at: expiresAt?.toISOString() || null,
-        })
+        } as any)
         .eq('user_id', userId);
 
       if (error) throw error;
