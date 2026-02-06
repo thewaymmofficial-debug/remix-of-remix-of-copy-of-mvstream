@@ -161,11 +161,7 @@ const categorySections: CategorySection[] = [
   },
 ];
 
-interface CategoryGridProps {
-  onCategoryClick: (filter: string) => void;
-}
-
-export function CategoryGrid({ onCategoryClick }: CategoryGridProps) {
+export function CategoryGrid() {
   const navigate = useNavigate();
   const { language } = useLanguage();
 
@@ -173,7 +169,7 @@ export function CategoryGrid({ onCategoryClick }: CategoryGridProps) {
     if (item.path) {
       navigate(item.path);
     } else if (item.filter) {
-      onCategoryClick(item.filter);
+      navigate(`/browse/${item.filter}`);
     }
   };
 
