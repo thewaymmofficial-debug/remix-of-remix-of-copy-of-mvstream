@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Home, Bookmark, Crown, User, LogOut, Settings, Search, Download } from 'lucide-react';
+import { Home, Bookmark, Crown, User, LogOut, Settings, Search, Download, Bell } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { usePendingRequestCount } from '@/hooks/usePendingRequests';
 import { cn } from '@/lib/utils';
 import {
   Sheet,
@@ -17,13 +18,14 @@ export function MobileBottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, role, isAdmin, signOut } = useAuth();
+  const pendingCount = usePendingRequestCount();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [profileSheetOpen, setProfileSheetOpen] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
     setProfileSheetOpen(false);
-    navigate('/');
+    navigate('/auth');
   };
 
   const navItems = [
@@ -33,6 +35,9 @@ export function MobileBottomNav() {
     { icon: Download, label: 'Downloads', path: '/downloads', show: !!user },
     { icon: Crown, label: 'Admin', path: '/admin', show: isAdmin },
   ].filter(item => item.show);
+
+  // Admin notification item rendered separately with badge
+  const showAdminNotif = isAdmin;
 
   const isActive = (path: string) => 
     location.pathname === path || 
@@ -72,6 +77,39 @@ export function MobileBottomNav() {
               </Link>
             );
           })}
+          {/* Admin Notification Bell */}
+          {showAdminNotif && (
+            <Link
+              to="/admin/premium-requests"
+              className={cn(
+                "flex flex-col items-center justify-center gap-1 py-2 px-4 rounded-lg transition-all relative",
+                location.pathname === '/admin/premium-requests'
+                  ? "text-cineverse-red"
+                  : "text-cineverse-gray hover:text-foreground"
+              )}
+            >
+              <div className="relative">
+                <Bell
+                  className={cn(
+                    "w-5 h-5 transition-all",
+                    location.pathname === '/admin/premium-requests' && "fill-cineverse-red"
+                  )}
+                  fill={location.pathname === '/admin/premium-requests' ? "currentColor" : "none"}
+                />
+                {pendingCount > 0 && (
+                  <span className="absolute -top-1.5 -right-2 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                    {pendingCount > 99 ? '99+' : pendingCount}
+                  </span>
+                )}
+              </div>
+              <span className={cn(
+                "text-xs font-medium",
+                location.pathname === '/admin/premium-requests' && "text-cineverse-red"
+              )}>
+                Requests
+              </span>
+            </Link>
+          )}
 
           {/* Profile Button with Sheet */}
           {user ? (

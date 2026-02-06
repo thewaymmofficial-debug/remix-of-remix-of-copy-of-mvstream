@@ -657,10 +657,38 @@ export type Database = {
         }
         Relationships: []
       }
+      user_devices: {
+        Row: {
+          created_at: string
+          device_id: string
+          device_name: string
+          id: string
+          last_active_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_id: string
+          device_name?: string
+          id?: string
+          last_active_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string
+          device_name?: string
+          id?: string
+          last_active_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
           id: string
+          max_devices: number
           premium_expires_at: string | null
           premium_type: string | null
           role: Database["public"]["Enums"]["app_role"]
@@ -669,6 +697,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          max_devices?: number
           premium_expires_at?: string | null
           premium_type?: string | null
           role?: Database["public"]["Enums"]["app_role"]
@@ -677,6 +706,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          max_devices?: number
           premium_expires_at?: string | null
           premium_type?: string | null
           role?: Database["public"]["Enums"]["app_role"]
