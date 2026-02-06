@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Eye, EyeOff, Moon, Sun } from 'lucide-react';
+import { User, Eye, EyeOff, Moon, Sun, AlertTriangle, Smartphone, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { useTheme } from 'next-themes';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import cineverseLogo from '@/assets/cineverse-logo.png';
+import type { UserDevice } from '@/hooks/useDevices';
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -22,12 +25,143 @@ export default function Auth() {
   const [displayName, setDisplayName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showDeviceLimitModal, setShowDeviceLimitModal] = useState(false);
+  const [blockedDevices, setBlockedDevices] = useState<UserDevice[]>([]);
+  const [blockedMaxDevices, setBlockedMaxDevices] = useState(1);
+  const [blockedUserId, setBlockedUserId] = useState<string | null>(null);
+  const [isCheckingDevices, setIsCheckingDevices] = useState(false);
 
   useEffect(() => {
-    if (user && !authLoading) {
+    if (user && !authLoading && !showDeviceLimitModal && !isCheckingDevices) {
       navigate('/welcome');
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, navigate, showDeviceLimitModal, isCheckingDevices]);
+
+  // Helper to get or create device ID
+  function getDeviceId(): string {
+    const key = 'cineverse_device_id';
+    let deviceId = localStorage.getItem(key);
+    if (!deviceId) {
+      deviceId = crypto.randomUUID();
+      localStorage.setItem(key, deviceId);
+    }
+    return deviceId;
+  }
+
+  function parseDeviceName(): string {
+    const ua = navigator.userAgent;
+    let browser = 'Unknown Browser';
+    let os = 'Unknown OS';
+    if (ua.includes('Firefox')) browser = 'Firefox';
+    else if (ua.includes('Edg')) browser = 'Edge';
+    else if (ua.includes('Chrome') && !ua.includes('Edg')) browser = 'Chrome';
+    else if (ua.includes('Safari') && !ua.includes('Chrome')) browser = 'Safari';
+    else if (ua.includes('Opera') || ua.includes('OPR')) browser = 'Opera';
+    if (ua.includes('iPhone')) os = 'iPhone';
+    else if (ua.includes('iPad')) os = 'iPad';
+    else if (ua.includes('Android')) os = 'Android';
+    else if (ua.includes('Windows')) os = 'Windows';
+    else if (ua.includes('Mac OS')) os = 'Mac';
+    else if (ua.includes('Linux')) os = 'Linux';
+    return `${browser} on ${os}`;
+  }
+
+  const checkAndRegisterDevice = async (userId: string): Promise<'allowed' | 'blocked'> => {
+    const deviceId = getDeviceId();
+    const deviceName = parseDeviceName();
+
+    // Get user role info
+    const { data: roleData } = await supabase
+      .from('user_roles')
+      .select('max_devices, role')
+      .eq('user_id', userId)
+      .single();
+
+    const userRole = roleData?.role;
+    const userMaxDevices = roleData?.max_devices ?? 1;
+    const isAdminRole = userRole === 'admin';
+    const isPremiumRole = userRole === 'premium';
+
+    // Free users: skip device tracking
+    if (!isAdminRole && !isPremiumRole) return 'allowed';
+
+    // Admin: unlimited devices, just register
+    if (isAdminRole) {
+      await supabase.from('user_devices').upsert(
+        { user_id: userId, device_id: deviceId, device_name: deviceName, last_active_at: new Date().toISOString() },
+        { onConflict: 'user_id,device_id' }
+      );
+      return 'allowed';
+    }
+
+    // Premium: check if this device already registered
+    const { data: existingDevice } = await supabase
+      .from('user_devices')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('device_id', deviceId)
+      .maybeSingle();
+
+    if (existingDevice) {
+      // Already registered, update and allow
+      await supabase.from('user_devices')
+        .update({ last_active_at: new Date().toISOString(), device_name: deviceName })
+        .eq('id', existingDevice.id);
+      return 'allowed';
+    }
+
+    // New device - check limit
+    const { data: currentDevices } = await supabase
+      .from('user_devices')
+      .select('*')
+      .eq('user_id', userId)
+      .order('last_active_at', { ascending: false });
+
+    const currentList = (currentDevices || []) as UserDevice[];
+
+    if (currentList.length >= userMaxDevices) {
+      // BLOCKED - keep signed in so they can delete devices via RLS
+      setBlockedDevices(currentList);
+      setBlockedMaxDevices(userMaxDevices);
+      setBlockedUserId(userId);
+      setShowDeviceLimitModal(true);
+      return 'blocked';
+    }
+
+    // Under limit - register
+    await supabase.from('user_devices').insert({
+      user_id: userId, device_id: deviceId, device_name: deviceName,
+      last_active_at: new Date().toISOString(),
+    });
+    return 'allowed';
+  };
+
+  const handleRemoveBlockedDevice = async (deviceDbId: string) => {
+    await supabase.from('user_devices').delete().eq('id', deviceDbId);
+    setBlockedDevices(prev => prev.filter(d => d.id !== deviceDbId));
+    toast.success('Device removed successfully.');
+
+    // Now try to register this device since a slot is free
+    if (blockedUserId) {
+      const deviceId = getDeviceId();
+      const deviceName = parseDeviceName();
+      await supabase.from('user_devices').insert({
+        user_id: blockedUserId, device_id: deviceId, device_name: deviceName,
+        last_active_at: new Date().toISOString(),
+      });
+      setShowDeviceLimitModal(false);
+      setBlockedUserId(null);
+      toast.success('Welcome back!');
+      navigate('/welcome');
+    }
+  };
+
+  const handleDeviceLimitClose = async () => {
+    // User closed modal without removing a device - sign out
+    setShowDeviceLimitModal(false);
+    setBlockedUserId(null);
+    await supabase.auth.signOut();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,15 +190,27 @@ export default function Auth() {
           toast.success('Account created! Please check your email to verify.');
         }
       } else {
+        setIsCheckingDevices(true);
         const { error } = await signIn(email, password);
         if (error) {
+          setIsCheckingDevices(false);
           toast.error('Invalid email or password');
         } else {
+          // Check device limits before navigating
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            const deviceCheckResult = await checkAndRegisterDevice(session.user.id);
+            if (deviceCheckResult === 'blocked') {
+              setIsCheckingDevices(false);
+              return;
+            }
+          }
+          setIsCheckingDevices(false);
           toast.success('Welcome back!');
           navigate('/welcome');
         }
       }
-    } catch (error) {
+    } catch {
       toast.error('Something went wrong. Please try again.');
     } finally {
       setIsLoading(false);
@@ -240,6 +386,46 @@ export default function Auth() {
           {t('version')} 1.0.0
         </p>
       </div>
+
+      {/* Device Limit Modal */}
+      <Dialog open={showDeviceLimitModal} onOpenChange={(open) => {
+        if (!open) handleDeviceLimitClose();
+      }}>
+        <DialogContent className="sm:max-w-sm rounded-2xl bg-background border-border p-6">
+          <div className="flex flex-col items-center text-center mb-4">
+            <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-3">
+              <AlertTriangle className="w-8 h-8 text-destructive" />
+            </div>
+            <h2 className="text-xl font-bold text-foreground">Device Limit Reached</h2>
+            <p className="text-sm text-muted-foreground mt-2">
+              Your plan allows a maximum of {blockedMaxDevices} device{blockedMaxDevices > 1 ? 's' : ''}. 
+              Remove a device below to log in on this device.
+            </p>
+          </div>
+
+          <div className="space-y-3 max-h-60 overflow-y-auto">
+            {blockedDevices.map((device) => (
+              <div key={device.id} className="border border-border rounded-xl p-4 flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center flex-shrink-0">
+                  <Smartphone className="w-6 h-6 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-foreground text-sm">{device.device_name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Last active: {new Date(device.last_active_at).toLocaleDateString()}
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleRemoveBlockedDevice(device.id)}
+                  className="p-2 text-destructive hover:text-destructive/80 transition-colors"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
