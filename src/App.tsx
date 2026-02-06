@@ -8,6 +8,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { FilterProvider } from "@/contexts/FilterContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { DevicePresenceMonitor } from "@/components/DevicePresenceMonitor";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import MovieDetails from "./pages/MovieDetails";
@@ -59,6 +60,7 @@ const App = () => (
       <LanguageProvider>
         <AuthProvider>
           <FilterProvider>
+            <DevicePresenceMonitor />
             <TooltipProvider>
               <Toaster />
               <Sonner />
