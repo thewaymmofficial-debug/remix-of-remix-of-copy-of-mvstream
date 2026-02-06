@@ -12,6 +12,7 @@ import {
   useUpdateInfoSlide,
   useDeleteInfoSlide,
 } from '@/hooks/useInfoSlides';
+import SlideImageUpload from '@/components/admin/SlideImageUpload';
 
 const BG_COLOR_OPTIONS = [
   { label: 'Red', value: 'from-red-600 to-red-800' },
@@ -124,18 +125,11 @@ export default function SlidesAdmin() {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-sm">Image URL (optional - overrides background color)</Label>
-            <Input
-              value={form.image_url}
-              onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-              placeholder="https://example.com/image.jpg"
-              className="text-sm"
+            <Label className="text-sm">Image (optional - overrides background color)</Label>
+            <SlideImageUpload
+              imageUrl={form.image_url}
+              onImageChange={(url) => setForm({ ...form, image_url: url })}
             />
-            {form.image_url && (
-              <div className="rounded-lg overflow-hidden border border-border h-32">
-                <img src={form.image_url} alt="Preview" className="w-full h-full object-cover" />
-              </div>
-            )}
           </div>
 
           {!form.image_url && (
