@@ -9,6 +9,8 @@ import {
   SkipBack,
   SkipForward,
   X,
+  AlertTriangle,
+  ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -29,6 +31,7 @@ export function VideoPlayer({ url, title, onClose }: VideoPlayerProps) {
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const [showControls, setShowControls] = useState(true);
+  const [videoError, setVideoError] = useState(false);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { needsCssRotation, isFullscreen } = useFullscreenLandscape(containerRef);
@@ -40,19 +43,25 @@ export function VideoPlayer({ url, title, onClose }: VideoPlayerProps) {
 
     const handleTimeUpdate = () => setCurrentTime(video.currentTime);
     const handleLoadedMetadata = () => setDuration(video.duration);
-    const handlePlay = () => setIsPlaying(true);
+    const handlePlay = () => { setIsPlaying(true); setVideoError(false); };
     const handlePause = () => setIsPlaying(false);
+    const handleError = () => {
+      console.error('Video playback error for URL:', url);
+      setVideoError(true);
+    };
 
     video.addEventListener('timeupdate', handleTimeUpdate);
     video.addEventListener('loadedmetadata', handleLoadedMetadata);
     video.addEventListener('play', handlePlay);
     video.addEventListener('pause', handlePause);
+    video.addEventListener('error', handleError);
 
     return () => {
       video.removeEventListener('timeupdate', handleTimeUpdate);
       video.removeEventListener('loadedmetadata', handleLoadedMetadata);
       video.removeEventListener('play', handlePlay);
       video.removeEventListener('pause', handlePause);
+      video.removeEventListener('error', handleError);
     };
   }, []);
 
@@ -112,6 +121,10 @@ export function VideoPlayer({ url, title, onClose }: VideoPlayerProps) {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  const openExternal = () => {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
   const resetControlsTimeout = useCallback(() => {
     setShowControls(true);
     if (controlsTimeoutRef.current) {
@@ -158,114 +171,139 @@ export function VideoPlayer({ url, title, onClose }: VideoPlayerProps) {
       </Button>
 
       {/* Video */}
-      <video
-        ref={videoRef}
-        src={url}
-        className="w-full h-full object-contain"
-        onClick={togglePlay}
-        playsInline
-        webkit-playsinline=""
-      />
+      {!videoError && (
+        <video
+          ref={videoRef}
+          src={url}
+          className="w-full h-full object-contain"
+          onClick={togglePlay}
+          playsInline
+          webkit-playsinline=""
+          crossOrigin="anonymous"
+        />
+      )}
+
+      {/* Error state - can't play video */}
+      {videoError && (
+        <div className="flex flex-col items-center justify-center gap-6 p-8 text-center">
+          <AlertTriangle className="w-16 h-16 text-yellow-500" />
+          <div>
+            <h3 className="text-white text-xl font-semibold mb-2">Cannot play this video</h3>
+            <p className="text-white/60 text-sm max-w-sm">
+              This video format or source isn't supported by the in-app player. Open it in your browser or an external player instead.
+            </p>
+          </div>
+          <Button
+            onClick={openExternal}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
+          >
+            <ExternalLink className="w-5 h-5" />
+            Open in Browser
+          </Button>
+        </div>
+      )}
 
       {/* Controls overlay */}
-      <div
-        className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 transition-opacity ${
-          showControls ? 'opacity-100' : 'opacity-0'
-        }`}
-      >
-        {/* Title */}
-        <h3 className="text-white font-semibold mb-4">{title}</h3>
+      {!videoError && (
+        <div
+          className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 transition-opacity ${
+            showControls ? 'opacity-100' : 'opacity-0'
+          }`}
+        >
+          {/* Title */}
+          <h3 className="text-white font-semibold mb-4">{title}</h3>
 
-        {/* Progress bar */}
-        <div className="mb-4">
-          <Slider
-            value={[currentTime]}
-            max={duration || 100}
-            step={0.1}
-            onValueChange={handleSeek}
-            className="cursor-pointer"
-          />
-          <div className="flex justify-between text-xs text-white/60 mt-1">
-            <span>{formatTime(currentTime)}</span>
-            <span>{formatTime(duration)}</span>
+          {/* Progress bar */}
+          <div className="mb-4">
+            <Slider
+              value={[currentTime]}
+              max={duration || 100}
+              step={0.1}
+              onValueChange={handleSeek}
+              className="cursor-pointer"
+            />
+            <div className="flex justify-between text-xs text-white/60 mt-1">
+              <span>{formatTime(currentTime)}</span>
+              <span>{formatTime(duration)}</span>
+            </div>
           </div>
-        </div>
 
-        {/* Controls */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-white hover:bg-white/20"
-              onClick={() => skip(-10)}
-            >
-              <SkipBack className="w-5 h-5" />
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-white hover:bg-white/20 w-12 h-12"
-              onClick={togglePlay}
-            >
-              {isPlaying ? (
-                <Pause className="w-6 h-6" />
-              ) : (
-                <Play className="w-6 h-6 ml-0.5" />
-              )}
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-white hover:bg-white/20"
-              onClick={() => skip(10)}
-            >
-              <SkipForward className="w-5 h-5" />
-            </Button>
-
-            {/* Volume */}
-            <div className="flex items-center gap-2 ml-4">
+          {/* Controls */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
                 size="icon"
                 className="text-white hover:bg-white/20"
-                onClick={toggleMute}
+                onClick={() => skip(-10)}
               >
-                {isMuted || volume === 0 ? (
-                  <VolumeX className="w-5 h-5" />
+                <SkipBack className="w-5 h-5" />
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-white hover:bg-white/20 w-12 h-12"
+                onClick={togglePlay}
+              >
+                {isPlaying ? (
+                  <Pause className="w-6 h-6" />
                 ) : (
-                  <Volume2 className="w-5 h-5" />
+                  <Play className="w-6 h-6 ml-0.5" />
                 )}
               </Button>
-              <Slider
-                value={[isMuted ? 0 : volume]}
-                max={1}
-                step={0.01}
-                onValueChange={handleVolumeChange}
-                className="w-24"
-              />
-            </div>
-          </div>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-white hover:bg-white/20"
-            onClick={toggleFullscreen}
-          >
-            {isFullscreen ? (
-              <Minimize className="w-5 h-5" />
-            ) : (
-              <Maximize className="w-5 h-5" />
-            )}
-          </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-white hover:bg-white/20"
+                onClick={() => skip(10)}
+              >
+                <SkipForward className="w-5 h-5" />
+              </Button>
+
+              {/* Volume */}
+              <div className="flex items-center gap-2 ml-4">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-white hover:bg-white/20"
+                  onClick={toggleMute}
+                >
+                  {isMuted || volume === 0 ? (
+                    <VolumeX className="w-5 h-5" />
+                  ) : (
+                    <Volume2 className="w-5 h-5" />
+                  )}
+                </Button>
+                <Slider
+                  value={[isMuted ? 0 : volume]}
+                  max={1}
+                  step={0.01}
+                  onValueChange={handleVolumeChange}
+                  className="w-24"
+                />
+              </div>
+            </div>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-white/20"
+              onClick={toggleFullscreen}
+            >
+              {isFullscreen ? (
+                <Minimize className="w-5 h-5" />
+              ) : (
+                <Maximize className="w-5 h-5" />
+              )}
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Play/Pause overlay button */}
-      {!isPlaying && showControls && (
+      {!isPlaying && showControls && !videoError && (
         <button
           onClick={togglePlay}
           className="absolute inset-0 flex items-center justify-center"

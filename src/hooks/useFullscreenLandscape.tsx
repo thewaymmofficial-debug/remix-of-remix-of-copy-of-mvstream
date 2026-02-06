@@ -19,7 +19,7 @@ export function useFullscreenLandscape(containerRef: RefObject<HTMLElement | nul
 
     const lockOrientation = async () => {
       try {
-        const orientation = screen.orientation;
+        const orientation = screen.orientation as any;
         if (orientation?.lock) {
           await orientation.lock('landscape');
         }
@@ -86,7 +86,7 @@ export function useFullscreenLandscape(containerRef: RefObject<HTMLElement | nul
 
       // Unlock orientation
       try {
-        screen.orientation?.unlock?.();
+        (screen.orientation as any)?.unlock?.();
       } catch (e) { /* ignore */ }
 
       // Exit fullscreen
