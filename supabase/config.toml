@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.telegram-bot-setup]
 verify_jwt = false
+
+[functions.telegram-stream]
+verify_jwt = false
