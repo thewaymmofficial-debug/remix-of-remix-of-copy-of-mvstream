@@ -419,6 +419,7 @@ export type Database = {
           plan_duration: string
           plan_id: string | null
           plan_price: string
+          premium_type: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           screenshot_url: string | null
@@ -434,6 +435,7 @@ export type Database = {
           plan_duration: string
           plan_id?: string | null
           plan_price: string
+          premium_type?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           screenshot_url?: string | null
@@ -449,6 +451,7 @@ export type Database = {
           plan_duration?: string
           plan_id?: string | null
           plan_price?: string
+          premium_type?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           screenshot_url?: string | null
