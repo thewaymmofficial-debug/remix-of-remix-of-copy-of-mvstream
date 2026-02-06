@@ -28,7 +28,9 @@ import {
 } from '@/components/ui/sheet';
 import { useAuth } from '@/hooks/useAuth';
 import { LoginModal } from './LoginModal';
+import { LanguageToggle } from './LanguageToggle';
 import { useFilter } from '@/contexts/FilterContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
 
 interface NavbarProps {
@@ -41,6 +43,7 @@ export function Navbar({ children, categories = [], years = [] }: NavbarProps) {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const { user, profile, role, isAdmin, signOut } = useAuth();
+  const { t } = useLanguage();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [searchSheetOpen, setSearchSheetOpen] = useState(false);
   const { searchQuery, setSearchQuery, selectedCategory, setSelectedCategory, selectedYear, setSelectedYear } = useFilter();
@@ -114,7 +117,10 @@ export function Navbar({ children, categories = [], years = [] }: NavbarProps) {
           </div>
 
           {/* Right side */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            {/* Language toggle */}
+            <LanguageToggle className="text-white border-white/20 hover:bg-white/10" />
+
             {/* Theme toggle */}
             <Button
               variant="ghost"
@@ -178,7 +184,7 @@ export function Navbar({ children, categories = [], years = [] }: NavbarProps) {
                 </DropdownMenu>
               ) : (
                 <Button onClick={() => setShowLoginModal(true)} size="sm" className="h-8 text-xs">
-                  Sign In
+                  {t('signIn')}
                 </Button>
               )}
             </div>
