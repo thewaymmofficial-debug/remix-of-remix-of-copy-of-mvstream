@@ -70,7 +70,7 @@ export default function Analytics() {
   const viewChartData = mostViewed?.map(movie => ({
     name: movie.title.length > 15 ? movie.title.substring(0, 15) + '...' : movie.title,
     views: movie.view_count,
-    weekViews: movie.week_views,
+    weekViews: movie.weekly_views,
   })) || [];
 
   const stats = [

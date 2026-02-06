@@ -153,7 +153,7 @@ export function BulkImport() {
             is_premium: movie.is_premium?.toLowerCase() === 'true',
             is_featured: movie.is_featured?.toLowerCase() === 'true',
             content_type: movie.content_type || 'movie',
-          });
+          } as any);
 
           if (error) {
             results.push({ success: false, title: movie.title, error: error.message });

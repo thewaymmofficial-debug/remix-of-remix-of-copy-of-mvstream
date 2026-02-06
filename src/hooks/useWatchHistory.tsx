@@ -8,10 +8,10 @@ interface WatchHistoryEntry {
   user_id: string;
   movie_id: string;
   episode_id: string | null;
-  progress_seconds: number;
-  duration_seconds: number | null;
-  completed: boolean;
-  watched_at: string;
+  progress: number;
+  duration: number | null;
+  last_watched_at: string;
+  created_at: string;
   movie: Movie;
 }
 
@@ -35,17 +35,17 @@ export function useWatchHistory(limit = 20) {
           movie:movies(*)
         `)
         .eq('user_id', user.id)
-        .order('watched_at', { ascending: false })
+        .order('last_watched_at', { ascending: false })
         .limit(limit);
 
       if (error) throw error;
-      return (data || []) as WatchHistoryEntry[];
+      return (data || []) as unknown as WatchHistoryEntry[];
     },
     enabled: !!user,
   });
 }
 
-// Fetch movies that are in-progress (not completed)
+// Fetch movies that are in-progress
 export function useContinueWatching() {
   const { user } = useAuth();
 
@@ -61,17 +61,16 @@ export function useContinueWatching() {
           movie:movies(*)
         `)
         .eq('user_id', user.id)
-        .eq('completed', false)
-        .gt('progress_seconds', 30) // Only show if watched more than 30 seconds
-        .order('watched_at', { ascending: false })
+        .gt('progress', 30) // Only show if watched more than 30 seconds
+        .order('last_watched_at', { ascending: false })
         .limit(10);
 
       if (error) throw error;
 
-      return (data || []).map((entry) => ({
+      return (data || []).map((entry: any) => ({
         ...entry,
-        progress_percent: entry.duration_seconds 
-          ? Math.min((entry.progress_seconds / entry.duration_seconds) * 100, 95)
+        progress_percent: entry.duration 
+          ? Math.min((entry.progress / entry.duration) * 100, 95)
           : 0,
       })) as ContinueWatchingEntry[];
     },
@@ -104,18 +103,15 @@ export function useUpdateProgress() {
           user_id: user.id,
           movie_id: movieId,
           episode_id: episodeId,
-          progress_seconds: progressSeconds,
-          duration_seconds: durationSeconds,
-          completed: durationSeconds ? progressSeconds >= durationSeconds * 0.9 : false,
-          watched_at: new Date().toISOString(),
-        }, {
-          onConflict: 'user_id,movie_id,episode_id',
-        });
+          progress: progressSeconds,
+          duration: durationSeconds || 0,
+          last_watched_at: new Date().toISOString(),
+        } as any);
 
       if (error) throw error;
 
       // Increment view count
-      await supabase.rpc('increment_view_count', { p_movie_id: movieId });
+      await supabase.rpc('increment_view_count', { _movie_id: movieId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['watch-history'] });
@@ -145,11 +141,10 @@ export function useMarkCompleted() {
           user_id: user.id,
           movie_id: movieId,
           episode_id: episodeId,
-          completed: true,
-          watched_at: new Date().toISOString(),
-        }, {
-          onConflict: 'user_id,movie_id,episode_id',
-        });
+          progress: 0,
+          duration: 0,
+          last_watched_at: new Date().toISOString(),
+        } as any);
 
       if (error) throw error;
     },
