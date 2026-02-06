@@ -6,7 +6,7 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useDownloads } from '@/hooks/useDownloads';
+import { useDownloadManager } from '@/contexts/DownloadContext';
 import { useNavigate } from 'react-router-dom';
 
 interface ServerDrawerProps {
@@ -38,13 +38,13 @@ export function ServerDrawer({
   movieInfo,
 }: ServerDrawerProps) {
   const { t } = useLanguage();
-  const { addDownload } = useDownloads();
+  const { startDownload } = useDownloadManager();
   const navigate = useNavigate();
 
   const handleOpen = (url: string, useInAppPlayer: boolean = false) => {
-    // Track download if it's a download action and movieInfo is provided
+    // In-app download with progress tracking
     if (type === 'download' && movieInfo) {
-      addDownload({
+      startDownload({
         movieId: movieInfo.movieId,
         title: movieInfo.title,
         posterUrl: movieInfo.posterUrl,
@@ -53,9 +53,8 @@ export function ServerDrawer({
         fileSize: movieInfo.fileSize,
         url,
       });
-    }
-
-    if (useInAppPlayer && type === 'play') {
+      navigate('/downloads');
+    } else if (useInAppPlayer && type === 'play') {
       const title = movieInfo?.title || 'Video';
       navigate(`/watch?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}`);
     } else {
