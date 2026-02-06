@@ -28,7 +28,7 @@ export default function Welcome() {
     maxDevices,
     registerDevice,
     removeDevice,
-    currentDeviceId,
+    
   } = useDevices(user?.id);
 
   // Redirect if not logged in
@@ -152,7 +152,7 @@ export default function Welcome() {
               className={cn(
                 'text-sm font-bold',
                 role === 'admin'
-                  ? 'text-yellow-500'
+                  ? 'text-amber-500'
                   : role === 'premium'
                   ? 'text-primary'
                   : 'text-foreground'
@@ -173,22 +173,6 @@ export default function Welcome() {
             </div>
           )}
 
-          {/* Active Devices row - only for premium/admin */}
-          {(isPremium || isAdmin) && (
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <Smartphone className="w-5 h-5 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Active Devices</span>
-              </div>
-              <button
-                onClick={() => setShowDevicesModal(true)}
-                className="text-sm font-medium text-primary hover:underline"
-              >
-                {devices.length} / {isAdmin ? '∞' : maxDevices}
-              </button>
-            </div>
-          )}
-
           {/* Action Buttons based on role */}
           {showPremiumView ? (
             <>
@@ -206,12 +190,22 @@ export default function Welcome() {
                 <Button
                   variant="outline"
                   onClick={() => navigate('/premium-renewal')}
-                  className="w-full h-12 rounded-2xl font-semibold text-base border-border"
+                  className="w-full h-12 rounded-2xl font-semibold text-base border-primary text-primary mb-3"
                 >
                   <Star className="w-5 h-5 mr-2" />
                   သက်တမ်းတိုးရန်
                 </Button>
               )}
+
+              {/* Active Devices button - only for premium/admin */}
+              <Button
+                variant="outline"
+                onClick={() => setShowDevicesModal(true)}
+                className="w-full h-12 rounded-2xl font-semibold text-base border-border text-muted-foreground"
+              >
+                <Smartphone className="w-5 h-5 mr-2" />
+                အသုံးပြုနေသော device များ
+              </Button>
             </>
           ) : (
             <>
@@ -268,51 +262,49 @@ export default function Welcome() {
       {/* Active Devices Modal */}
       <Dialog open={showDevicesModal} onOpenChange={setShowDevicesModal}>
         <DialogContent className="sm:max-w-sm rounded-2xl bg-background border-border p-6">
-          <h2 className="text-xl font-bold text-foreground mb-1">Active Devices</h2>
-          <p className="text-sm text-muted-foreground mb-4">
-            {devices.length} / {isAdmin ? '∞' : maxDevices} devices used
-          </p>
+          <h2 className="text-xl font-bold text-foreground mb-4">Active Devices</h2>
 
           <div className="space-y-3 max-h-60 overflow-y-auto">
             {devices.map((device) => (
               <div
                 key={device.id}
-                className={cn(
-                  "border rounded-xl p-4 flex items-center gap-3",
-                  device.device_id === currentDeviceId
-                    ? "border-primary bg-primary/5"
-                    : "border-border"
-                )}
+                className="bg-accent/50 rounded-xl p-4 flex items-center gap-3"
               >
-                <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center flex-shrink-0">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                   <Smartphone className="w-6 h-6 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-foreground text-sm">
                     {device.device_name}
-                    {device.device_id === currentDeviceId && (
-                      <span className="ml-2 text-xs text-primary">(This device)</span>
-                    )}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Last active: {new Date(device.last_active_at).toLocaleDateString()}
+                    {device.device_id.substring(0, 10).toUpperCase()}
                   </p>
                 </div>
-                {device.device_id !== currentDeviceId && (
-                  <button
-                    onClick={() => handleRemoveDevice(device.id)}
-                    className="p-2 text-destructive hover:text-destructive/80 transition-colors"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-                )}
+                <button
+                  onClick={() => handleRemoveDevice(device.id)}
+                  className="p-2 text-destructive hover:text-destructive/80 transition-colors"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
               </div>
             ))}
           </div>
 
+          <div className="border-t border-border mt-4 pt-3">
+            <p className="text-sm text-muted-foreground text-center mb-1">
+              နောက်ဆုံး Logout ထုက်ထားသောနေ့
+            </p>
+            <p className="text-sm text-muted-foreground text-center">
+              {devices.length > 0
+                ? new Date(devices[devices.length - 1]?.last_active_at).toLocaleDateString('my-MM')
+                : '-'}
+            </p>
+          </div>
+
           <button
             onClick={() => setShowDevicesModal(false)}
-            className="w-full text-center text-primary font-medium mt-4 py-2"
+            className="w-full text-center text-primary font-medium mt-3 py-2"
           >
             Close
           </button>
