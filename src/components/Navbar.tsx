@@ -19,13 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet';
 import { useAuth } from '@/hooks/useAuth';
 import { LoginModal } from './LoginModal';
 import { LanguageToggle } from './LanguageToggle';
@@ -45,7 +38,6 @@ export function Navbar({ children, categories = [], years = [] }: NavbarProps) {
   const { user, profile, role, isAdmin, signOut } = useAuth();
   const { t } = useLanguage();
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [searchSheetOpen, setSearchSheetOpen] = useState(false);
   const { searchQuery, setSearchQuery, selectedCategory, setSelectedCategory, selectedYear, setSelectedYear } = useFilter();
 
   const toggleTheme = () => {
@@ -189,71 +181,15 @@ export function Navbar({ children, categories = [], years = [] }: NavbarProps) {
               )}
             </div>
 
-            {/* Mobile search button */}
-            <Sheet open={searchSheetOpen} onOpenChange={setSearchSheetOpen}>
-              <SheetTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="md:hidden text-white hover:bg-white/10 h-9 w-9"
-                >
-                  <Search className="w-4 h-4" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="top" className="bg-black/95 border-white/10">
-                <SheetHeader className="text-left pb-4">
-                  <SheetTitle className="text-white">Search</SheetTitle>
-                </SheetHeader>
-                <div className="space-y-3">
-                  {/* Search Input */}
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
-                    <Input
-                      type="text"
-                      placeholder="Search movies..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-9 bg-white/10 border-white/20 text-white placeholder:text-white/50"
-                      autoFocus
-                    />
-                  </div>
-
-                  {/* Filters */}
-                  <div className="flex gap-2">
-                    {categories.length > 0 && (
-                      <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                        <SelectTrigger className="flex-1 bg-white/10 border-white/20 text-white text-sm">
-                          <SelectValue placeholder="Category" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-popover border-border">
-                          <SelectItem value="all">All Categories</SelectItem>
-                          {categories.map((cat) => (
-                            <SelectItem key={cat} value={cat}>
-                              {cat}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                    {years.length > 0 && (
-                      <Select value={selectedYear} onValueChange={setSelectedYear}>
-                        <SelectTrigger className="flex-1 bg-white/10 border-white/20 text-white text-sm">
-                          <SelectValue placeholder="Year" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-popover border-border">
-                          <SelectItem value="all">All Years</SelectItem>
-                          {years.map((year) => (
-                            <SelectItem key={year} value={year.toString()}>
-                              {year}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </div>
-                </div>
-              </SheetContent>
-            </Sheet>
+            {/* Mobile search button - navigates to /search */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden text-white hover:bg-white/10 h-9 w-9"
+              onClick={() => navigate('/search')}
+            >
+              <Search className="w-4 h-4" />
+            </Button>
           </div>
         </div>
       </nav>

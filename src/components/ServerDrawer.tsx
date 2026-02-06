@@ -6,6 +6,7 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useDownloads } from '@/hooks/useDownloads';
 
 interface ServerDrawerProps {
   open: boolean;
@@ -15,6 +16,14 @@ interface ServerDrawerProps {
   megaUrl?: string | null;
   downloadUrl?: string | null;
   type: 'play' | 'download';
+  movieInfo?: {
+    movieId: string;
+    title: string;
+    posterUrl: string | null;
+    year: number | null;
+    resolution: string | null;
+    fileSize: string | null;
+  };
 }
 
 export function ServerDrawer({
@@ -25,10 +34,24 @@ export function ServerDrawer({
   megaUrl,
   downloadUrl,
   type,
+  movieInfo,
 }: ServerDrawerProps) {
   const { t } = useLanguage();
+  const { addDownload } = useDownloads();
 
   const handleOpen = (url: string) => {
+    // Track download if it's a download action and movieInfo is provided
+    if (type === 'download' && movieInfo) {
+      addDownload({
+        movieId: movieInfo.movieId,
+        title: movieInfo.title,
+        posterUrl: movieInfo.posterUrl,
+        year: movieInfo.year,
+        resolution: movieInfo.resolution,
+        fileSize: movieInfo.fileSize,
+        url,
+      });
+    }
     window.open(url, '_blank', 'noopener,noreferrer');
     onOpenChange(false);
   };

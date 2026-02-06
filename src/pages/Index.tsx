@@ -6,7 +6,7 @@ import { Navbar } from '@/components/Navbar';
 import { MovieRow } from '@/components/MovieRow';
 import { MovieCard } from '@/components/MovieCard';
 import { ContinueWatchingCard } from '@/components/ContinueWatchingCard';
-import { LoginModal } from '@/components/LoginModal';
+import { LoginRequiredModal } from '@/components/LoginRequiredModal';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { MovieQuickPreview } from '@/components/MovieQuickPreview';
 import { SkeletonRow } from '@/components/SkeletonCard';
@@ -327,7 +327,7 @@ const Index = () => {
       </footer>
 
       <MobileBottomNav />
-      <LoginModal open={showLoginModal} onOpenChange={setShowLoginModal} />
+      <LoginRequiredModal open={showLoginModal} onOpenChange={setShowLoginModal} />
       <MovieQuickPreview 
         movie={previewMovie} 
         open={!!previewMovie} 

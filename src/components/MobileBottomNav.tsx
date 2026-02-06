@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Home, Bookmark, Crown, User, LogOut, Settings } from 'lucide-react';
+import { Home, Bookmark, Crown, User, LogOut, Settings, Search, Download } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -28,7 +28,9 @@ export function MobileBottomNav() {
 
   const navItems = [
     { icon: Home, label: 'Home', path: '/', show: true },
+    { icon: Search, label: 'Search', path: '/search', show: true },
     { icon: Bookmark, label: 'Watchlist', path: '/watchlist', show: !!user },
+    { icon: Download, label: 'Downloads', path: '/downloads', show: !!user },
     { icon: Crown, label: 'Admin', path: '/admin', show: isAdmin },
   ].filter(item => item.show);
 

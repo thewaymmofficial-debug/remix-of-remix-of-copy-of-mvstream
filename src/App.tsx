@@ -19,6 +19,9 @@ import PremiumRenewal from "./pages/PremiumRenewal";
 import MovieRequest from "./pages/MovieRequest";
 import TvChannels from "./pages/TvChannels";
 import Browse from "./pages/Browse";
+import SearchPage from "./pages/Search";
+import Welcome from "./pages/Welcome";
+import Downloads from "./pages/Downloads";
 import AdminLayout from "./pages/admin/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
 import MoviesAdmin from "./pages/admin/MoviesAdmin";
@@ -63,6 +66,9 @@ const App = () => (
                   <Route path="/" element={<Index />} />
                   <Route path="/movie/:id" element={<MovieDetails />} />
                   <Route path="/browse/:filter" element={<Browse />} />
+                  <Route path="/search" element={<SearchPage />} />
+                  <Route path="/welcome" element={<ProtectedRoute><Welcome /></ProtectedRoute>} />
+                  <Route path="/downloads" element={<ProtectedRoute><Downloads /></ProtectedRoute>} />
                   <Route path="/actor/:id" element={<ActorDetail />} />
                   <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                   <Route path="/watchlist" element={<ProtectedRoute><Watchlist /></ProtectedRoute>} />

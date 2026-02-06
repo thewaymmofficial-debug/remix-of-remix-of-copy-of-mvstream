@@ -140,6 +140,12 @@ const translations = {
     copied: 'Copied!',
     noMovies: 'No movies available yet. Check back soon!',
     noResults: 'No movies match your filters. Try adjusting your search.',
+    downloadManager: 'Download Manager',
+    noDownloads: 'No downloads yet',
+    loginSuccess: 'Login Successful',
+    browseMoviesBtn: 'Browse Movies',
+    plan: 'Plan',
+    expiresOn: 'Expires',
   },
   mm: {
     // Navigation
@@ -278,6 +284,12 @@ const translations = {
     copied: 'ကူးယူပြီး!',
     noMovies: 'ရုပ်ရှင်များမရှိသေးပါ။ နောက်မှပြန်စစ်ကြည့်ပါ!',
     noResults: 'ရှာဖွေမှုနှင့်ကိုက်ညီသောရုပ်ရှင်မရှိပါ။',
+    downloadManager: 'Download Manager',
+    noDownloads: 'ဒေါင်းလုဒ်များ မရှိသေးပါ',
+    loginSuccess: 'Login Successful',
+    browseMoviesBtn: 'ရုပ်ရှင်ကြည့်မယ်',
+    plan: 'Plan',
+    expiresOn: 'သက်တမ်း',
   },
 } as const;
 
