@@ -16,7 +16,7 @@ export default function Support() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate(-1)}
+            onClick={() => navigate('/')}
             className="h-9 w-9"
           >
             <ArrowLeft className="w-5 h-5" />
