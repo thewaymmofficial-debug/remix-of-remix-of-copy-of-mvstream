@@ -59,6 +59,7 @@ const defaultEpisode: Omit<EpisodeInsert, 'season_id'> = {
   stream_url: '',
   telegram_url: '',
   mega_url: '',
+  download_url: '',
 };
 
 export default function SeriesAdmin() {
@@ -187,6 +188,7 @@ export default function SeriesAdmin() {
       stream_url: episode.stream_url || '',
       telegram_url: episode.telegram_url || '',
       mega_url: episode.mega_url || '',
+      download_url: episode.download_url || '',
     });
     setShowEpisodeModal(true);
   };
@@ -419,6 +421,11 @@ export default function SeriesAdmin() {
                                 {episode.mega_url && (
                                   <span className="flex items-center gap-1">
                                     <ExternalLink className="w-3 h-3" /> MEGA
+                                  </span>
+                                )}
+                                {episode.download_url && (
+                                  <span className="flex items-center gap-1">
+                                    <ExternalLink className="w-3 h-3" /> DL
                                   </span>
                                 )}
                               </div>
@@ -687,6 +694,20 @@ export default function SeriesAdmin() {
                     mega_url: e.target.value
                   }))}
                   placeholder="https://mega.nz/..."
+                  className="bg-muted"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="ep_download_url">Download Link</Label>
+                <Input
+                  id="ep_download_url"
+                  value={episodeFormData.download_url || ''}
+                  onChange={(e) => setEpisodeFormData(prev => ({
+                    ...prev,
+                    download_url: e.target.value
+                  }))}
+                  placeholder="http://..."
                   className="bg-muted"
                 />
               </div>
