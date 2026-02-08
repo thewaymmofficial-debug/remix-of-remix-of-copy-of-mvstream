@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { ChevronDown, Play, ExternalLink, Eye, Download, Film, Server } from 'lucide-react';
+import { ChevronDown, ChevronUp, Play, ExternalLink, Film, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { useSeasonsWithEpisodes } from '@/hooks/useSeasons';
 import { useLanguage } from '@/contexts/LanguageContext';
-import type { Episode, SeasonWithEpisodes } from '@/types/database';
+import type { Episode } from '@/types/database';
 
 interface SeasonEpisodeListProps {
   movieId: string;
@@ -22,15 +21,22 @@ export function SeasonEpisodeList({
   const { data: seasons, isLoading } = useSeasonsWithEpisodes(movieId);
   const { t } = useLanguage();
   const [expandedSeasons, setExpandedSeasons] = useState<Set<string>>(() => new Set());
+  const [expandedEpisodes, setExpandedEpisodes] = useState<Set<string>>(() => new Set());
 
   const toggleSeason = (seasonId: string) => {
     setExpandedSeasons(prev => {
       const next = new Set(prev);
-      if (next.has(seasonId)) {
-        next.delete(seasonId);
-      } else {
-        next.add(seasonId);
-      }
+      if (next.has(seasonId)) next.delete(seasonId);
+      else next.add(seasonId);
+      return next;
+    });
+  };
+
+  const toggleEpisode = (episodeId: string) => {
+    setExpandedEpisodes(prev => {
+      const next = new Set(prev);
+      if (next.has(episodeId)) next.delete(episodeId);
+      else next.add(episodeId);
       return next;
     });
   };
@@ -43,24 +49,13 @@ export function SeasonEpisodeList({
     }
   };
 
-  const handleDownload = (episode: Episode) => {
-    if (!userIsPremium) {
-      onPremiumRequired();
-    } else if (episode.mega_url) {
-      window.open(episode.mega_url, '_blank', 'noopener,noreferrer');
-    } else if (episode.telegram_url) {
-      window.open(episode.telegram_url, '_blank', 'noopener,noreferrer');
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="mt-6">
         <div className="animate-pulse space-y-3">
           <div className="h-6 w-48 bg-muted rounded" />
-          <div className="h-20 bg-muted rounded-xl" />
-          <div className="h-20 bg-muted rounded-xl" />
-          <div className="h-20 bg-muted rounded-xl" />
+          <div className="h-24 bg-muted rounded-xl" />
+          <div className="h-24 bg-muted rounded-xl" />
         </div>
       </div>
     );
@@ -68,121 +63,195 @@ export function SeasonEpisodeList({
 
   if (!seasons || seasons.length === 0) return null;
 
-  // Calculate total episodes across all seasons
   const totalEpisodes = seasons.reduce((sum, s) => sum + s.episodes.length, 0);
   const hasSingleSeason = seasons.length === 1;
 
   return (
     <div className="mt-6">
-      {hasSingleSeason ? (
-        // Single season - show flat episode list like M-Sub
-        <>
-          <h2 className="text-xl font-bold text-foreground mb-4">
-            {t('allEpisodes')} ({totalEpisodes})
-          </h2>
-          <div className="space-y-3">
-            {seasons[0].episodes.map((episode) => (
-              <EpisodeCard
-                key={episode.id}
-                episode={episode}
-                onPlay={() => handlePlay(episode)}
-                onDownload={() => handleDownload(episode)}
-              />
-            ))}
-          </div>
-        </>
-      ) : (
-        // Multiple seasons - collapsible
-        <>
-          <h2 className="text-xl font-bold text-foreground mb-4">
-            {t('seasonsAndEpisodes')}
-          </h2>
-          <div className="space-y-3">
-            {seasons.map((season) => (
-              <div key={season.id}>
-                <button
-                  onClick={() => toggleSeason(season.id)}
-                  className="w-full flex items-center justify-between p-4 rounded-xl bg-card border border-border hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="font-semibold text-foreground">
-                      Season {season.season_number}
-                      {season.title && `: ${season.title}`}
-                    </span>
-                    <span className="text-sm text-muted-foreground">
-                      ({season.episodes.length} {t('episodes')})
-                    </span>
-                  </div>
-                  <ChevronDown 
-                    className={`w-5 h-5 text-muted-foreground transition-transform ${
-                      expandedSeasons.has(season.id) ? 'rotate-180' : ''
-                    }`}
-                  />
-                </button>
+      <h2 className="text-xl font-bold text-foreground mb-4">
+        {hasSingleSeason ? `${t('allEpisodes')} (${totalEpisodes})` : t('seasonsAndEpisodes')}
+      </h2>
 
-                {expandedSeasons.has(season.id) && (
-                  <div className="mt-2 space-y-3">
-                    {season.episodes.map((episode) => (
-                      <EpisodeCard
-                        key={episode.id}
-                        episode={episode}
-                        onPlay={() => handlePlay(episode)}
-                        onDownload={() => handleDownload(episode)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </>
-      )}
+      <div className="space-y-3">
+        {hasSingleSeason ? (
+          // Single season — flat list
+          seasons[0].episodes.map((episode) => (
+            <EpisodeCard
+              key={episode.id}
+              episode={episode}
+              seasonNumber={seasons[0].season_number}
+              isExpanded={expandedEpisodes.has(episode.id)}
+              onToggle={() => toggleEpisode(episode.id)}
+              onPlay={() => handlePlay(episode)}
+              userIsPremium={userIsPremium}
+              onPremiumRequired={onPremiumRequired}
+            />
+          ))
+        ) : (
+          // Multiple seasons — collapsible
+          seasons.map((season) => (
+            <div key={season.id} className="rounded-xl border border-border overflow-hidden">
+              <button
+                onClick={() => toggleSeason(season.id)}
+                className="w-full flex items-center justify-between p-4 bg-card hover:bg-muted/50 transition-colors"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  {expandedSeasons.has(season.id) 
+                    ? <ChevronUp className="w-5 h-5 text-muted-foreground shrink-0" />
+                    : <ChevronDown className="w-5 h-5 text-muted-foreground shrink-0" />
+                  }
+                  <span className="font-semibold text-foreground truncate">
+                    Season {season.season_number}
+                    {season.title ? `: ${season.title}` : ''}
+                  </span>
+                </div>
+                <span className="text-sm text-muted-foreground whitespace-nowrap ml-2">
+                  {season.episodes.length} {t('episodes')}
+                </span>
+              </button>
+
+              {expandedSeasons.has(season.id) && (
+                <div className="border-t border-border bg-background p-3 space-y-3">
+                  {season.episodes.map((episode) => (
+                    <EpisodeCard
+                      key={episode.id}
+                      episode={episode}
+                      seasonNumber={season.season_number}
+                      isExpanded={expandedEpisodes.has(episode.id)}
+                      onToggle={() => toggleEpisode(episode.id)}
+                      onPlay={() => handlePlay(episode)}
+                      userIsPremium={userIsPremium}
+                      onPremiumRequired={onPremiumRequired}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
     </div>
   );
 }
 
 interface EpisodeCardProps {
   episode: Episode;
+  seasonNumber: number;
+  isExpanded: boolean;
+  onToggle: () => void;
   onPlay: () => void;
-  onDownload: () => void;
+  userIsPremium: boolean;
+  onPremiumRequired: () => void;
 }
 
-function EpisodeCard({ episode, onPlay, onDownload }: EpisodeCardProps) {
-  const hasDownload = episode.mega_url || episode.telegram_url;
+function EpisodeCard({ 
+  episode, 
+  seasonNumber, 
+  isExpanded, 
+  onToggle, 
+  onPlay,
+  userIsPremium,
+  onPremiumRequired,
+}: EpisodeCardProps) {
+  const handleLinkClick = (url: string) => {
+    if (!userIsPremium) {
+      onPremiumRequired();
+    } else {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  };
 
   return (
-    <div className="flex items-center gap-3 p-4 rounded-xl bg-card border border-border">
-      {/* Play button */}
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
+      {/* Main row — always visible */}
       <button
-        onClick={onPlay}
-        className="flex-shrink-0 w-10 h-10 rounded-full border-2 border-primary flex items-center justify-center text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+        onClick={onToggle}
+        className="w-full flex items-center gap-3 p-3 text-left hover:bg-muted/30 transition-colors"
       >
-        <Play className="w-4 h-4 fill-current" />
-      </button>
+        {/* Thumbnail */}
+        <div className="w-28 h-20 rounded-lg bg-muted shrink-0 flex items-center justify-center overflow-hidden">
+          {episode.thumbnail_url ? (
+            <img 
+              src={episode.thumbnail_url} 
+              alt={episode.title} 
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <Film className="w-8 h-8 text-muted-foreground/50" />
+          )}
+        </div>
 
-      {/* Episode info */}
-      <div className="flex-1 min-w-0">
-        <h4 className="font-semibold text-foreground text-sm">
-          {episode.title}
-        </h4>
-        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <p className="text-xs text-muted-foreground">
+            {seasonNumber}-{episode.episode_number}
+            {episode.air_date && ` • ${episode.air_date}`}
+          </p>
+          <h4 className="font-semibold text-foreground text-sm mt-0.5 line-clamp-2">
+            Episode {episode.episode_number}: {episode.title}
+          </h4>
           {episode.duration && (
-            <div className="flex items-center gap-1">
-              <Server className="w-3 h-3" />
+            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+              <Clock className="w-3 h-3" />
               <span>{episode.duration}</span>
             </div>
           )}
         </div>
-      </div>
 
-      {/* Download icon */}
-      {hasDownload && (
-        <button
-          onClick={onDownload}
-          className="flex-shrink-0 p-2 text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <Download className="w-5 h-5" />
-        </button>
+        {/* Expand icon */}
+        {isExpanded 
+          ? <ChevronUp className="w-5 h-5 text-muted-foreground shrink-0" />
+          : <ChevronDown className="w-5 h-5 text-muted-foreground shrink-0" />
+        }
+      </button>
+
+      {/* Expanded content */}
+      {isExpanded && (
+        <div className="px-3 pb-3 space-y-3 border-t border-border pt-3">
+          {/* Description */}
+          {episode.description && (
+            <p className="text-sm text-muted-foreground">{episode.description}</p>
+          )}
+
+          {/* Action buttons */}
+          <div className="flex flex-wrap gap-2">
+            {episode.stream_url && (
+              <Button
+                onClick={(e) => { e.stopPropagation(); onPlay(); }}
+                className="bg-red-600 hover:bg-red-700 text-white gap-2"
+                size="sm"
+              >
+                <Play className="w-4 h-4 fill-current" />
+                Play
+              </Button>
+            )}
+
+            {episode.telegram_url && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => { e.stopPropagation(); handleLinkClick(episode.telegram_url!); }}
+                className="gap-2"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Telegram
+              </Button>
+            )}
+
+            {episode.mega_url && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => { e.stopPropagation(); handleLinkClick(episode.mega_url!); }}
+                className="gap-2"
+              >
+                <ExternalLink className="w-4 h-4" />
+                MEGA
+              </Button>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
