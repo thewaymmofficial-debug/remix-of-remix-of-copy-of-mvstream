@@ -96,6 +96,7 @@ export interface Episode {
   stream_url: string | null;
   telegram_url: string | null;
   mega_url: string | null;
+  download_url: string | null;
   created_at: string;
 }
 
@@ -110,6 +111,7 @@ export interface EpisodeInsert {
   stream_url?: string | null;
   telegram_url?: string | null;
   mega_url?: string | null;
+  download_url?: string | null;
 }
 
 export interface EpisodeUpdate extends Partial<Omit<EpisodeInsert, 'season_id'>> {}

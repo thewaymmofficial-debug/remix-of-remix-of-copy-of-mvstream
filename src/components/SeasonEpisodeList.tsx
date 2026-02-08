@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, Play, ExternalLink, Film, Clock } from 'lucide-react';
+import { ChevronDown, ChevronUp, Play, ExternalLink, Film, Clock, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSeasonsWithEpisodes } from '@/hooks/useSeasons';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -248,6 +248,18 @@ function EpisodeCard({
               >
                 <ExternalLink className="w-4 h-4" />
                 MEGA
+              </Button>
+            )}
+
+            {episode.download_url && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => { e.stopPropagation(); handleLinkClick(episode.download_url!); }}
+                className="gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Download
               </Button>
             )}
           </div>

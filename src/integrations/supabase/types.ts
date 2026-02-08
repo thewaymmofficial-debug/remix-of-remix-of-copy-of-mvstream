@@ -61,6 +61,7 @@ export type Database = {
           air_date: string | null
           created_at: string
           description: string | null
+          download_url: string | null
           duration: string | null
           episode_number: number
           id: string
@@ -75,6 +76,7 @@ export type Database = {
           air_date?: string | null
           created_at?: string
           description?: string | null
+          download_url?: string | null
           duration?: string | null
           episode_number: number
           id?: string
@@ -89,6 +91,7 @@ export type Database = {
           air_date?: string | null
           created_at?: string
           description?: string | null
+          download_url?: string | null
           duration?: string | null
           episode_number?: number
           id?: string
