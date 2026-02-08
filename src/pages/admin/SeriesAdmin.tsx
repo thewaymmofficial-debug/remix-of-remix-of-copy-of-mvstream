@@ -517,7 +517,7 @@ export default function SeriesAdmin() {
 
       {/* Episode Modal */}
       <Dialog open={showEpisodeModal} onOpenChange={setShowEpisodeModal}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto glass">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto glass sm:max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>
               {editingEpisode ? 'Edit Episode' : 'Add New Episode'}
@@ -645,9 +645,9 @@ export default function SeriesAdmin() {
               </div>
             </div>
 
-            {/* Streaming Links */}
+            {/* Streaming & Download Links */}
             <div className="space-y-4 pt-2 border-t border-border">
-              <h4 className="font-medium text-sm text-muted-foreground">Streaming Links</h4>
+              <h4 className="font-medium text-sm text-foreground">🔗 Streaming & Download Links</h4>
               
               <div className="space-y-2">
                 <Label htmlFor="ep_stream_url">Stream URL</Label>
