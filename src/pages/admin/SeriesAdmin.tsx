@@ -524,13 +524,14 @@ export default function SeriesAdmin() {
 
       {/* Episode Modal */}
       <Dialog open={showEpisodeModal} onOpenChange={setShowEpisodeModal}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto glass sm:max-h-[90vh]">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl glass p-0 flex flex-col" style={{ maxHeight: 'calc(100vh - 2rem)', top: '1rem', bottom: '1rem', transform: 'translateX(-50%)' }}>
+          <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
             <DialogTitle>
               {editingEpisode ? 'Edit Episode' : 'Add New Episode'}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleEpisodeSubmit} className="space-y-4 mt-4">
+          <form onSubmit={handleEpisodeSubmit} className="flex flex-col flex-1 min-h-0">
+            <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="episode_number">Episode Number *</Label>
@@ -711,9 +712,11 @@ export default function SeriesAdmin() {
                   className="bg-muted"
                 />
               </div>
+              </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-4">
+            {/* Pinned footer */}
+            <div className="shrink-0 flex justify-end gap-3 px-6 py-4 border-t border-border">
               <Button type="button" variant="secondary" onClick={() => setShowEpisodeModal(false)}>
                 Cancel
               </Button>
