@@ -10,6 +10,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import { DownloadProvider } from "@/contexts/DownloadContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { DevicePresenceMonitor } from "@/components/DevicePresenceMonitor";
+import { useNetworkRefresh } from "@/hooks/useNetworkRefresh";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import MovieDetails from "./pages/MovieDetails";
@@ -58,6 +59,11 @@ const queryClient = new QueryClient({
   }),
 });
 
+function NetworkRefreshMonitor() {
+  useNetworkRefresh();
+  return null;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
@@ -65,6 +71,7 @@ const App = () => (
         <AuthProvider>
           <FilterProvider>
             <DownloadProvider>
+            <NetworkRefreshMonitor />
             <DevicePresenceMonitor />
             <TooltipProvider>
               <Toaster />
