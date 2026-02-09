@@ -1,10 +1,33 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, FileText, Trash2, Sun, Moon, RotateCcw, FolderDown } from 'lucide-react';
+import { ArrowLeft, FileText, Pause, Play, Trash2, Sun, Moon, AlertCircle, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import { useDownloadManager } from '@/contexts/DownloadContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from 'next-themes';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
+
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
+}
+
+function formatSpeed(bytesPerSecond: number): string {
+  if (bytesPerSecond === 0) return '0 KB/s';
+  return `${formatBytes(bytesPerSecond)}/s`;
+}
+
+function formatEta(seconds: number): string {
+  if (seconds <= 0 || !isFinite(seconds)) return '';
+  if (seconds < 60) return `${Math.ceil(seconds)}s left`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${Math.floor(seconds % 60)}s left`;
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  return `${h}h ${m}m left`;
+}
 
 function formatFilename(title: string, year: number | null, resolution: string | null) {
   const y = year || 'XXXX';
@@ -12,20 +35,11 @@ function formatFilename(title: string, year: number | null, resolution: string |
   return `${title.replace(/\s+/g, '.')}.${y}.${r}.Web-Dl(cineverse).mkv`;
 }
 
-function formatDate(timestamp: number) {
-  return new Date(timestamp).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
 export default function Downloads() {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const { theme, setTheme } = useTheme();
-  const { downloads, removeDownload, clearDownloads, startDownload } = useDownloadManager();
+  const { downloads, pauseDownload, resumeDownload, removeDownload, clearDownloads, startDownload } = useDownloadManager();
 
   return (
     <div className="min-h-screen bg-background mobile-nav-spacing">
@@ -66,16 +80,6 @@ export default function Downloads() {
         </div>
       </div>
 
-      {/* Info banner */}
-      <div className="px-4 pt-4">
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border border-border">
-          <FolderDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-          <p className="text-xs text-muted-foreground">
-            Files are saved to your device's Downloads folder by the browser.
-          </p>
-        </div>
-      </div>
-
       {/* Downloads list */}
       <div className="px-4 py-4 space-y-3">
         {downloads.length === 0 ? (
@@ -85,83 +89,129 @@ export default function Downloads() {
           </div>
         ) : (
           downloads.map((dl) => (
-            <DownloadCard
+            <div
               key={dl.id}
-              dl={dl}
-              onRetry={() =>
-                startDownload({
-                  movieId: dl.movieId,
-                  title: dl.title,
-                  posterUrl: dl.posterUrl,
-                  year: dl.year,
-                  resolution: dl.resolution,
-                  fileSize: dl.fileSize,
-                  url: dl.url,
-                })
-              }
-              onRemove={() => removeDownload(dl.id)}
-            />
+              className="p-4 rounded-xl bg-card border border-border"
+            >
+              <div className="flex items-start gap-3">
+                {/* File icon */}
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <FileText className="w-5 h-5 text-primary" />
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground leading-snug break-all">
+                    {formatFilename(dl.title, dl.year, dl.resolution)}
+                  </p>
+
+                  {/* Size info */}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {dl.totalBytes > 0
+                      ? `${formatBytes(dl.downloadedBytes)} / ${formatBytes(dl.totalBytes)}`
+                      : dl.downloadedBytes > 0
+                        ? formatBytes(dl.downloadedBytes)
+                        : dl.fileSize || 'Waiting...'}
+                  </p>
+
+                  {/* Progress bar */}
+                  {dl.status !== 'complete' && (
+                    <Progress value={dl.progress} className="h-1.5 mt-2" />
+                  )}
+                  {dl.status === 'complete' && (
+                    <Progress value={100} className="h-1.5 mt-2" />
+                  )}
+
+                  {/* Speed & ETA row */}
+                  <div className="flex items-center justify-between mt-1.5">
+                    <span className="text-xs text-muted-foreground">
+                      {dl.status === 'downloading' && dl.speed > 0
+                        ? formatSpeed(dl.speed)
+                        : dl.status === 'complete'
+                          ? 'Complete'
+                          : dl.status === 'paused'
+                            ? 'Paused'
+                            : dl.status === 'error'
+                              ? 'Error'
+                              : 'Starting...'}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {dl.status === 'downloading' && dl.eta > 0
+                        ? formatEta(dl.eta)
+                        : ''}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Action button */}
+                <div className="flex flex-col gap-1 flex-shrink-0">
+                  {dl.status === 'downloading' && (
+                    <button
+                      onClick={() => pauseDownload(dl.id)}
+                      className="w-9 h-9 rounded-full bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"
+                      title="Pause"
+                    >
+                      <Pause className="w-4 h-4 text-foreground" />
+                    </button>
+                  )}
+                  {dl.status === 'paused' && (
+                    <button
+                      onClick={() => resumeDownload(dl.id)}
+                      className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
+                      title="Resume"
+                    >
+                      <Play className="w-4 h-4 text-primary fill-primary" />
+                    </button>
+                  )}
+                  {dl.status === 'error' && (
+                    <button
+                      onClick={() => startDownload({
+                        movieId: dl.movieId,
+                        title: dl.title,
+                        posterUrl: dl.posterUrl,
+                        year: dl.year,
+                        resolution: dl.resolution,
+                        fileSize: dl.fileSize,
+                        url: dl.url,
+                      })}
+                      className="w-9 h-9 rounded-full bg-destructive/10 flex items-center justify-center hover:bg-destructive/20 transition-colors"
+                      title="Retry"
+                    >
+                      <RotateCcw className="w-4 h-4 text-destructive" />
+                    </button>
+                  )}
+                  {dl.status === 'complete' && (
+                    <button
+                      onClick={() => window.open(dl.url, '_blank')}
+                      className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
+                      title="Open"
+                    >
+                      <Play className="w-4 h-4 text-primary fill-primary" />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => removeDownload(dl.id)}
+                    className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-destructive/10 transition-colors"
+                    title="Remove"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Error message */}
+              {dl.status === 'error' && dl.error && (
+                <div className="flex items-center gap-2 mt-2 text-xs text-destructive">
+                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="truncate">{dl.error}</span>
+                </div>
+              )}
+            </div>
           ))
         )}
       </div>
 
       <MobileBottomNav />
-    </div>
-  );
-}
-
-function DownloadCard({
-  dl,
-  onRetry,
-  onRemove,
-}: {
-  dl: import('@/contexts/DownloadContext').DownloadEntry;
-  onRetry: () => void;
-  onRemove: () => void;
-}) {
-  return (
-    <div className="p-4 rounded-xl bg-card border border-border">
-      <div className="flex items-start gap-3">
-        {/* File icon */}
-        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-          <FileText className="w-5 h-5 text-primary" />
-        </div>
-
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-foreground leading-snug break-all">
-            {formatFilename(dl.title, dl.year, dl.resolution)}
-          </p>
-          <div className="flex items-center gap-2 mt-1">
-            {dl.fileSize && (
-              <span className="text-xs text-muted-foreground">{dl.fileSize}</span>
-            )}
-            <span className="text-xs text-muted-foreground">•</span>
-            <span className="text-xs text-muted-foreground">{formatDate(dl.timestamp)}</span>
-          </div>
-          <span className="inline-block mt-1.5 text-xs font-medium text-primary">
-            ✓ Saved to Downloads
-          </span>
-        </div>
-
-        {/* Actions */}
-        <div className="flex flex-col gap-1 flex-shrink-0">
-          <button
-            onClick={onRetry}
-            className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
-            title="Download again"
-          >
-            <RotateCcw className="w-4 h-4 text-primary" />
-          </button>
-          <button
-            onClick={onRemove}
-            className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-destructive/10 transition-colors"
-            title="Remove"
-          >
-            <Trash2 className="w-3.5 h-3.5 text-destructive" />
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
