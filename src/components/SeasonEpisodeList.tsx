@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, Play, ExternalLink, Film, Clock, Download } from 'lucide-react';
+import { ChevronDown, ChevronUp, Play, Film, Clock, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSeasonsWithEpisodes } from '@/hooks/useSeasons';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { ServerDrawer } from '@/components/ServerDrawer';
 import type { Episode } from '@/types/database';
 
 interface SeasonEpisodeListProps {
@@ -10,18 +11,29 @@ interface SeasonEpisodeListProps {
   isPremium: boolean;
   userIsPremium: boolean;
   onPremiumRequired: () => void;
+  movieTitle: string;
+  posterUrl: string | null;
+  year: number | null;
+  resolution: string | null;
+  fileSize: string | null;
 }
 
 export function SeasonEpisodeList({ 
   movieId, 
-  isPremium, 
+  isPremium: _isPremium, 
   userIsPremium, 
-  onPremiumRequired 
+  onPremiumRequired,
+  movieTitle,
+  posterUrl,
+  year,
+  resolution,
+  fileSize,
 }: SeasonEpisodeListProps) {
   const { data: seasons, isLoading } = useSeasonsWithEpisodes(movieId);
   const { t } = useLanguage();
   const [expandedSeasons, setExpandedSeasons] = useState<Set<string>>(() => new Set());
   const [expandedEpisodes, setExpandedEpisodes] = useState<Set<string>>(() => new Set());
+  const [downloadEpisode, setDownloadEpisode] = useState<{ episode: Episode; seasonNumber: number } | null>(null);
 
   const toggleSeason = (seasonId: string) => {
     setExpandedSeasons(prev => {
@@ -49,6 +61,14 @@ export function SeasonEpisodeList({
     }
   };
 
+  const handleEpisodeDownload = (episode: Episode, seasonNumber: number) => {
+    if (!userIsPremium) {
+      onPremiumRequired();
+      return;
+    }
+    setDownloadEpisode({ episode, seasonNumber });
+  };
+
   if (isLoading) {
     return (
       <div className="mt-6">
@@ -66,6 +86,14 @@ export function SeasonEpisodeList({
   const totalEpisodes = seasons.reduce((sum, s) => sum + s.episodes.length, 0);
   const hasSingleSeason = seasons.length === 1;
 
+  // Build episode download title like "Series Name - S1E3"
+  const getEpisodeTitle = (ep: Episode, seasonNum: number) =>
+    `${movieTitle} - S${seasonNum}E${ep.episode_number}`;
+
+  // Check if episode has any download source
+  const hasDownloadSource = (ep: Episode) =>
+    !!(ep.download_url || ep.telegram_url || ep.mega_url);
+
   return (
     <div className="mt-6">
       <h2 className="text-xl font-bold text-foreground mb-4">
@@ -74,7 +102,6 @@ export function SeasonEpisodeList({
 
       <div className="space-y-3">
         {hasSingleSeason ? (
-          // Single season — flat list
           seasons[0].episodes.map((episode) => (
             <EpisodeCard
               key={episode.id}
@@ -83,12 +110,11 @@ export function SeasonEpisodeList({
               isExpanded={expandedEpisodes.has(episode.id)}
               onToggle={() => toggleEpisode(episode.id)}
               onPlay={() => handlePlay(episode)}
-              userIsPremium={userIsPremium}
-              onPremiumRequired={onPremiumRequired}
+              onDownload={() => handleEpisodeDownload(episode, seasons[0].season_number)}
+              hasDownloadSource={hasDownloadSource(episode)}
             />
           ))
         ) : (
-          // Multiple seasons — collapsible
           seasons.map((season) => (
             <div key={season.id} className="rounded-xl border border-border overflow-hidden">
               <button
@@ -120,8 +146,8 @@ export function SeasonEpisodeList({
                       isExpanded={expandedEpisodes.has(episode.id)}
                       onToggle={() => toggleEpisode(episode.id)}
                       onPlay={() => handlePlay(episode)}
-                      userIsPremium={userIsPremium}
-                      onPremiumRequired={onPremiumRequired}
+                      onDownload={() => handleEpisodeDownload(episode, season.season_number)}
+                      hasDownloadSource={hasDownloadSource(episode)}
                     />
                   ))}
                 </div>
@@ -130,6 +156,26 @@ export function SeasonEpisodeList({
           ))
         )}
       </div>
+
+      {/* Shared ServerDrawer for episode downloads */}
+      {downloadEpisode && (
+        <ServerDrawer
+          open={!!downloadEpisode}
+          onOpenChange={(open) => { if (!open) setDownloadEpisode(null); }}
+          downloadUrl={downloadEpisode.episode.download_url}
+          telegramUrl={downloadEpisode.episode.telegram_url}
+          megaUrl={downloadEpisode.episode.mega_url}
+          type="download"
+          movieInfo={{
+            movieId: `${movieId}-ep${downloadEpisode.episode.episode_number}`,
+            title: getEpisodeTitle(downloadEpisode.episode, downloadEpisode.seasonNumber),
+            posterUrl,
+            year,
+            resolution,
+            fileSize,
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -140,8 +186,8 @@ interface EpisodeCardProps {
   isExpanded: boolean;
   onToggle: () => void;
   onPlay: () => void;
-  userIsPremium: boolean;
-  onPremiumRequired: () => void;
+  onDownload: () => void;
+  hasDownloadSource: boolean;
 }
 
 function EpisodeCard({ 
@@ -150,16 +196,9 @@ function EpisodeCard({
   isExpanded, 
   onToggle, 
   onPlay,
-  userIsPremium,
-  onPremiumRequired,
+  onDownload,
+  hasDownloadSource,
 }: EpisodeCardProps) {
-  const handleLinkClick = (url: string) => {
-    if (!userIsPremium) {
-      onPremiumRequired();
-    } else {
-      window.open(url, '_blank', 'noopener,noreferrer');
-    }
-  };
 
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
@@ -227,35 +266,11 @@ function EpisodeCard({
               </Button>
             )}
 
-            {episode.telegram_url && (
+            {hasDownloadSource && (
               <Button
                 variant="outline"
                 size="sm"
-                onClick={(e) => { e.stopPropagation(); handleLinkClick(episode.telegram_url!); }}
-                className="gap-2"
-              >
-                <ExternalLink className="w-4 h-4" />
-                Telegram
-              </Button>
-            )}
-
-            {episode.mega_url && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => { e.stopPropagation(); handleLinkClick(episode.mega_url!); }}
-                className="gap-2"
-              >
-                <ExternalLink className="w-4 h-4" />
-                MEGA
-              </Button>
-            )}
-
-            {episode.download_url && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => { e.stopPropagation(); handleLinkClick(episode.download_url!); }}
+                onClick={(e) => { e.stopPropagation(); onDownload(); }}
                 className="gap-2"
               >
                 <Download className="w-4 h-4" />
