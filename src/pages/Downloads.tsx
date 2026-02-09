@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, FileText, Pause, Play, Trash2, Sun, Moon, AlertCircle, RotateCcw } from 'lucide-react';
+import { ArrowLeft, FileText, Trash2, Sun, Moon, AlertCircle, RotateCcw, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useDownloadManager } from '@/contexts/DownloadContext';
@@ -15,20 +15,6 @@ function formatBytes(bytes: number): string {
   return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
 }
 
-function formatSpeed(bytesPerSecond: number): string {
-  if (bytesPerSecond === 0) return '0 KB/s';
-  return `${formatBytes(bytesPerSecond)}/s`;
-}
-
-function formatEta(seconds: number): string {
-  if (seconds <= 0 || !isFinite(seconds)) return '';
-  if (seconds < 60) return `${Math.ceil(seconds)}s left`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${Math.floor(seconds % 60)}s left`;
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  return `${h}h ${m}m left`;
-}
-
 function formatFilename(title: string, year: number | null, resolution: string | null) {
   const y = year || 'XXXX';
   const r = resolution || 'HD';
@@ -39,7 +25,7 @@ export default function Downloads() {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const { theme, setTheme } = useTheme();
-  const { downloads, pauseDownload, resumeDownload, removeDownload, clearDownloads, startDownload } = useDownloadManager();
+  const { downloads, removeDownload, clearDownloads, startDownload } = useDownloadManager();
 
   return (
     <div className="min-h-screen bg-background mobile-nav-spacing">
@@ -108,61 +94,29 @@ export default function Downloads() {
                   {/* Size info */}
                   <p className="text-xs text-muted-foreground mt-1">
                     {dl.totalBytes > 0
-                      ? `${formatBytes(dl.downloadedBytes)} / ${formatBytes(dl.totalBytes)}`
-                      : dl.downloadedBytes > 0
-                        ? formatBytes(dl.downloadedBytes)
-                        : dl.fileSize || 'Waiting...'}
+                      ? formatBytes(dl.totalBytes)
+                      : dl.fileSize || 'Waiting...'}
                   </p>
 
                   {/* Progress bar */}
-                  {dl.status !== 'complete' && (
-                    <Progress value={dl.progress} className="h-1.5 mt-2" />
-                  )}
-                  {dl.status === 'complete' && (
-                    <Progress value={100} className="h-1.5 mt-2" />
-                  )}
+                  <Progress value={dl.status === 'complete' ? 100 : dl.progress} className="h-1.5 mt-2" />
 
-                  {/* Speed & ETA row */}
+                  {/* Status row */}
                   <div className="flex items-center justify-between mt-1.5">
                     <span className="text-xs text-muted-foreground">
-                      {dl.status === 'downloading' && dl.speed > 0
-                        ? formatSpeed(dl.speed)
+                      {dl.status === 'downloading'
+                        ? 'Downloading via browser...'
                         : dl.status === 'complete'
                           ? 'Complete'
-                          : dl.status === 'paused'
-                            ? 'Paused'
-                            : dl.status === 'error'
-                              ? 'Error'
-                              : 'Starting...'}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {dl.status === 'downloading' && dl.eta > 0
-                        ? formatEta(dl.eta)
-                        : ''}
+                          : dl.status === 'error'
+                            ? 'Error'
+                            : ''}
                     </span>
                   </div>
                 </div>
 
                 {/* Action button */}
                 <div className="flex flex-col gap-1 flex-shrink-0">
-                  {dl.status === 'downloading' && (
-                    <button
-                      onClick={() => pauseDownload(dl.id)}
-                      className="w-9 h-9 rounded-full bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"
-                      title="Pause"
-                    >
-                      <Pause className="w-4 h-4 text-foreground" />
-                    </button>
-                  )}
-                  {dl.status === 'paused' && (
-                    <button
-                      onClick={() => resumeDownload(dl.id)}
-                      className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
-                      title="Resume"
-                    >
-                      <Play className="w-4 h-4 text-primary fill-primary" />
-                    </button>
-                  )}
                   {dl.status === 'error' && (
                     <button
                       onClick={() => startDownload({
@@ -184,9 +138,9 @@ export default function Downloads() {
                     <button
                       onClick={() => window.open(dl.url, '_blank')}
                       className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
-                      title="Open"
+                      title="Download again"
                     >
-                      <Play className="w-4 h-4 text-primary fill-primary" />
+                      <Download className="w-4 h-4 text-primary" />
                     </button>
                   )}
                   <button
