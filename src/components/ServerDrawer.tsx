@@ -6,7 +6,6 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useDownloadManager } from '@/contexts/DownloadContext';
 import { useNavigate } from 'react-router-dom';
 
 interface ServerDrawerProps {
@@ -38,26 +37,14 @@ export function ServerDrawer({
   movieInfo,
 }: ServerDrawerProps) {
   const { t } = useLanguage();
-  const { startDownload } = useDownloadManager();
   const navigate = useNavigate();
 
   const handleOpen = (url: string, useInAppPlayer: boolean = false) => {
-    // In-app download with progress tracking
-    if (type === 'download' && movieInfo) {
-      startDownload({
-        movieId: movieInfo.movieId,
-        title: movieInfo.title,
-        posterUrl: movieInfo.posterUrl,
-        year: movieInfo.year,
-        resolution: movieInfo.resolution,
-        fileSize: movieInfo.fileSize,
-        url,
-      });
-      navigate('/downloads');
-    } else if (useInAppPlayer && type === 'play') {
+    if (useInAppPlayer && type === 'play') {
       const title = movieInfo?.title || 'Video';
       navigate(`/watch?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}`);
     } else {
+      // Direct browser download / external link — avoids edge function proxy limits
       window.open(url, '_blank', 'noopener,noreferrer');
     }
     onOpenChange(false);
@@ -81,7 +68,6 @@ export function ServerDrawer({
   if (servers.length === 0) return null;
 
   const title = type === 'play' ? t('chooseServer') : t('chooseDownloader');
-  const ActionIcon = type === 'play' ? Play : Download;
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
