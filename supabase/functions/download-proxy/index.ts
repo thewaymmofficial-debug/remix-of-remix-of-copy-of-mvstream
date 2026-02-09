@@ -35,7 +35,7 @@ serve(async (req) => {
     }
 
     console.log("[download-proxy] Fetching upstream:", targetUrl);
-    const response = await fetch(targetUrl, { headers });
+    const response = await fetch(targetUrl, { headers, redirect: 'follow' });
     console.log("[download-proxy] Upstream status:", response.status, response.statusText);
 
     if (!response.ok && response.status !== 206) {
@@ -70,9 +70,11 @@ serve(async (req) => {
       status: response.status,
       headers: responseHeaders,
     });
-  } catch (error) {
-    console.error("[download-proxy] Error:", error.message, error.stack);
-    return new Response(JSON.stringify({ error: error.message || "Proxy fetch failed" }), {
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    const errStack = error instanceof Error ? error.stack : '';
+    console.error("[download-proxy] Error:", errMsg, errStack);
+    return new Response(JSON.stringify({ error: errMsg || "Proxy fetch failed" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
