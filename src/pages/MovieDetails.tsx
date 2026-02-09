@@ -258,7 +258,7 @@ export default function MovieDetails() {
       </div>
 
       {/* Favorite & Download buttons */}
-      <div className="px-4 mb-6 flex justify-around">
+      <div className={`px-4 mb-6 flex ${movie.content_type === 'series' ? 'justify-center' : 'justify-around'}`}>
         <button
           onClick={toggleWatchlist}
           disabled={isWatchlistMutating || watchlistLoading}
@@ -270,13 +270,15 @@ export default function MovieDetails() {
           <span className="text-xs font-medium">{t('favorite')}</span>
         </button>
 
-        <button
-          onClick={handleDownload}
-          className="flex flex-col items-center gap-1.5 text-foreground hover:text-primary transition-colors"
-        >
-          <Download className="w-7 h-7" />
-          <span className="text-xs font-medium">{t('download')}</span>
-        </button>
+        {movie.content_type !== 'series' && (
+          <button
+            onClick={handleDownload}
+            className="flex flex-col items-center gap-1.5 text-foreground hover:text-primary transition-colors"
+          >
+            <Download className="w-7 h-7" />
+            <span className="text-xs font-medium">{t('download')}</span>
+          </button>
+        )}
       </div>
 
       {/* Storyline */}
@@ -324,6 +326,11 @@ export default function MovieDetails() {
             isPremium={movie.is_premium}
             userIsPremium={isPremium}
             onPremiumRequired={() => setShowPremiumModal(true)}
+            movieTitle={movie.title}
+            posterUrl={movie.poster_url}
+            year={movie.year}
+            resolution={movie.resolution}
+            fileSize={movie.file_size}
           />
         </div>
       )}
@@ -346,23 +353,25 @@ export default function MovieDetails() {
         megaUrl={movie.mega_url}
         type="play"
       />
-      <ServerDrawer
-        open={showDownloadDrawer}
-        onOpenChange={setShowDownloadDrawer}
-        streamUrl={movie.stream_url}
-        telegramUrl={movie.telegram_url}
-        megaUrl={movie.mega_url}
-        downloadUrl={(movie as any).download_url}
-        type="download"
-        movieInfo={{
-          movieId: movie.id,
-          title: movie.title,
-          posterUrl: movie.poster_url,
-          year: movie.year,
-          resolution: movie.resolution,
-          fileSize: movie.file_size,
-        }}
-      />
+      {movie.content_type !== 'series' && (
+        <ServerDrawer
+          open={showDownloadDrawer}
+          onOpenChange={setShowDownloadDrawer}
+          streamUrl={movie.stream_url}
+          telegramUrl={movie.telegram_url}
+          megaUrl={movie.mega_url}
+          downloadUrl={(movie as any).download_url}
+          type="download"
+          movieInfo={{
+            movieId: movie.id,
+            title: movie.title,
+            posterUrl: movie.poster_url,
+            year: movie.year,
+            resolution: movie.resolution,
+            fileSize: movie.file_size,
+          }}
+        />
+      )}
 
       {/* Premium Modal */}
       <PremiumModal open={showPremiumModal} onOpenChange={setShowPremiumModal} />
