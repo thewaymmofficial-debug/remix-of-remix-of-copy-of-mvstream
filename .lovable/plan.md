@@ -1,53 +1,115 @@
 
 
-# Fix Episode Downloads and Remove Series Download Button
+# In-App Download Manager (No Server Proxy)
 
-## Problem Summary
+## Problem
 
-1. **Episode download not working like movies**: When clicking "Download" on a series episode, it currently just opens the URL in a new browser tab. It should use the same in-app download manager (with progress tracking, pause/resume) that movies use via the `ServerDrawer` component.
+The current download system tries to stream video files through a Supabase Edge Function proxy, which crashes with `WORKER_LIMIT` errors because video files are too large for edge function resource limits. Meanwhile, `window.open()` opens a new browser tab, which doesn't feel "in-app."
 
-2. **Series detail page has a useless Download button**: The main Download button on a series page doesn't make sense because you can't download an entire series at once -- each episode needs to be downloaded individually.
+## Solution: Direct Browser Download with In-App Tracking
+
+Since the download URLs are on external HTTP servers (no CORS support), JavaScript `fetch()` cannot access them directly from the browser. Instead, we'll trigger downloads using a **hidden anchor tag** -- this works without CORS restrictions and doesn't open a new tab. The browser's native download manager handles the actual file transfer (saving to the device's Downloads folder), while we show an **in-app download tracking UI** with a toast notification.
+
+### How it works for the user:
+1. User taps "Download" on a movie or episode
+2. The ServerDrawer opens showing available download sources (Main Server, Telegram, MEGA)
+3. User picks a source
+4. A toast notification appears: "Download started - Movie.Name.2024.HD.mkv"
+5. The browser starts downloading the file natively (saves to Downloads folder)
+6. User can go to the Downloads page to see their download history
+7. User never leaves the app
 
 ## Changes
 
-### 1. Hide Download button on series detail page (`MovieDetails.tsx`)
+### 1. Simplify `DownloadContext` (`src/contexts/DownloadContext.tsx`)
 
-- Conditionally hide the Download button when `movie.content_type === 'series'`
-- Keep the Favorite button centered when Download is hidden
-- Remove the download `ServerDrawer` for series content
+Remove the fetch/proxy/streaming logic entirely. Replace with:
+- **`startDownload()`**: Creates a hidden `<a>` element with `href` pointing to the source URL, clicks it to trigger a native browser download, then records the download entry as "complete"
+- **Remove**: `pauseDownload`, `resumeDownload`, `chunksRef`, `controllersRef`, `speedSamplesRef`, proxy URL logic
+- **Keep**: Download history tracking in localStorage, `removeDownload`, `clearDownloads`
+- **Add**: Toast notification when download starts (using sonner toast)
 
-### 2. Add ServerDrawer-based downloading to episode cards (`SeasonEpisodeList.tsx`)
+The download entry will immediately be marked "complete" since the browser handles the actual transfer natively -- we can't track byte-level progress without a proxy, but the file reliably downloads.
 
-- Import `useDownloadManager` from the DownloadContext
-- Import `useNavigate` from react-router-dom
-- Add a `ServerDrawer` state to the `SeasonEpisodeList` component (shared across all episodes)
-- When user clicks Download on an episode:
-  - If episode has only one download source (`download_url`), trigger the download manager directly (same as movies)
-  - If episode has multiple sources (download_url, telegram_url, mega_url), open a `ServerDrawer` to let the user choose
-- The download will use `startDownload()` from DownloadContext which proxies through the edge function, tracks progress, and allows pause/resume
-- Navigate to `/downloads` page after starting
+### 2. Re-integrate `ServerDrawer` with Download Manager (`src/components/ServerDrawer.tsx`)
 
-### 3. Pass series info to episode downloads
+- Import `useDownloadManager` back
+- When type is `'download'` and `movieInfo` is provided, call `startDownload()` (which now uses the anchor-tag approach instead of the broken proxy)
+- This makes both movie and episode downloads go through the same in-app flow
 
-- Pass the parent movie's `title`, `poster_url`, `year`, `resolution` to the episode download so the Download Manager shows meaningful info
-- The episode title will be appended (e.g., "Series Name - S1E3 Episode Title")
+### 3. Update Downloads Page (`src/pages/Downloads.tsx`)
+
+- Remove pause/resume buttons (not applicable with direct browser downloads)
+- Show download history as a list of completed/started downloads
+- Keep the "Remove" and "Clear All" functionality
+- Show a helpful message explaining that files are saved to the device's Downloads folder
+
+### 4. Clean Up Edge Function
+
+- The `download-proxy` edge function is no longer needed for downloads
+- Keep it in case it's useful for other purposes, but it won't be called for downloads anymore
 
 ## Technical Details
 
 ### Files to modify:
 
-**`src/pages/MovieDetails.tsx`**
-- Wrap the Download button and its ServerDrawer in a condition: only show when `movie.content_type !== 'series'`
+**`src/contexts/DownloadContext.tsx`**
+- Strip out fetch/proxy/streaming logic (lines 95-217)
+- Replace `performDownload` with a simple function that:
+  - Creates a hidden `<a href="url">` element
+  - Sets the download attribute with a formatted filename
+  - Clicks it programmatically (triggers native browser download)
+  - Records the entry as "complete" in state
+- Remove `pauseDownload`, `resumeDownload` from the context type
+- Remove `controllersRef`, `chunksRef`, `speedSamplesRef`
+- Add toast import from sonner for "Download started" notification
+
+**`src/components/ServerDrawer.tsx`**
+- Re-import `useDownloadManager`
+- In `handleOpen()`, when `type === 'download'` and `movieInfo` exists, call `startDownload({ ...movieInfo, url })` instead of `window.open()`
+- For Telegram and MEGA links (external services), keep `window.open()` since those have their own download UIs
+
+**`src/pages/Downloads.tsx`**
+- Remove pause/resume button logic
+- Simplify the download card to show: filename, file size, timestamp, and a "saved to Downloads folder" message
+- Keep remove/clear functionality
+- Add a retry button that re-triggers the anchor download
 
 **`src/components/SeasonEpisodeList.tsx`**
-- Add props for movie metadata (title, posterUrl, year, resolution, fileSize) needed by the download manager
-- Import `ServerDrawer`, `useDownloadManager`, `useNavigate`, and `useAuth`
-- Add state for tracking which episode's download drawer is open
-- When Download is clicked on an episode:
-  - Use the `ServerDrawer` with episode-specific URLs (download_url, telegram_url, mega_url)
-  - Pass `movieInfo` with episode-specific title formatting (e.g., "Movie Title - EP3")
-  - The ServerDrawer's `startDownload` handles the proxy + progress tracking automatically
+- No changes needed -- it already uses `ServerDrawer` which will now work with the updated download manager
 
-**`src/pages/MovieDetails.tsx`** (props update)
-- Pass additional movie info props to `SeasonEpisodeList` so the download manager can display proper metadata
+**`src/pages/MovieDetails.tsx`**
+- No changes needed -- it already uses `ServerDrawer` for movie downloads
+
+### Download flow diagram (text):
+
+```text
+User taps "Download"
+       |
+       v
+ ServerDrawer opens
+ (shows Main Server, Telegram, MEGA)
+       |
+       v
+ User picks "Main Server"
+       |
+       v
+ startDownload() called
+       |
+       v
+ Hidden <a> element created
+ with href = download URL
+       |
+       v
+ a.click() triggers native
+ browser download
+       |
+       v
+ Toast: "Download started!"
+ Entry saved to Downloads page
+       |
+       v
+ File saves to device's
+ Downloads folder automatically
+```
 
