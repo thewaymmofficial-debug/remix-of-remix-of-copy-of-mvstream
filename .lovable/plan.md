@@ -1,42 +1,52 @@
 
 
-## Web UI Improvement: "Sent to System Downloader" Status
+## Fix: Confusing "Starting..." Label on WebView/APK Downloads
 
-### Overview
+### Problem
 
-The native Android changes (public Downloads folder, permissions) are all done on your side in Android Studio. On the web side, two small improvements are needed:
+The Download Manager UI shows two conflicting messages for WebView downloads:
+- **Size line**: "Starting..." (because `fileSize` is null and `downloadedBytes` is 0)
+- **Status line**: "Sent to system downloader"
 
-1. Better status messaging for WebView downloads
-2. Ensure the proxy forwards `Content-Length` (already done -- verified in the edge function code)
+The file was already downloaded and saved by the system, but the web UI still shows "Starting..." which is confusing.
 
-### Changes
+### Root Cause
 
-**File: `src/contexts/DownloadContext.tsx`**
+The size info line (line 112 in Downloads.tsx) has a fallback chain: if there are no downloaded bytes and no `fileSize` metadata, it defaults to "Starting..." -- this is intended for in-browser downloads that haven't received their first chunk yet, but it also triggers for completed WebView handoffs where bytes are always 0.
 
-Update the WebView download entry creation (lines 253-254):
-- Change `status: 'complete'` to `status: 'downloading'`
-- Change `progress: 100` to `progress: 0`
-- After `window.location.href = proxyUrl`, add a 3-second `setTimeout` that updates the entry status to `'complete'` -- this gives users a brief "handing off" visual before marking it done
+### Fix
 
 **File: `src/pages/Downloads.tsx`**
 
-Update the status text display (around line 127-128):
-- When `status === 'complete'` and `downloadedBytes === 0` (meaning it was a native handoff, not an in-browser download), show **"Sent to system downloader"** instead of "Complete"
-- When `status === 'downloading'` and `downloadedBytes === 0`, show **"Handing off to system..."** instead of "Starting..."
+Update the size info display (line 107-113) to check for WebView handoff scenarios:
 
-**File: `supabase/functions/download-proxy/index.ts`**
+- When `status === 'complete'` and `downloadedBytes === 0`: show the `fileSize` if available, or "Downloaded via system" instead of "Starting..."
+- When `status === 'downloading'` and `downloadedBytes === 0`: show `fileSize` if available, or "Preparing..." instead of "Starting..."
 
-No changes needed -- the proxy already forwards `Content-Length`, `Content-Type`, and `Content-Disposition` headers correctly. Verified in the existing code.
+This way, WebView downloads will show:
+- During handoff: file size (e.g. "1.2 GB") or "Preparing..."
+- After handoff: file size or "Downloaded via system"
 
-### What Users Will See (WebView/APK)
+The status line beneath the progress bar remains unchanged ("Handing off to system..." then "Sent to system downloader").
 
-1. Tap Download
-2. Web UI shows "Handing off to system..." for ~3 seconds
-3. Web UI changes to "Sent to system downloader"
-4. Android system notification shows real progress (bar, speed, ETA, pause/resume)
-5. File saved to **Internal Storage > Download/**
+### Result
 
-### What Users Will See (Regular Browser)
+Before (broken):
+```
+Steel.Thunder.2023.4K.Web-Dl(cineverse).mkv
+Starting...                        <-- confusing
+[=========progress bar=========]
+Sent to system downloader
+```
 
-No change -- full in-app progress tracking with speed, ETA, and percentage continues working as before.
+After (fixed):
+```
+Steel.Thunder.2023.4K.Web-Dl(cineverse).mkv
+Downloaded via system              <-- clear
+[=========progress bar=========]
+Sent to system downloader
+```
 
+### Technical Details
+
+Single change in `src/pages/Downloads.tsx`, lines 107-113. Replace the size info fallback logic to account for the `status` field when `downloadedBytes` is 0.
