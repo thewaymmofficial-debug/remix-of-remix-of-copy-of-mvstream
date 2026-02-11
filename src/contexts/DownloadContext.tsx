@@ -68,8 +68,9 @@ function generateFilename(title: string, year: number | null, resolution: string
 export function DownloadProvider({ children }: { children: React.ReactNode }) {
   const [downloads, setDownloads] = useState<DownloadEntry[]>(getStoredDownloads);
   const abortControllers = useRef<Map<string, AbortController>>(new Map());
-  // Store accumulated blob chunks per download for pause/resume
   const blobParts = useRef<Map<string, Uint8Array[]>>(new Map());
+  const pendingStarts = useRef<Array<{ id: string; url: string; filename: string }>>([]);
+  const doFetchRef = useRef<((id: string, url: string, filename: string, resumeFrom?: number) => void) | null>(null);
 
   useEffect(() => {
     saveToStorage(downloads);
@@ -201,6 +202,21 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
       });
   }, [updateEntry]);
 
+  // Keep ref in sync
+  doFetchRef.current = doFetchDownload;
+
+  // Process pending download starts
+  useEffect(() => {
+    if (pendingStarts.current.length > 0) {
+      const pending = [...pendingStarts.current];
+      pendingStarts.current = [];
+      pending.forEach(({ id, url, filename }) => {
+        console.log('[Download] Processing pending start:', id, url);
+        doFetchRef.current?.(id, url, filename);
+      });
+    }
+  });
+
   const startDownload = useCallback((info: {
     movieId: string;
     title: string;
@@ -210,9 +226,23 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
     fileSize: string | null;
     url: string;
   }) => {
-    // Don't add duplicate
-    const existing = downloads.find(d => d.movieId === info.movieId && (d.status === 'downloading' || d.status === 'paused'));
-    if (existing) return;
+    console.log('[Download] startDownload called:', info.movieId, info.url);
+
+    // Remove any existing failed/paused entry for this movie
+    setDownloads(prev => {
+      const existing = prev.find(d => d.movieId === info.movieId && (d.status === 'downloading' || d.status === 'paused'));
+      if (existing) {
+        // Cancel the existing one
+        const controller = abortControllers.current.get(existing.id);
+        if (controller) {
+          controller.abort();
+          abortControllers.current.delete(existing.id);
+        }
+        blobParts.current.delete(existing.id);
+        return prev.filter(d => d.id !== existing.id);
+      }
+      return prev;
+    });
 
     const id = `${info.movieId}-${Date.now()}`;
     const newEntry: DownloadEntry = {
@@ -236,9 +266,10 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
     setDownloads(prev => [newEntry, ...prev]);
 
     const filename = generateFilename(info.title, info.year, info.resolution);
-    // Start in next tick so state is set
-    setTimeout(() => doFetchDownload(id, info.url, filename), 0);
-  }, [downloads, doFetchDownload]);
+    // Queue for processing in next render via useEffect
+    pendingStarts.current.push({ id, url: info.url, filename });
+    console.log('[Download] Queued pending start:', id);
+  }, []);
 
   const pauseDownload = useCallback((id: string) => {
     const controller = abortControllers.current.get(id);
@@ -250,14 +281,15 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
   }, [updateEntry]);
 
   const resumeDownload = useCallback((id: string) => {
-    const dl = downloads.find(d => d.id === id);
-    if (!dl) return;
-
-    const filename = generateFilename(dl.title, dl.year, dl.resolution);
-    // Note: Resume with Range header requires server support
-    // The Cloudflare worker supports Range headers
-    doFetchDownload(id, dl.url, filename, dl.downloadedBytes);
-  }, [downloads, doFetchDownload]);
+    setDownloads(prev => {
+      const dl = prev.find(d => d.id === id);
+      if (!dl) return prev;
+      const filename = generateFilename(dl.title, dl.year, dl.resolution);
+      // Use ref to call fetch directly
+      doFetchRef.current?.(id, dl.url, filename, dl.downloadedBytes);
+      return prev;
+    });
+  }, []);
 
   const cancelDownload = useCallback((id: string) => {
     const controller = abortControllers.current.get(id);
