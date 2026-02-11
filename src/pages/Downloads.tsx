@@ -109,7 +109,11 @@ export default function Downloads() {
                       ? `${formatBytes(dl.downloadedBytes)} / ${formatBytes(dl.totalBytes)}`
                       : dl.downloadedBytes > 0
                         ? formatBytes(dl.downloadedBytes)
-                        : dl.fileSize || 'Starting...'}
+                        : dl.status === 'complete' && dl.downloadedBytes === 0
+                          ? (dl.fileSize || 'Downloaded via system')
+                          : dl.status === 'downloading' && dl.downloadedBytes === 0
+                            ? (dl.fileSize || 'Handing off to system...')
+                            : dl.fileSize || 'Starting...'}
                   </p>
 
                   {/* Progress bar */}
