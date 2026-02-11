@@ -250,8 +250,8 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
         year: info.year,
         resolution: info.resolution,
         fileSize: info.fileSize,
-        status: 'complete',
-        progress: 100,
+      status: 'downloading',
+      progress: 0,
         downloadedBytes: 0,
         totalBytes: 0,
         speed: 0,
@@ -265,6 +265,14 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
       const proxyUrl = `https://icnfjixjohbxjxqbnnac.supabase.co/functions/v1/download-proxy?url=${encodeURIComponent(info.url)}&filename=${encodeURIComponent(filename)}`;
       // window.location.href triggers Android WebView's onDownloadStart listener
       window.location.href = proxyUrl;
+
+      // After 3 seconds, mark as complete (system downloader has taken over)
+      setTimeout(() => {
+        setDownloads(prev => prev.map(d =>
+          d.id === id ? { ...d, status: 'complete' as const } : d
+        ));
+      }, 3000);
+
       return;
     }
 
