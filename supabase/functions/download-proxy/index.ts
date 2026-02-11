@@ -4,6 +4,7 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, range, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
   "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Expose-Headers": "Content-Length, Content-Range, Content-Type, Accept-Ranges",
 };
 
 serve(async (req) => {
@@ -15,7 +16,7 @@ serve(async (req) => {
     const url = new URL(req.url);
     const targetUrl = url.searchParams.get("url");
 
-    console.log("[download-proxy] Resolve request for:", targetUrl);
+    console.log("[download-proxy] Stream request for:", targetUrl);
 
     if (!targetUrl) {
       return new Response(JSON.stringify({ error: "Missing 'url' parameter" }), {
@@ -24,73 +25,50 @@ serve(async (req) => {
       });
     }
 
-    // Use redirect: 'manual' to capture redirect without following or downloading body
-    // This avoids compute limits since we only read headers
-    let finalUrl = targetUrl;
-    let currentUrl = targetUrl;
-    const maxRedirects = 10;
-
-    for (let i = 0; i < maxRedirects; i++) {
-      console.log(`[download-proxy] Checking redirect (${i + 1}):`, currentUrl);
-      
-      const response = await fetch(currentUrl, {
-        method: "GET",
-        redirect: "manual",
-      });
-
-      // If it's a redirect, follow it manually
-      if (response.status >= 300 && response.status < 400) {
-        const location = response.headers.get("Location");
-        if (!location) {
-          console.log("[download-proxy] Redirect without Location header");
-          break;
-        }
-        // Consume/discard the body to free resources
-        await response.body?.cancel();
-        
-        // Handle relative redirects
-        currentUrl = location.startsWith("http") ? location : new URL(location, currentUrl).href;
-        finalUrl = currentUrl;
-        console.log("[download-proxy] Redirected to:", finalUrl);
-        continue;
-      }
-
-      // Not a redirect - this is the final URL
-      // Get content info from headers before discarding body
-      const contentLength = response.headers.get("Content-Length");
-      const contentType = response.headers.get("Content-Type");
-      
-      // Discard body immediately to avoid compute limits
-      await response.body?.cancel();
-
-      console.log("[download-proxy] Final URL:", finalUrl);
-      console.log("[download-proxy] Content-Length:", contentLength);
-
-      return new Response(JSON.stringify({
-        resolvedUrl: finalUrl,
-        contentLength: contentLength ? parseInt(contentLength, 10) : null,
-        contentType: contentType || "application/octet-stream",
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Forward Range header for resume support
+    const headers: Record<string, string> = {};
+    const rangeHeader = req.headers.get("Range");
+    if (rangeHeader) {
+      headers["Range"] = rangeHeader;
+      console.log("[download-proxy] Range header:", rangeHeader);
     }
 
-    // If we exhausted redirects, return what we have
-    console.log("[download-proxy] Max redirects reached, using:", finalUrl);
-    return new Response(JSON.stringify({
-      resolvedUrl: finalUrl,
-      contentLength: null,
-      contentType: "application/octet-stream",
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // Fetch the target URL and stream the response
+    const response = await fetch(targetUrl, {
+      method: "GET",
+      headers,
+      redirect: "follow",
+    });
+
+    console.log("[download-proxy] Upstream status:", response.status);
+    console.log("[download-proxy] Content-Length:", response.headers.get("Content-Length"));
+    console.log("[download-proxy] Content-Type:", response.headers.get("Content-Type"));
+
+    // Build response headers
+    const responseHeaders: Record<string, string> = { ...corsHeaders };
+    
+    // Forward relevant headers
+    const contentLength = response.headers.get("Content-Length");
+    if (contentLength) responseHeaders["Content-Length"] = contentLength;
+    
+    const contentType = response.headers.get("Content-Type");
+    responseHeaders["Content-Type"] = contentType || "application/octet-stream";
+    
+    const contentRange = response.headers.get("Content-Range");
+    if (contentRange) responseHeaders["Content-Range"] = contentRange;
+    
+    const acceptRanges = response.headers.get("Accept-Ranges");
+    if (acceptRanges) responseHeaders["Accept-Ranges"] = acceptRanges;
+
+    // Stream the response body directly
+    return new Response(response.body, {
+      status: response.status,
+      headers: responseHeaders,
     });
 
   } catch (error: unknown) {
     const errMsg = error instanceof Error ? error.message : String(error);
-    const errStack = error instanceof Error ? error.stack : '';
-    console.error("[download-proxy] Error:", errMsg, errStack);
+    console.error("[download-proxy] Error:", errMsg);
     return new Response(JSON.stringify({ error: errMsg || "Proxy fetch failed" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
