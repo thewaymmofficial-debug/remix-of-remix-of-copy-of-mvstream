@@ -205,18 +205,6 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
   // Keep ref in sync
   doFetchRef.current = doFetchDownload;
 
-  // Process pending download starts
-  useEffect(() => {
-    if (pendingStarts.current.length > 0) {
-      const pending = [...pendingStarts.current];
-      pendingStarts.current = [];
-      pending.forEach(({ id, url, filename }) => {
-        console.log('[Download] Processing pending start:', id, url);
-        doFetchRef.current?.(id, url, filename);
-      });
-    }
-  });
-
   const startDownload = useCallback((info: {
     movieId: string;
     title: string;
@@ -232,7 +220,6 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
     setDownloads(prev => {
       const existing = prev.find(d => d.movieId === info.movieId && (d.status === 'downloading' || d.status === 'paused'));
       if (existing) {
-        // Cancel the existing one
         const controller = abortControllers.current.get(existing.id);
         if (controller) {
           controller.abort();
@@ -266,9 +253,9 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
     setDownloads(prev => [newEntry, ...prev]);
 
     const filename = generateFilename(info.title, info.year, info.resolution);
-    // Queue for processing in next render via useEffect
-    pendingStarts.current.push({ id, url: info.url, filename });
-    console.log('[Download] Queued pending start:', id);
+    // Call fetch directly via ref - no need to wait for state
+    console.log('[Download] Calling doFetchDownload directly:', id, info.url);
+    doFetchRef.current?.(id, info.url, filename);
   }, []);
 
   const pauseDownload = useCallback((id: string) => {
