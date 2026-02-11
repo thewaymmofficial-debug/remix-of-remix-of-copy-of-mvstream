@@ -95,11 +95,21 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
 
     updateEntry(id, { status: 'downloading', speed: 0, error: undefined });
 
-    // Route through Supabase edge function proxy to avoid CSP/CORS issues
-    const proxyUrl = `https://icnfjixjohbxjxqbnnac.supabase.co/functions/v1/download-proxy?url=${encodeURIComponent(url)}`;
-    console.log('[Download] Starting fetch via proxy:', proxyUrl, 'resumeFrom:', resumeFromBytes);
+    // Try direct fetch first (works on published app), fall back to proxy (for preview iframe)
+    const attemptFetch = async (): Promise<Response> => {
+      try {
+        console.log('[Download] Trying direct fetch:', url);
+        const directResponse = await fetch(url, { signal: controller.signal, headers, mode: 'cors' });
+        console.log('[Download] Direct fetch succeeded:', directResponse.status);
+        return directResponse;
+      } catch (directErr) {
+        console.log('[Download] Direct fetch failed, trying proxy:', (directErr as Error).message);
+        const proxyUrl = `https://icnfjixjohbxjxqbnnac.supabase.co/functions/v1/download-proxy?url=${encodeURIComponent(url)}`;
+        return fetch(proxyUrl, { signal: controller.signal, headers });
+      }
+    };
 
-    fetch(proxyUrl, { signal: controller.signal, headers })
+    attemptFetch()
       .then(response => {
         console.log('[Download] Response:', response.status, response.statusText, 'ok:', response.ok);
         if (!response.ok && response.status !== 206) {
