@@ -95,9 +95,11 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
 
     updateEntry(id, { status: 'downloading', speed: 0, error: undefined });
 
-    console.log('[Download] Starting fetch:', url, 'resumeFrom:', resumeFromBytes);
+    // Route through Supabase edge function proxy to avoid CSP/CORS issues
+    const proxyUrl = `https://icnfjixjohbxjxqbnnac.supabase.co/functions/v1/download-proxy?url=${encodeURIComponent(url)}`;
+    console.log('[Download] Starting fetch via proxy:', proxyUrl, 'resumeFrom:', resumeFromBytes);
 
-    fetch(url, { signal: controller.signal, headers, mode: 'cors' })
+    fetch(proxyUrl, { signal: controller.signal, headers })
       .then(response => {
         console.log('[Download] Response:', response.status, response.statusText, 'ok:', response.ok);
         if (!response.ok && response.status !== 206) {
