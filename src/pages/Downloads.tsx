@@ -120,15 +120,19 @@ export default function Downloads() {
                     <span className="text-xs text-muted-foreground">
                       {dl.status === 'downloading' && dl.speed > 0
                         ? `${formatSpeed(dl.speed)} • ${formatEta(dl.eta)} remaining`
-                        : dl.status === 'downloading'
-                          ? 'Starting...'
-                          : dl.status === 'paused'
-                            ? 'Paused'
-                            : dl.status === 'complete'
-                              ? 'Complete'
-                              : dl.status === 'error'
-                                ? 'Error'
-                                : ''}
+                        : dl.status === 'downloading' && dl.downloadedBytes === 0
+                          ? 'Handing off to system...'
+                          : dl.status === 'downloading'
+                            ? 'Starting...'
+                            : dl.status === 'paused'
+                              ? 'Paused'
+                              : dl.status === 'complete' && dl.downloadedBytes === 0
+                                ? 'Sent to system downloader'
+                                : dl.status === 'complete'
+                                  ? 'Complete'
+                                  : dl.status === 'error'
+                                    ? 'Error'
+                                    : ''}
                     </span>
                     {dl.status === 'downloading' && (
                       <span className="text-xs font-medium text-primary">{dl.progress}%</span>
