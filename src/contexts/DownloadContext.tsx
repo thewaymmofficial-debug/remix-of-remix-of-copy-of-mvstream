@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 
 export interface DownloadEntry {
   id: string;
@@ -8,12 +8,12 @@ export interface DownloadEntry {
   year: number | null;
   resolution: string | null;
   fileSize: string | null;
-  status: 'downloading' | 'complete' | 'error';
+  status: 'downloading' | 'paused' | 'complete' | 'error';
   progress: number;
   downloadedBytes: number;
   totalBytes: number;
-  speed: number;
-  eta: number;
+  speed: number; // bytes per second
+  eta: number; // seconds remaining
   timestamp: number;
   url: string;
   error?: string;
@@ -30,6 +30,9 @@ interface DownloadContextType {
     fileSize: string | null;
     url: string;
   }) => void;
+  pauseDownload: (id: string) => void;
+  resumeDownload: (id: string) => void;
+  cancelDownload: (id: string) => void;
   removeDownload: (id: string) => void;
   clearDownloads: () => void;
 }
@@ -42,7 +45,11 @@ function getStoredDownloads(): DownloadEntry[] {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return [];
-    return JSON.parse(stored) as DownloadEntry[];
+    const parsed = JSON.parse(stored) as DownloadEntry[];
+    // Reset any in-progress downloads to paused on reload
+    return parsed.map(d =>
+      d.status === 'downloading' ? { ...d, status: 'paused' as const, speed: 0, eta: 0 } : d
+    );
   } catch {
     return [];
   }
@@ -52,12 +59,143 @@ function saveToStorage(downloads: DownloadEntry[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(downloads));
 }
 
+function generateFilename(title: string, year: number | null, resolution: string | null) {
+  const y = year || 'XXXX';
+  const r = resolution || 'HD';
+  return `${title.replace(/\s+/g, '.')}.${y}.${r}.Web-Dl(cineverse).mkv`;
+}
+
 export function DownloadProvider({ children }: { children: React.ReactNode }) {
   const [downloads, setDownloads] = useState<DownloadEntry[]>(getStoredDownloads);
+  const abortControllers = useRef<Map<string, AbortController>>(new Map());
+  // Store accumulated blob chunks per download for pause/resume
+  const blobParts = useRef<Map<string, Uint8Array[]>>(new Map());
 
   useEffect(() => {
     saveToStorage(downloads);
   }, [downloads]);
+
+  const updateEntry = useCallback((id: string, patch: Partial<DownloadEntry>) => {
+    setDownloads(prev => prev.map(d => d.id === id ? { ...d, ...patch } : d));
+  }, []);
+
+  const doFetchDownload = useCallback((id: string, url: string, filename: string, resumeFromBytes = 0) => {
+    const controller = new AbortController();
+    abortControllers.current.set(id, controller);
+
+    if (!blobParts.current.has(id)) {
+      blobParts.current.set(id, []);
+    }
+
+    const headers: Record<string, string> = {};
+    if (resumeFromBytes > 0) {
+      headers['Range'] = `bytes=${resumeFromBytes}-`;
+    }
+
+    updateEntry(id, { status: 'downloading', speed: 0, error: undefined });
+
+    fetch(url, { signal: controller.signal, headers })
+      .then(response => {
+        if (!response.ok && response.status !== 206) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        // Parse total size
+        let totalBytes = 0;
+        const contentRange = response.headers.get('Content-Range');
+        if (contentRange) {
+          // Format: bytes 0-999/5000
+          const match = contentRange.match(/\/(\d+)/);
+          if (match) totalBytes = parseInt(match[1], 10);
+        } else {
+          const contentLength = response.headers.get('Content-Length');
+          if (contentLength) totalBytes = parseInt(contentLength, 10) + resumeFromBytes;
+        }
+
+        if (totalBytes > 0) {
+          updateEntry(id, { totalBytes });
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error('ReadableStream not supported');
+
+        let downloadedBytes = resumeFromBytes;
+        let lastTime = Date.now();
+        let lastBytes = resumeFromBytes;
+        const chunks = blobParts.current.get(id)!;
+
+        const pump = (): Promise<void> => {
+          return reader.read().then(({ done, value }) => {
+            if (done) {
+              // Download complete — trigger save
+              const blob = new Blob(chunks as unknown as BlobPart[]);
+              const blobUrl = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = blobUrl;
+              a.download = filename;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(blobUrl);
+
+              updateEntry(id, {
+                status: 'complete',
+                progress: 100,
+                downloadedBytes: totalBytes || downloadedBytes,
+                speed: 0,
+                eta: 0,
+              });
+              abortControllers.current.delete(id);
+              blobParts.current.delete(id);
+              return;
+            }
+
+            chunks.push(value);
+            downloadedBytes += value.length;
+
+            // Calculate speed every 500ms
+            const now = Date.now();
+            const elapsed = (now - lastTime) / 1000;
+            let speed = 0;
+            let eta = 0;
+
+            if (elapsed >= 0.5) {
+              speed = (downloadedBytes - lastBytes) / elapsed;
+              lastTime = now;
+              lastBytes = downloadedBytes;
+              const remaining = totalBytes > 0 ? totalBytes - downloadedBytes : 0;
+              eta = speed > 0 ? remaining / speed : 0;
+            }
+
+            const progress = totalBytes > 0 ? Math.round((downloadedBytes / totalBytes) * 100) : 0;
+
+            updateEntry(id, {
+              downloadedBytes,
+              progress,
+              ...(speed > 0 ? { speed, eta } : {}),
+            });
+
+            return pump();
+          });
+        };
+
+        return pump();
+      })
+      .catch(err => {
+        if (err.name === 'AbortError') {
+          // Paused or cancelled — don't set error
+          return;
+        }
+        updateEntry(id, {
+          status: 'error',
+          error: err.message || 'Download failed',
+          speed: 0,
+          eta: 0,
+        });
+        abortControllers.current.delete(id);
+        blobParts.current.delete(id);
+      });
+  }, [updateEntry]);
 
   const startDownload = useCallback((info: {
     movieId: string;
@@ -68,8 +206,8 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
     fileSize: string | null;
     url: string;
   }) => {
-    // Don't add duplicate entries for the same movie
-    const existing = downloads.find(d => d.movieId === info.movieId && d.status !== 'error');
+    // Don't add duplicate
+    const existing = downloads.find(d => d.movieId === info.movieId && (d.status === 'downloading' || d.status === 'paused'));
     if (existing) return;
 
     const id = `${info.movieId}-${Date.now()}`;
@@ -93,31 +231,49 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
 
     setDownloads(prev => [newEntry, ...prev]);
 
-    // Trigger native browser download directly — no proxy needed
-    // Using <a> tag navigation bypasses CORS entirely (CORS only applies to fetch/XHR)
-    // The browser will handle any redirects natively
-    const a = document.createElement('a');
-    a.href = info.url;
-    a.download = `${info.title.replace(/\s+/g, '.')}.${info.year || 'XXXX'}.${info.resolution || 'HD'}.Web-Dl(cineverse).mkv`;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    const filename = generateFilename(info.title, info.year, info.resolution);
+    // Start in next tick so state is set
+    setTimeout(() => doFetchDownload(id, info.url, filename), 0);
+  }, [downloads, doFetchDownload]);
 
-    // Mark as complete after a short delay (browser handles the actual download)
-    setTimeout(() => {
-      setDownloads(prev => prev.map(d =>
-        d.id === id ? { ...d, status: 'complete' as const, progress: 100 } : d
-      ));
-    }, 3000);
-  }, [downloads]);
+  const pauseDownload = useCallback((id: string) => {
+    const controller = abortControllers.current.get(id);
+    if (controller) {
+      controller.abort();
+      abortControllers.current.delete(id);
+    }
+    updateEntry(id, { status: 'paused', speed: 0, eta: 0 });
+  }, [updateEntry]);
 
-  const removeDownload = useCallback((id: string) => {
+  const resumeDownload = useCallback((id: string) => {
+    const dl = downloads.find(d => d.id === id);
+    if (!dl) return;
+
+    const filename = generateFilename(dl.title, dl.year, dl.resolution);
+    // Note: Resume with Range header requires server support
+    // The Cloudflare worker supports Range headers
+    doFetchDownload(id, dl.url, filename, dl.downloadedBytes);
+  }, [downloads, doFetchDownload]);
+
+  const cancelDownload = useCallback((id: string) => {
+    const controller = abortControllers.current.get(id);
+    if (controller) {
+      controller.abort();
+      abortControllers.current.delete(id);
+    }
+    blobParts.current.delete(id);
     setDownloads(prev => prev.filter(d => d.id !== id));
   }, []);
 
+  const removeDownload = useCallback((id: string) => {
+    cancelDownload(id);
+  }, [cancelDownload]);
+
   const clearDownloads = useCallback(() => {
+    // Abort all active
+    abortControllers.current.forEach(c => c.abort());
+    abortControllers.current.clear();
+    blobParts.current.clear();
     setDownloads([]);
   }, []);
 
@@ -125,6 +281,9 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
     <DownloadContext.Provider value={{
       downloads,
       startDownload,
+      pauseDownload,
+      resumeDownload,
+      cancelDownload,
       removeDownload,
       clearDownloads,
     }}>
