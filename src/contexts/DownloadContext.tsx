@@ -237,6 +237,51 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
   }) => {
     console.log('[Download] startDownload called:', info.movieId, info.url);
 
+    // WebView: skip in-memory streaming entirely, hand off to system download manager
+    if (isWebView()) {
+      console.log('[Download] WebView detected — triggering direct system download');
+      const id = `${info.movieId}-${Date.now()}`;
+      const newEntry: DownloadEntry = {
+        id,
+        movieId: info.movieId,
+        title: info.title,
+        posterUrl: info.posterUrl,
+        year: info.year,
+        resolution: info.resolution,
+        fileSize: info.fileSize,
+        status: 'complete',
+        progress: 100,
+        downloadedBytes: 0,
+        totalBytes: 0,
+        speed: 0,
+        eta: 0,
+        timestamp: Date.now(),
+        url: info.url,
+      };
+      setDownloads(prev => [newEntry, ...prev]);
+
+      // Try multiple methods to trigger the system download manager
+      try {
+        const a = document.createElement('a');
+        a.href = info.url;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.setAttribute('download', '');
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } catch {
+        // Fallback: window.open or location.href
+        try {
+          window.open(info.url, '_blank');
+        } catch {
+          window.location.href = info.url;
+        }
+      }
+      return;
+    }
+
+    // Regular browser: stream with progress tracking
     // Remove any existing failed/paused entry for this movie
     setDownloads(prev => {
       const existing = prev.find(d => d.movieId === info.movieId && (d.status === 'downloading' || d.status === 'paused'));
@@ -274,7 +319,6 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
     setDownloads(prev => [newEntry, ...prev]);
 
     const filename = generateFilename(info.title, info.year, info.resolution);
-    // Call fetch directly via ref - no need to wait for state
     console.log('[Download] Calling doFetchDownload directly:', id, info.url);
     doFetchRef.current?.(id, info.url, filename);
   }, []);
