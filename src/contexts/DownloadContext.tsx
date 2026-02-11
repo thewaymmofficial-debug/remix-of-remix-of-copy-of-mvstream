@@ -94,8 +94,11 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
 
     updateEntry(id, { status: 'downloading', speed: 0, error: undefined });
 
-    fetch(url, { signal: controller.signal, headers })
+    console.log('[Download] Starting fetch:', url, 'resumeFrom:', resumeFromBytes);
+
+    fetch(url, { signal: controller.signal, headers, mode: 'cors' })
       .then(response => {
+        console.log('[Download] Response:', response.status, response.statusText, 'ok:', response.ok);
         if (!response.ok && response.status !== 206) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
@@ -182,6 +185,7 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
         return pump();
       })
       .catch(err => {
+        console.error('[Download] Error:', err.name, err.message);
         if (err.name === 'AbortError') {
           // Paused or cancelled — don't set error
           return;
