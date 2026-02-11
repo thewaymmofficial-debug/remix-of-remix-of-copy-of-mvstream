@@ -237,10 +237,11 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
   }) => {
     console.log('[Download] startDownload called:', info.movieId, info.url);
 
-    // WebView: skip in-memory streaming entirely, hand off to system download manager
+    // WebView: skip in-memory streaming entirely, hand off to native DownloadManager
     if (isWebView()) {
-      console.log('[Download] WebView detected — triggering direct system download');
+      console.log('[Download] WebView detected — triggering native download via location.href');
       const id = `${info.movieId}-${Date.now()}`;
+      const filename = generateFilename(info.title, info.year, info.resolution);
       const newEntry: DownloadEntry = {
         id,
         movieId: info.movieId,
@@ -260,24 +261,10 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
       };
       setDownloads(prev => [newEntry, ...prev]);
 
-      // Try multiple methods to trigger the system download manager
-      try {
-        const a = document.createElement('a');
-        a.href = info.url;
-        a.target = '_blank';
-        a.rel = 'noopener noreferrer';
-        a.setAttribute('download', '');
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      } catch {
-        // Fallback: window.open or location.href
-        try {
-          window.open(info.url, '_blank');
-        } catch {
-          window.location.href = info.url;
-        }
-      }
+      // Use proxy URL with Content-Disposition header so Android DownloadManager gets the filename
+      const proxyUrl = `https://icnfjixjohbxjxqbnnac.supabase.co/functions/v1/download-proxy?url=${encodeURIComponent(info.url)}&filename=${encodeURIComponent(filename)}`;
+      // window.location.href triggers Android WebView's onDownloadStart listener
+      window.location.href = proxyUrl;
       return;
     }
 

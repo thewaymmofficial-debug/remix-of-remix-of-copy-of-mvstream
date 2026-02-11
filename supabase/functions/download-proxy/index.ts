@@ -15,8 +15,9 @@ serve(async (req) => {
   try {
     const url = new URL(req.url);
     const targetUrl = url.searchParams.get("url");
+    const filenameParam = url.searchParams.get("filename");
 
-    console.log("[download-proxy] Stream request for:", targetUrl);
+    console.log("[download-proxy] Stream request for:", targetUrl, "filename:", filenameParam);
 
     if (!targetUrl) {
       return new Response(JSON.stringify({ error: "Missing 'url' parameter" }), {
@@ -59,6 +60,13 @@ serve(async (req) => {
     
     const acceptRanges = response.headers.get("Accept-Ranges");
     if (acceptRanges) responseHeaders["Accept-Ranges"] = acceptRanges;
+
+    // Add Content-Disposition so Android DownloadManager knows the filename
+    if (filenameParam) {
+      responseHeaders["Content-Disposition"] = `attachment; filename="${filenameParam}"`;
+    } else {
+      responseHeaders["Content-Disposition"] = "attachment";
+    }
 
     // Stream the response body directly
     return new Response(response.body, {
