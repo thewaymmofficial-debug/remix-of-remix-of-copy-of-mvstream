@@ -1,44 +1,30 @@
 
 
-## Fix Downloads to Save Files on All Platforms (Telegram Mini App, WebToApp APK, etc.)
+## WebView-Compatible Download Fix
 
-### The Problem
+### What This Fixes
 
-The current download completion code creates an in-memory `Blob`, generates a temporary `URL.createObjectURL()`, and programmatically clicks an `<a download>` link. This works in regular Chrome/Safari browsers but **fails silently in WebView environments** (Telegram mini apps, WebToApp APKs) because:
+Downloads work in regular browsers but files vanish in Telegram mini-apps and WebToApp APKs. These WebView environments sandbox blob URLs and ignore the `<a download>` attribute, so files never reach the device filesystem.
 
-- WebViews often ignore the `download` attribute on `<a>` tags
-- `URL.createObjectURL` blobs are sandboxed and don't trigger the system download manager
-- The file stays in memory and is immediately garbage-collected -- it never reaches the filesystem
+### How It Works
 
-### The Solution
+**Platform Detection**: A helper function checks `navigator.userAgent` for WebView indicators (Telegram, FBAN, Instagram, Android WebView `wv` flag, etc.).
 
-Replace the blob-based save with a **multi-strategy approach** that tries the best method for each platform:
+**Two Save Strategies**:
+- **Regular browsers**: Keep the current blob + `<a download>` approach (supports custom filenames, works great)
+- **WebView environments**: On download completion, instead of saving a blob, redirect to the original file URL via `window.location.href`. This hands the file to the system's native download manager, which saves it to the device's Downloads folder
 
-1. **Strategy 1 - Direct navigation**: Redirect `window.location.href` to the original file URL. This hands the download off to the **system download manager** (Android/iOS), which works universally in WebViews, Telegram, and wrapped APKs.
+**Bonus -- "Direct Download" mode for WebView**: For very large files where streaming in-memory is wasteful in a WebView (since the blob won't be used), add a direct handoff option that skips streaming entirely and immediately triggers the system download manager.
 
-2. **Strategy 2 - Fallback `<a>` click**: For regular browsers where direct fetch + streaming progress is working, keep the current blob approach as it provides a better UX with the custom filename.
+### Technical Details
 
-3. **Platform detection**: Detect if running inside a WebView/mini-app (via `navigator.userAgent` checks for Telegram, WebView indicators) and choose the right strategy.
+**File 1: `src/contexts/DownloadContext.tsx`**
+- Add `isWebView()` utility function checking user agent for: `Telegram`, `TelegramBot`, `wv` (Android WebView flag), `FBAN` (Facebook), `Instagram`, `Line`, `MiniApp`, `WebView`
+- Modify the `pump()` completion branch (line 145-166):
+  - If `isWebView()` is true: skip blob creation, call `window.location.href = url` to trigger native system download, then mark as complete
+  - If regular browser: keep existing blob + `<a download>` logic
+- Clean up unused `pendingStarts` ref (leftover from previous refactor)
 
-### Technical Changes
-
-**File: `src/contexts/DownloadContext.tsx`**
-
-- Add a `isWebView()` helper that checks the user agent for WebView indicators (e.g., `wv`, `Telegram`, `FBAN`, `Instagram`, `Line`, `MiniApp`)
-- Modify the download completion handler (`done` branch in `pump()`):
-  - **If WebView detected**: Skip the blob approach entirely. Instead, open the original file URL via `window.location.href = url` or `window.open(url, '_system')` to trigger the native system download manager. The system will handle saving to the Downloads folder.
-  - **If regular browser**: Keep the existing `Blob` + `createObjectURL` + `<a download>` approach (it works well and supports custom filenames)
-- For WebView mode, an alternative is to skip the streaming fetch entirely and just hand the URL to the system -- but this loses progress tracking. A hybrid approach: stream for progress UI, then on completion, trigger a **second native download** of the same URL via the system manager, which saves the file properly.
-
-**Recommended hybrid for best UX on WebView:**
-- Stream the file as now (showing progress, speed, ETA in the UI)
-- On completion, instead of blob save, call `window.location.href = url` to trigger the system's native download of the same file
-- The system download manager will save it to the device's Downloads folder
-- Mark the entry as "complete" in the UI
-
-This means the file downloads twice (once for progress tracking, once for actual save), but ensures reliable file saving. For efficiency, we can also offer a "direct download" mode for WebViews that skips streaming and just hands the URL to the system immediately.
-
-### Files to Modify
-
-1. **`src/contexts/DownloadContext.tsx`** - Add WebView detection, modify completion handler, add direct-download fallback for WebView environments
+**File 2: `supabase/config.toml`**
+- Restore the `[functions.download-proxy]` section with `verify_jwt = false` (lost during remix)
 
