@@ -1,5 +1,10 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 
+function isWebView(): boolean {
+  const ua = navigator.userAgent;
+  return /Telegram|TelegramBot|wv|FBAN|Instagram|Line|MiniApp|WebView/i.test(ua);
+}
+
 export interface DownloadEntry {
   id: string;
   movieId: string;
@@ -69,7 +74,6 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
   const [downloads, setDownloads] = useState<DownloadEntry[]>(getStoredDownloads);
   const abortControllers = useRef<Map<string, AbortController>>(new Map());
   const blobParts = useRef<Map<string, Uint8Array[]>>(new Map());
-  const pendingStarts = useRef<Array<{ id: string; url: string; filename: string }>>([]);
   const doFetchRef = useRef<((id: string, url: string, filename: string, resumeFrom?: number) => void) | null>(null);
 
   useEffect(() => {
@@ -144,15 +148,20 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
           return reader.read().then(({ done, value }) => {
             if (done) {
               // Download complete — trigger save
-              const blob = new Blob(chunks as unknown as BlobPart[]);
-              const blobUrl = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = blobUrl;
-              a.download = filename;
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
-              URL.revokeObjectURL(blobUrl);
+              if (isWebView()) {
+                console.log('[Download] WebView detected, triggering system download');
+                window.location.href = url;
+              } else {
+                const blob = new Blob(chunks as unknown as BlobPart[], { type: 'application/octet-stream' });
+                const blobUrl = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(blobUrl);
+              }
 
               updateEntry(id, {
                 status: 'complete',
