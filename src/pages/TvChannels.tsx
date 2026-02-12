@@ -55,15 +55,7 @@ export default function TvChannels() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Initialize open state for first source
-  useMemo(() => {
-    if (data?.sources && Object.keys(openSources).length === 0) {
-      const keys = Object.keys(data.sources);
-      if (keys.length > 0) {
-        setOpenSources({ [keys[0]]: true });
-      }
-    }
-  }, [data?.sources]);
+  // All sources start collapsed by default — no auto-open
 
   // Flatten all channels for search
   const allChannels = useMemo(() => {
