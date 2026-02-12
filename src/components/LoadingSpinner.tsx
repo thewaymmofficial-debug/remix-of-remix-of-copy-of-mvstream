@@ -27,7 +27,7 @@ export function LoadingSpinner({ message = 'Loading...' }: LoadingSpinnerProps) 
 
   return (
     <div className="flex flex-col items-center justify-center py-32 gap-6">
-      <div ref={containerRef} className="relative flex items-end h-10 overflow-visible logo-loading-loop">
+      <div ref={containerRef} className="relative flex items-end h-10 overflow-visible">
         {LETTERS.map((letter, i) => {
           const isI = i === 1;
           const delay = i * 80;
