@@ -63,11 +63,11 @@ export default function TvChannels() {
     queryKey: ['broken-channels'],
     queryFn: async () => {
       const { data } = await supabase.from('broken_channels').select('channel_url');
-      return new Set((data || []).map(r => r.channel_url));
+      return (data || []).map(r => r.channel_url);
     },
     staleTime: 5 * 60 * 1000,
   });
-  const brokenUrls = brokenChannels ?? new Set<string>();
+  const brokenUrls = useMemo(() => new Set(brokenChannels || []), [brokenChannels]);
 
   // Report a broken channel globally
   const reportBroken = useMutation({

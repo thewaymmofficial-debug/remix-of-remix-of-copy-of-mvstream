@@ -100,13 +100,24 @@ async function checkUrl(url: string): Promise<boolean> {
   }
 }
 
+async function fetchBrokenUrls(): Promise<Set<string>> {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabase = createClient(supabaseUrl, supabaseKey);
+  const { data } = await supabase.from("broken_channels").select("channel_url");
+  return new Set((data || []).map((r: any) => r.channel_url));
+}
+
 async function filterChannels(
-  channels: Record<string, GitHubChannel[]>
+  channels: Record<string, GitHubChannel[]>,
+  brokenUrls: Set<string>
 ): Promise<Record<string, GitHubChannel[]>> {
   const filtered: Record<string, GitHubChannel[]> = {};
   for (const [group, list] of Object.entries(channels)) {
+    // First exclude globally broken channels
+    const notBroken = list.filter((ch) => !brokenUrls.has(ch.url));
     const checks = await Promise.allSettled(
-      list.map(async (ch) => ({ ch, ok: await checkUrl(ch.url) }))
+      notBroken.map(async (ch) => ({ ch, ok: await checkUrl(ch.url) }))
     );
     const valid = checks
       .filter((r) => r.status === "fulfilled" && r.value.ok)
@@ -128,6 +139,7 @@ async function fetchAllSources(
     return cache.data;
   }
 
+  const brokenUrls = await fetchBrokenUrls();
   const results: Record<string, SourceResult> = {};
 
   const fetches = await Promise.allSettled(
@@ -136,7 +148,7 @@ async function fetchAllSources(
       const res = await fetch(source.url);
       if (!res.ok) throw new Error(`Failed: ${res.status}`);
       const json = (await res.json()) as GitHubResponse;
-      const validChannels = await filterChannels(json.channels || {});
+      const validChannels = await filterChannels(json.channels || {}, brokenUrls);
       return { category, channels: validChannels };
     })
   );
