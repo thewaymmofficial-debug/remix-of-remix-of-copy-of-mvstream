@@ -88,6 +88,36 @@ async function fetchSources(): Promise<SourceEntry[]> {
   }
 }
 
+async function checkUrl(url: string): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2000);
+    const res = await fetch(url, { method: "HEAD", signal: controller.signal });
+    clearTimeout(timeout);
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function filterChannels(
+  channels: Record<string, GitHubChannel[]>
+): Promise<Record<string, GitHubChannel[]>> {
+  const filtered: Record<string, GitHubChannel[]> = {};
+  for (const [group, list] of Object.entries(channels)) {
+    const checks = await Promise.allSettled(
+      list.map(async (ch) => ({ ch, ok: await checkUrl(ch.url) }))
+    );
+    const valid = checks
+      .filter((r) => r.status === "fulfilled" && r.value.ok)
+      .map((r) => (r as PromiseFulfilledResult<{ ch: GitHubChannel; ok: boolean }>).value.ch);
+    if (valid.length > 0) {
+      filtered[group] = valid;
+    }
+  }
+  return filtered;
+}
+
 async function fetchAllSources(
   sources: SourceEntry[]
 ): Promise<Record<string, SourceResult>> {
@@ -106,14 +136,17 @@ async function fetchAllSources(
       const res = await fetch(source.url);
       if (!res.ok) throw new Error(`Failed: ${res.status}`);
       const json = (await res.json()) as GitHubResponse;
-      return { category, channels: json.channels || {} };
+      const validChannels = await filterChannels(json.channels || {});
+      return { category, channels: validChannels };
     })
   );
 
   for (const result of fetches) {
     if (result.status === "fulfilled") {
       const { category, channels } = result.value;
-      results[category] = { category, channels };
+      if (Object.keys(channels).length > 0) {
+        results[category] = { category, channels };
+      }
     }
   }
 
