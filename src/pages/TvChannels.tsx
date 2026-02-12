@@ -48,7 +48,7 @@ export default function TvChannels() {
 
   const favoriteUrls = useMemo(() => new Set(favorites.map(f => f.channel_url)), [favorites]);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['live-tv-channels'],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('live-tv-proxy');
@@ -238,6 +238,17 @@ export default function TvChannels() {
       <div className="px-4 pb-24">
         {isLoading ? (
           <LoadingSpinner message="Loading channels..." />
+        ) : isError ? (
+          <FadeIn>
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <Tv className="w-16 h-16 text-destructive mb-4" />
+              <p className="text-foreground font-semibold mb-2">Failed to load channels</p>
+              <p className="text-sm text-muted-foreground mb-4">Please check your connection and try again</p>
+              <Button onClick={() => refetch()} variant="outline">
+                Retry
+              </Button>
+            </div>
+          </FadeIn>
         ) : showFavorites ? (
           <FadeIn>
             {favoriteChannelsList.length === 0 ? (
