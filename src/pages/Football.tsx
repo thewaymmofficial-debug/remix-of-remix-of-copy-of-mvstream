@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Play, Trophy, Crown, Wifi, Download, Video } from 'lucide-react';
+import { ArrowLeft, Play, Trophy, Crown, Wifi, Download, Video, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/Navbar';
@@ -19,6 +19,7 @@ export default function Football() {
   const { data: videos, isLoading } = useFootballVideos();
   const { data: categories } = useFootballCategories();
   const [activeCategory, setActiveCategory] = useState('all');
+  const [showHighlights, setShowHighlights] = useState(true);
   const [loginModal, setLoginModal] = useState(false);
 
   const filteredVideos = useMemo(() => {
@@ -69,13 +70,24 @@ export default function Football() {
       <div className="pt-16 pb-24 md:pb-8">
         {/* Header */}
         <div className="px-4 py-4 flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="rounded-full">
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <h1 className="text-xl font-bold flex items-center gap-2">
             <Trophy className="w-5 h-5" />
             ဘောလုံး
           </h1>
+          <div className="ml-auto">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowHighlights(!showHighlights)}
+              className="text-xs gap-1.5"
+            >
+              {showHighlights ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+              Highlights
+            </Button>
+          </div>
         </div>
 
         {/* Category Tabs */}
@@ -139,7 +151,7 @@ export default function Football() {
               )}
 
               {/* Highlights Section */}
-              {highlightVideos.length > 0 && (
+              {showHighlights && highlightVideos.length > 0 && (
                 <div>
                   <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
                     <Video className="w-4 h-4" />
