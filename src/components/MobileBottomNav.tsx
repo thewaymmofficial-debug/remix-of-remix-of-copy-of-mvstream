@@ -21,6 +21,12 @@ export function MobileBottomNav() {
   const pendingCount = usePendingRequestCount();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [profileSheetOpen, setProfileSheetOpen] = useState(false);
+  const [tappedPath, setTappedPath] = useState<string | null>(null);
+
+  const handleTap = (path: string) => {
+    setTappedPath(path);
+    setTimeout(() => setTappedPath(null), 400);
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -51,6 +57,7 @@ export function MobileBottomNav() {
               <Link
                 key={item.path}
                 to={item.path}
+                onClick={() => handleTap(item.path)}
                 className={cn(
                   "flex flex-col items-center justify-center gap-0.5 py-2 px-1 flex-1 min-w-0 rounded-lg transition-all",
                   active 
@@ -58,7 +65,10 @@ export function MobileBottomNav() {
                     : "text-cineverse-gray hover:text-foreground"
                 )}
               >
-                <div className="relative">
+                <div className={cn(
+                  "relative",
+                  tappedPath === item.path && "animate-nav-bounce"
+                )}>
                   <item.icon 
                     className={cn(
                       "w-[18px] h-[18px] transition-all",
@@ -87,6 +97,7 @@ export function MobileBottomNav() {
             <Sheet open={profileSheetOpen} onOpenChange={setProfileSheetOpen}>
               <SheetTrigger asChild>
                 <button
+                  onClick={() => handleTap('profile')}
                   className={cn(
                     "flex flex-col items-center justify-center gap-0.5 py-2 px-1 flex-1 min-w-0 rounded-lg transition-all",
                     (location.pathname === '/profile') 
@@ -94,13 +105,15 @@ export function MobileBottomNav() {
                       : "text-cineverse-gray hover:text-foreground"
                   )}
                 >
-                  <User 
-                    className={cn(
-                      "w-[18px] h-[18px] transition-all",
-                      location.pathname === '/profile' && "fill-cineverse-red"
-                    )} 
-                    fill={location.pathname === '/profile' ? "currentColor" : "none"}
-                  />
+                  <div className={cn(tappedPath === 'profile' && "animate-nav-bounce")}>
+                    <User 
+                      className={cn(
+                        "w-[18px] h-[18px] transition-all",
+                        location.pathname === '/profile' && "fill-cineverse-red"
+                      )} 
+                      fill={location.pathname === '/profile' ? "currentColor" : "none"}
+                    />
+                  </div>
                   <span className={cn(
                     "text-[10px] font-medium truncate w-full text-center",
                     location.pathname === '/profile' && "text-cineverse-red"
