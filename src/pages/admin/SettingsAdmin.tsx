@@ -65,7 +65,8 @@ export default function SettingsAdmin() {
       setAnnouncement(settings.announcement);
     }
     if (settings?.liveTvSources) {
-      setLiveTvSources(settings.liveTvSources);
+      const sources = settings.liveTvSources;
+      setLiveTvSources(Array.isArray(sources) ? sources : []);
     }
   }, [settings]);
 
