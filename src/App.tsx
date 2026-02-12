@@ -10,7 +10,6 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import { DownloadProvider } from "@/contexts/DownloadContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { DevicePresenceMonitor } from "@/components/DevicePresenceMonitor";
-import { PageTransition } from "@/components/PageTransition";
 import { useNetworkRefresh } from "@/hooks/useNetworkRefresh";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -79,7 +78,6 @@ const App = () => (
               <Toaster />
               <Sonner />
               <BrowserRouter>
-                <PageTransition>
                 <Routes>
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/" element={<Index />} />
@@ -114,7 +112,6 @@ const App = () => (
                   </Route>
                   <Route path="*" element={<NotFound />} />
                 </Routes>
-                </PageTransition>
               </BrowserRouter>
             </TooltipProvider>
             </DownloadProvider>
