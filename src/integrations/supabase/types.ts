@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      broken_channels: {
+        Row: {
+          channel_name: string | null
+          channel_url: string
+          created_at: string
+          id: string
+          reported_by: string | null
+        }
+        Insert: {
+          channel_name?: string | null
+          channel_url: string
+          created_at?: string
+          id?: string
+          reported_by?: string | null
+        }
+        Update: {
+          channel_name?: string | null
+          channel_url?: string
+          created_at?: string
+          id?: string
+          reported_by?: string | null
+        }
+        Relationships: []
+      }
       cast_members: {
         Row: {
           created_at: string

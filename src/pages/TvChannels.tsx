@@ -11,7 +11,7 @@ import { FadeIn } from '@/components/FadeIn';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useFavoriteChannels, useToggleFavoriteChannel } from '@/hooks/useFavoriteChannels';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -41,7 +41,7 @@ export default function TvChannels() {
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
   const [openSources, setOpenSources] = useState<Record<string, boolean>>({});
   const [showFavorites, setShowFavorites] = useState(false);
-  const [brokenUrls, setBrokenUrls] = useState<Set<string>>(new Set());
+  const queryClient = useQueryClient();
 
   const { favorites } = useFavoriteChannels();
   const toggleFavorite = useToggleFavoriteChannel();
@@ -56,6 +56,30 @@ export default function TvChannels() {
       return data as LiveTvResponse;
     },
     staleTime: 5 * 60 * 1000,
+  });
+
+  // Fetch globally broken channels
+  const { data: brokenChannels } = useQuery({
+    queryKey: ['broken-channels'],
+    queryFn: async () => {
+      const { data } = await supabase.from('broken_channels').select('channel_url');
+      return new Set((data || []).map(r => r.channel_url));
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  const brokenUrls = brokenChannels ?? new Set<string>();
+
+  // Report a broken channel globally
+  const reportBroken = useMutation({
+    mutationFn: async ({ url, name }: { url: string; name: string }) => {
+      await supabase.from('broken_channels').upsert(
+        { channel_url: url, channel_name: name, reported_by: user?.id },
+        { onConflict: 'channel_url' }
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['broken-channels'] });
+    },
   });
 
   // All sources start collapsed by default — no auto-open
@@ -104,8 +128,10 @@ export default function TvChannels() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleStreamError = (url: string) => {
-    setBrokenUrls(prev => new Set(prev).add(url));
+  const handleStreamError = (url: string, name: string) => {
+    if (user) {
+      reportBroken.mutate({ url, name });
+    }
     setTimeout(() => setActiveChannel(null), 2000);
   };
 
