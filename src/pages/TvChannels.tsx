@@ -39,6 +39,7 @@ export default function TvChannels() {
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
   const [openSources, setOpenSources] = useState<Record<string, boolean>>({});
   const [showFavorites, setShowFavorites] = useState(false);
+  const [brokenUrls, setBrokenUrls] = useState<Set<string>>(new Set());
 
   const { favorites } = useFavoriteChannels();
   const toggleFavorite = useToggleFavoriteChannel();
@@ -64,12 +65,14 @@ export default function TvChannels() {
     for (const [category, source] of Object.entries(data.sources)) {
       for (const group of Object.values(source.channels)) {
         for (const ch of group) {
-          channels.push({ ...ch, sourceCategory: category });
+          if (!brokenUrls.has(ch.url)) {
+            channels.push({ ...ch, sourceCategory: category });
+          }
         }
       }
     }
     return channels;
-  }, [data]);
+  }, [data, brokenUrls]);
 
   // Filter by search
   const filteredChannels = useMemo(() => {
@@ -97,6 +100,11 @@ export default function TvChannels() {
   const handlePlay = (channel: Channel) => {
     setActiveChannel(channel);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleStreamError = (url: string) => {
+    setBrokenUrls(prev => new Set(prev).add(url));
+    setTimeout(() => setActiveChannel(null), 2000);
   };
 
   const handleToggleFavorite = (channel: Channel & { sourceCategory?: string }) => {
@@ -145,6 +153,7 @@ export default function TvChannels() {
             url={activeChannel.url}
             channelName={activeChannel.name}
             onClose={() => setActiveChannel(null)}
+            onError={handleStreamError}
           />
         </div>
       )}
@@ -276,26 +285,30 @@ export default function TvChannels() {
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <div className="space-y-6 pt-4">
-                      {Object.entries(sourceData.channels).map(([group, channels]) => (
-                        <div key={group}>
-                          <h3 className="text-sm font-semibold text-muted-foreground mb-3 pl-1">
-                            {group} ({channels.length})
-                          </h3>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                            {channels.map((channel, idx) => (
-                              <ChannelCard
-                                key={`${channel.name}-${idx}`}
-                                channel={channel}
-                                isActive={activeChannel?.url === channel.url}
-                                onPlay={handlePlay}
-                                isFavorite={favoriteUrls.has(channel.url)}
-                                onToggleFavorite={handleToggleFavorite}
-                                showFavorite={!!user}
-                              />
-                            ))}
+                      {Object.entries(sourceData.channels).map(([group, channels]) => {
+                        const validChannels = channels.filter(c => !brokenUrls.has(c.url));
+                        if (validChannels.length === 0) return null;
+                        return (
+                          <div key={group}>
+                            <h3 className="text-sm font-semibold text-muted-foreground mb-3 pl-1">
+                              {group} ({validChannels.length})
+                            </h3>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                              {validChannels.map((channel, idx) => (
+                                <ChannelCard
+                                  key={`${channel.name}-${idx}`}
+                                  channel={channel}
+                                  isActive={activeChannel?.url === channel.url}
+                                  onPlay={handlePlay}
+                                  isFavorite={favoriteUrls.has(channel.url)}
+                                  onToggleFavorite={handleToggleFavorite}
+                                  showFavorite={!!user}
+                                />
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </CollapsibleContent>
                 </Collapsible>

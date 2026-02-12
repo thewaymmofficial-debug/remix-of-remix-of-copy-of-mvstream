@@ -7,9 +7,10 @@ interface LiveTvPlayerProps {
   url: string;
   channelName: string;
   onClose: () => void;
+  onError?: (url: string) => void;
 }
 
-export function LiveTvPlayer({ url, channelName, onClose }: LiveTvPlayerProps) {
+export function LiveTvPlayer({ url, channelName, onClose, onError }: LiveTvPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -43,12 +44,14 @@ export function LiveTvPlayer({ url, channelName, onClose }: LiveTvPlayerProps) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
               setError('Network error — stream may be offline or blocked by CORS.');
+              onError?.(url);
               break;
             case Hls.ErrorTypes.MEDIA_ERROR:
               hls.recoverMediaError();
               break;
             default:
               setError('Stream failed to load.');
+              onError?.(url);
               hls.destroy();
               break;
           }
@@ -69,6 +72,7 @@ export function LiveTvPlayer({ url, channelName, onClose }: LiveTvPlayerProps) {
       video.addEventListener('error', () => {
         setLoading(false);
         setError('Stream failed to load.');
+        onError?.(url);
       });
     } else {
       setError('HLS playback is not supported in this browser.');
