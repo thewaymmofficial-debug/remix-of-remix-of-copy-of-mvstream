@@ -6,7 +6,7 @@ import { MovieCard } from '@/components/MovieCard';
 import { MovieQuickPreview } from '@/components/MovieQuickPreview';
 import { LoginModal } from '@/components/LoginModal';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
-import { SkeletonCard } from '@/components/SkeletonCard';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useMovies, useFeaturedMovies } from '@/hooks/useMovies';
 import { useTrendingMovies } from '@/hooks/useTrending';
 import { useAuth } from '@/hooks/useAuth';
@@ -104,11 +104,7 @@ const Browse = () => {
 
         {/* Content */}
         {isLoading ? (
-          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
-            {Array.from({ length: 12 }).map((_, i) => (
-              <SkeletonCard key={i} />
-            ))}
-          </div>
+          <LoadingSpinner message="Loading movies..." />
         ) : movies.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-muted-foreground text-lg mb-4">

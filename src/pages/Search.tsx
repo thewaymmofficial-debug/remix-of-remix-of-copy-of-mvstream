@@ -86,7 +86,13 @@ export default function SearchPage() {
       {/* Results */}
       <div className="px-4 py-4 space-y-3">
         {isLoading && (
-          <div className="text-center py-12 text-muted-foreground">{t('loading')}</div>
+          <div className="flex flex-col items-center justify-center py-32 gap-4">
+            <div className="relative w-16 h-16">
+              <div className="absolute inset-0 rounded-full border-4 border-muted" />
+              <div className="absolute inset-0 rounded-full border-4 border-t-primary animate-spin" />
+            </div>
+            <p className="text-sm text-muted-foreground animate-pulse">{t('loading')}</p>
+          </div>
         )}
 
         {!isLoading && query.trim() && results.length === 0 && (

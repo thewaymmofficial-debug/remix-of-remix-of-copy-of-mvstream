@@ -75,17 +75,12 @@ export default function History() {
 
           {/* Content */}
           {isLoading || authLoading ? (
-            <div className="space-y-4">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="flex gap-4 p-4 bg-card rounded-lg animate-pulse">
-                  <div className="w-24 h-36 bg-muted rounded" />
-                  <div className="flex-1 space-y-3">
-                    <div className="h-5 w-1/3 bg-muted rounded" />
-                    <div className="h-4 w-1/4 bg-muted rounded" />
-                    <div className="h-3 w-1/5 bg-muted rounded" />
-                  </div>
-                </div>
-              ))}
+            <div className="flex flex-col items-center justify-center py-32 gap-4">
+              <div className="relative w-16 h-16">
+                <div className="absolute inset-0 rounded-full border-4 border-muted" />
+                <div className="absolute inset-0 rounded-full border-4 border-t-primary animate-spin" />
+              </div>
+              <p className="text-sm text-muted-foreground animate-pulse">Loading history...</p>
             </div>
           ) : !history || history.length === 0 ? (
             <div className="text-center py-20">
