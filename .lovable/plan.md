@@ -1,59 +1,75 @@
 
 
-# Pixar-Style "CINEVERSE" Logo Animation
+## Fix: Blank Screen in APK and Admin Panel Flashing
 
-Inspired by Pixar's iconic lamp animation, we'll create a playful text logo animation where a spotlight/lamp-like element bounces onto one of the letters, squishing it down -- then the full text settles into place.
+### Problems Identified
 
-## How It Works
+**1. Blank screen in WebToApp APK (TV Channels page)**
+- The `useNetworkRefresh` hook in `App.tsx` calls `window.location.reload()` whenever the device goes from offline to online. WebToApp APKs on mobile frequently trigger brief offline/online events (e.g. switching between WiFi and mobile data, or signal fluctuations). This causes constant page reloads, resulting in a blank/white screen.
+- Additionally, if the edge function returns a 500 error, the `useQuery` in `TvChannels.tsx` throws but there is no error UI -- it just shows loading forever or crashes to a blank screen.
 
-1. The letters "C-I-N-E-V-E-R-S-E" animate in with a staggered fade-up effect
-2. A small spotlight icon (or a star/lamp shape) drops from above and "lands" on the letter "I", squishing it briefly
-3. The "I" compresses, then springs back to normal height
-4. The spotlight settles on top of the "I" and glows softly
-5. The animation plays once on page load (not on every navigation)
+**2. Admin panel flashing when adding channels and scrolling**
+- In `ChannelsAdmin.tsx`, the `useEffect` on line 40-45 syncs `settings.liveTvSources` into local `sources` state. After clicking "Save All Changes", the mutation's `onSuccess` invalidates the `site-settings` query, which re-fetches data and triggers the `useEffect` again, resetting the `sources` state. This causes a visible flash/re-render of the entire channel list.
+- With 27 sources, every state change (add, toggle, edit) re-runs `parseCategoryFromUrl` for all items, adding unnecessary computation.
 
-## Technical Approach
+---
 
-### 1. Create a new `CineverseLogo` component (`src/components/CineverseLogo.tsx`)
+### Plan
 
-- Split "CINEVERSE" into individual letter `<span>` elements
-- Each letter gets a staggered `animation-delay` for a sequential fade-up entrance
-- The "I" letter has a special squish keyframe (scaleY compress then bounce back)
-- A small lamp/spotlight SVG element animates downward onto the "I" with a bounce
-- Use `sessionStorage` to track if animation already played this session, so it only runs once on first load (not every route change)
+**Fix 1: Prevent APK blank screen from network refresh**
+- File: `src/hooks/useNetworkRefresh.tsx`
+- Add a debounce/cooldown so the page does not reload more than once per 30 seconds. Also add a minimum offline duration check (e.g. must be offline for at least 3 seconds before triggering a reload on reconnect). This prevents rapid offline/online toggles in mobile APKs from causing constant blank-screen reloads.
 
-### 2. Add keyframes to `tailwind.config.ts`
+**Fix 2: Add error handling to TvChannels**
+- File: `src/pages/TvChannels.tsx`
+- Capture the `error` and `isError` states from the `useQuery` hook and show a proper error UI with a retry button instead of a blank screen.
 
-- `letter-fade-up`: Letters fade and slide up into place
-- `lamp-drop`: Lamp drops from above with a bounce easing
-- `letter-squish`: The "I" compresses vertically then springs back
-- `lamp-glow`: Subtle glow pulse on the lamp after landing
+**Fix 3: Fix admin panel flashing**
+- File: `src/pages/admin/ChannelsAdmin.tsx`
+- Add a `useRef` flag (`initialLoadDone`) so the `useEffect` only syncs from server data on the initial load, not on every query refetch after saving. This prevents the flash caused by the mutation's `onSuccess` invalidation overwriting local state.
 
-### 3. Update `Navbar.tsx`
+---
 
-- Replace the plain `<span>CINEVERSE</span>` with the new `<CineverseLogo />` component
-- No other navbar changes needed
+### Technical Details
 
-### 4. Add supporting CSS in `src/index.css`
+**useNetworkRefresh.tsx changes:**
+```typescript
+// Add minimum offline duration check
+const offlineAtRef = useRef<number>(0);
 
-- Lamp glow effect using a small `box-shadow` or `text-shadow`
-- Ensure the animation doesn't cause layout shift (fixed dimensions on the logo container)
+const handleOffline = () => {
+  wasOfflineRef.current = true;
+  offlineAtRef.current = Date.now();
+};
 
-## Visual Timeline
-
-```text
-Time:  0ms    100ms   200ms   300ms   400ms   500ms   600ms   700ms   800ms
-       |-------|-------|-------|-------|-------|-------|-------|-------|
-Letters: C...I...N...E...V...E...R...S...E  (staggered fade-up)
-Lamp:                          [drops down--->bounces on "I"]
-"I":                                         [squish---spring back]
-Glow:                                                  [soft pulse]
+const handleOnline = () => {
+  if (wasOfflineRef.current) {
+    const offlineDuration = Date.now() - offlineAtRef.current;
+    wasOfflineRef.current = false;
+    // Only reload if offline for more than 3 seconds
+    if (offlineDuration > 3000) {
+      window.location.reload();
+    }
+  }
+};
 ```
 
-## Files to Create/Edit
+**TvChannels.tsx changes:**
+- Destructure `isError` from the channels query
+- Show error fallback UI with retry button when `isError` is true
 
-- **New**: `src/components/CineverseLogo.tsx` -- animated logo component
-- **Edit**: `src/components/Navbar.tsx` -- swap plain text for new component
-- **Edit**: `tailwind.config.ts` -- add new keyframes and animations
-- **Edit**: `src/index.css` -- add lamp glow styles
+**ChannelsAdmin.tsx changes:**
+```typescript
+const initialLoadDone = useRef(false);
+
+useEffect(() => {
+  if (settings?.liveTvSources && !initialLoadDone.current) {
+    const s = settings.liveTvSources;
+    setSources(Array.isArray(s) ? s : []);
+    initialLoadDone.current = true;
+  }
+}, [settings]);
+```
+
+This ensures the server data only populates local state once on mount, so subsequent saves don't cause a flash by resetting the list.
 
