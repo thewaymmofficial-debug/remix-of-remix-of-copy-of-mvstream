@@ -69,6 +69,7 @@ function NetworkRefreshMonitor() {
   return null;
 }
 
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
