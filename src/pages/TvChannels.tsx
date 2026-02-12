@@ -96,16 +96,17 @@ export default function TvChannels() {
     })),
   });
 
+  // Stable derived value to avoid infinite re-render loop
+  const loadedCount = sourceQueries.filter(q => !q.isLoading).length;
+
   // Load next batch when current batch finishes
   useEffect(() => {
     if (!sourceUrls || sourceUrls.length === 0) return;
     const enabledCount = Math.min(loadedBatch * BATCH_SIZE, sourceUrls.length);
-    const enabledQueries = sourceQueries.slice(0, enabledCount);
-    const allDone = enabledQueries.length > 0 && enabledQueries.every(q => !q.isLoading);
-    if (allDone && enabledCount < sourceUrls.length) {
+    if (loadedCount >= enabledCount && enabledCount < sourceUrls.length) {
       setLoadedBatch(prev => prev + 1);
     }
-  }, [sourceQueries, sourceUrls, loadedBatch]);
+  }, [loadedCount, sourceUrls, loadedBatch]);
 
   // Broken channels
   const [localBroken, setLocalBroken] = useState<string[]>(() => {
