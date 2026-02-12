@@ -56,7 +56,7 @@ export function Navbar({ children, categories = [], years = [] }: NavbarProps) {
         <div className="flex items-center justify-between px-4 md:px-6 h-14 max-w-[1920px] mx-auto">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 flex-shrink-0">
-            <img src={cineverseLogo} alt="Cineverse" className="h-8 w-auto" />
+            <img src={cineverseLogo} alt="Cineverse" className="h-8 w-8 object-contain" width={32} height={32} loading="eager" decoding="sync" />
             <span className="text-lg font-bold text-white tracking-wide">CINEVERSE</span>
           </Link>
 
