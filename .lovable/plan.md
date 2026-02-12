@@ -1,48 +1,79 @@
 
 
-## Plan: Add 11 New Channel Sources + Fix Admin Save Crash
+## Fix: Admin Channels Panel - Mobile Responsive Layout
 
-### Part 1: Add your 11 URLs directly to the database
+### Issues Identified
 
-I'll update the `site_settings` table directly via SQL to append these 11 new source URLs to the existing 24, bringing the total to 35. No admin panel interaction needed.
+1. **Source card action buttons overflow on mobile**: The Switch, Edit (Pencil), and Delete (Trash) buttons sit inline with two badges, causing horizontal overflow on narrow screens (< 390px).
+2. **Glass/backdrop-filter on mobile WebView**: Per project conventions, admin elements should use solid backgrounds instead of `backdrop-filter` for touch reliability in Telegram/APK WebViews.
+3. **Long URLs overflow cards**: URLs like `https://raw.githubusercontent.com/bugsfreeweb/LiveTVCollector/refs/heads/main/LiveTV/SpecialExcess/LiveTV.json` are extremely long and can push card content beyond its bounds.
+4. **Edit mode input + buttons cramped**: When editing a URL, the input field plus two icon buttons barely fit on mobile.
 
-URLs to add:
-- Portugal, Russia, Spain, SpecialExcess, Thailand, Turkey, UK, USA, Venezuela, Vietnam, Worldwide
+### Changes
 
-### Part 2: Fix the admin panel crash
+**File: `src/pages/admin/ChannelsAdmin.tsx`**
 
-**Root cause**: When you click "Save All Changes" in the admin Channels page, the mutation calls `queryClient.invalidateQueries({ queryKey: ['site-settings'] })`. This triggers a refetch of `useSiteSettings` across the entire app. If you're on a page that also renders the TvChannels component (or if the `live-tv-source-list` query gets stale), the `sourceUrls` array changes, which causes `useQueries` to create new query entries, triggering the batch-loading effect loop.
+1. **Reorganize source card layout for mobile**: Split the badge row and action buttons into two separate rows on mobile. Badges on the first row, action controls (Switch + Edit + Delete) on the second row aligned right.
 
-**Fix in `src/pages/admin/ChannelsAdmin.tsx`**:
-- After saving, do NOT invalidate the `site-settings` query immediately -- instead just show the success toast
-- Or better: the `useUpdateSiteSettings` hook's `onSuccess` already invalidates `site-settings`. The issue is that this also invalidates the `live-tv-source-list` query indirectly. We need to make the `ChannelsAdmin` save NOT trigger a full TvChannels re-fetch.
+2. **Replace `glass` class with solid backgrounds**: Use `bg-card` instead of `glass` on all Cards to avoid WebView touch issues.
 
-**Fix in `src/pages/TvChannels.tsx`**:
-- The real bug: when `sourceUrls` changes (e.g., from 24 to 35 items), `loadedBatch` is still at its old value (e.g., 7 for 35 items). But `useQueries` creates 35 query objects, and the `enabled` flag limits which ones run. The `loadedCount` jumps because the new queries start as "not loading" (they're disabled), which makes `loadedCount >= enabledCount` true immediately, causing rapid batch increments.
-- **Fix**: Only count queries that are enabled AND finished loading, not disabled queries (which are "not loading" by default).
+3. **Truncate URLs**: Use `truncate` with a max-width wrapper instead of `break-all`, and show full URL on tap/hover via a tooltip or title attribute.
 
-**Updated logic**:
-```
-const enabledCount = Math.min(loadedBatch * BATCH_SIZE, sourceUrls.length);
-const loadedCount = sourceQueries.slice(0, enabledCount).filter(q => !q.isLoading).length;
-```
-
-This ensures disabled queries don't falsely inflate the `loadedCount`.
-
-### Part 3: How to add channels yourself next time
-
-After the fix, the admin panel will work normally:
-1. Go to Admin > Live TV Channels
-2. Paste the GitHub JSON URL in the input field
-3. Click "Add" -- this only adds it to the local list (not saved yet)
-4. Repeat for all URLs you want to add
-5. Click "Save All Changes" at the bottom
-6. Done! The TV Channels page will pick up the new sources automatically
+4. **Stack "Add" input vertically on mobile**: Change the input + Add button from `flex` row to `flex-col` on small screens so the button doesn't squeeze the input.
 
 ### Technical Details
 
-**Files to modify:**
-1. **Database** -- SQL UPDATE to append 11 URLs to `site_settings.value` where `key = 'live_tv_sources'`
-2. **`src/pages/TvChannels.tsx`** -- Fix `loadedCount` calculation to only count enabled queries, and reset `loadedBatch` when `sourceUrls` changes
-3. No other files need changes
+**Source card layout change (each source item):**
+```text
+// BEFORE: Single flex row with everything
+<div className="flex items-center gap-2 flex-wrap">
+  <Badge>...</Badge>
+  <Badge>...</Badge>
+  <div className="flex-1" />
+  <Switch />
+  <Button (edit) />
+  <Button (delete) />
+</div>
 
+// AFTER: Two rows - badges top, actions bottom
+<div className="flex items-center justify-between gap-2">
+  <div className="flex items-center gap-2 flex-wrap min-w-0">
+    <Badge>...</Badge>
+    <Badge>...</Badge>
+  </div>
+  <div className="flex items-center gap-1 shrink-0">
+    <Switch />
+    <Button (edit) />
+    <Button (delete) />
+  </div>
+</div>
+```
+
+**Glass to solid background:**
+```text
+// BEFORE
+<Card className="glass mb-6">
+
+// AFTER
+<Card className="bg-card border border-border mb-6">
+```
+
+**URL display with truncation:**
+```text
+// BEFORE
+<p className="text-xs text-muted-foreground break-all flex-1">{source.url}</p>
+
+// AFTER
+<p className="text-xs text-muted-foreground truncate flex-1" title={source.url}>{source.url}</p>
+```
+
+**Add input stacking:**
+```text
+// BEFORE
+<div className="flex gap-2">
+
+// AFTER
+<div className="flex flex-col sm:flex-row gap-2">
+```
+
+Only one file needs changes: `src/pages/admin/ChannelsAdmin.tsx`
