@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Navbar } from '@/components/Navbar';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { LiveTvPlayer } from '@/components/LiveTvPlayer';
+import { FadeIn } from '@/components/FadeIn';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -198,118 +199,123 @@ export default function TvChannels() {
             <p className="text-sm text-muted-foreground animate-pulse">Loading channels...</p>
           </div>
         ) : showFavorites ? (
-          // Favorites view
-          favoriteChannelsList.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <Heart className="w-16 h-16 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No favorite channels yet</p>
-              <p className="text-xs text-muted-foreground mt-1">Tap the heart icon on any channel to save it</p>
-            </div>
-          ) : (
-            <div>
-              <h2 className="text-lg font-bold text-foreground mb-4">
-                Favorites ({favoriteChannelsList.length})
-              </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {favoriteChannelsList.map((channel, idx) => (
-                  <ChannelCard
-                    key={`fav-${channel.url}-${idx}`}
-                    channel={channel}
-                    isActive={activeChannel?.url === channel.url}
-                    onPlay={handlePlay}
-                    isFavorite={true}
-                    onToggleFavorite={handleToggleFavorite}
-                    showFavorite={!!user}
-                  />
-                ))}
+          <FadeIn>
+            {favoriteChannelsList.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <Heart className="w-16 h-16 text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">No favorite channels yet</p>
+                <p className="text-xs text-muted-foreground mt-1">Tap the heart icon on any channel to save it</p>
               </div>
-            </div>
-          )
+            ) : (
+              <div>
+                <h2 className="text-lg font-bold text-foreground mb-4">
+                  Favorites ({favoriteChannelsList.length})
+                </h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {favoriteChannelsList.map((channel, idx) => (
+                    <ChannelCard
+                      key={`fav-${channel.url}-${idx}`}
+                      channel={channel}
+                      isActive={activeChannel?.url === channel.url}
+                      onPlay={handlePlay}
+                      isFavorite={true}
+                      onToggleFavorite={handleToggleFavorite}
+                      showFavorite={!!user}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </FadeIn>
         ) : filteredChannels !== null ? (
-          // Search results
-          filteredChannels.length === 0 ? (
+          <FadeIn>
+            {filteredChannels.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <Tv className="w-16 h-16 text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">No channels found</p>
+              </div>
+            ) : (
+              <div>
+                <h2 className="text-lg font-bold text-foreground mb-4">
+                  Results ({filteredChannels.length})
+                </h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {filteredChannels.map((channel, idx) => (
+                    <ChannelCard
+                      key={`${channel.name}-${idx}`}
+                      channel={channel}
+                      isActive={activeChannel?.url === channel.url}
+                      onPlay={handlePlay}
+                      isFavorite={favoriteUrls.has(channel.url)}
+                      onToggleFavorite={handleToggleFavorite}
+                      showFavorite={!!user}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </FadeIn>
+        ) : !data?.sources || Object.keys(data.sources).length === 0 ? (
+          <FadeIn>
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <Tv className="w-16 h-16 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No channels found</p>
+              <p className="text-muted-foreground">{t('noChannels')}</p>
             </div>
-          ) : (
-            <div>
-              <h2 className="text-lg font-bold text-foreground mb-4">
-                Results ({filteredChannels.length})
-              </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {filteredChannels.map((channel, idx) => (
-                  <ChannelCard
-                    key={`${channel.name}-${idx}`}
-                    channel={channel}
-                    isActive={activeChannel?.url === channel.url}
-                    onPlay={handlePlay}
-                    isFavorite={favoriteUrls.has(channel.url)}
-                    onToggleFavorite={handleToggleFavorite}
-                    showFavorite={!!user}
-                  />
-                ))}
-              </div>
-            </div>
-          )
-        ) : !data?.sources || Object.keys(data.sources).length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <Tv className="w-16 h-16 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">{t('noChannels')}</p>
-          </div>
+          </FadeIn>
         ) : (
-          // Country/type grouped view
-          <div className="space-y-4">
-            {Object.entries(data.sources).map(([sourceCategory, sourceData]) => {
-              const channelCount = Object.values(sourceData.channels).flat().length;
-              return (
-                <Collapsible
-                  key={sourceCategory}
-                  open={openSources[sourceCategory] ?? false}
-                  onOpenChange={() => toggleSource(sourceCategory)}
-                >
-                  <CollapsibleTrigger className="w-full">
-                    <div className="flex items-center justify-between p-3 bg-muted rounded-xl hover:bg-muted/80 transition-colors">
-                      <div className="flex items-center gap-2">
-                        <Tv className="w-5 h-5 text-primary" />
-                        <span className="font-bold text-foreground text-sm sm:text-base">{sourceCategory}</span>
-                        <span className="text-xs text-muted-foreground">({channelCount})</span>
+          <FadeIn>
+            <div className="space-y-4">
+              {Object.entries(data.sources).map(([sourceCategory, sourceData]) => {
+                const channelCount = Object.values(sourceData.channels).flat().length;
+                return (
+                  <Collapsible
+                    key={sourceCategory}
+                    open={openSources[sourceCategory] ?? false}
+                    onOpenChange={() => toggleSource(sourceCategory)}
+                  >
+                    <CollapsibleTrigger className="w-full">
+                      <div className="flex items-center justify-between p-3 bg-muted rounded-xl hover:bg-muted/80 transition-colors">
+                        <div className="flex items-center gap-2">
+                          <Tv className="w-5 h-5 text-primary" />
+                          <span className="font-bold text-foreground text-sm sm:text-base">{sourceCategory}</span>
+                          <span className="text-xs text-muted-foreground">({channelCount})</span>
+                        </div>
+                        <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${openSources[sourceCategory] ? 'rotate-180' : ''}`} />
                       </div>
-                      <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${openSources[sourceCategory] ? 'rotate-180' : ''}`} />
-                    </div>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <div className="space-y-6 pt-4">
-                      {Object.entries(sourceData.channels).map(([group, channels]) => {
-                        const validChannels = channels.filter(c => !brokenUrls.has(c.url));
-                        if (validChannels.length === 0) return null;
-                        return (
-                          <div key={group}>
-                            <h3 className="text-sm font-semibold text-muted-foreground mb-3 pl-1">
-                              {group} ({validChannels.length})
-                            </h3>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                              {validChannels.map((channel, idx) => (
-                                <ChannelCard
-                                  key={`${channel.name}-${idx}`}
-                                  channel={channel}
-                                  isActive={activeChannel?.url === channel.url}
-                                  onPlay={handlePlay}
-                                  isFavorite={favoriteUrls.has(channel.url)}
-                                  onToggleFavorite={handleToggleFavorite}
-                                  showFavorite={!!user}
-                                />
-                              ))}
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="space-y-6 pt-4">
+                        {Object.entries(sourceData.channels).map(([group, channels]) => {
+                          const validChannels = channels.filter(c => !brokenUrls.has(c.url));
+                          if (validChannels.length === 0) return null;
+                          return (
+                            <div key={group}>
+                              <h3 className="text-sm font-semibold text-muted-foreground mb-3 pl-1">
+                                {group} ({validChannels.length})
+                              </h3>
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                {validChannels.map((channel, idx) => (
+                                  <ChannelCard
+                                    key={`${channel.name}-${idx}`}
+                                    channel={channel}
+                                    isActive={activeChannel?.url === channel.url}
+                                    onPlay={handlePlay}
+                                    isFavorite={favoriteUrls.has(channel.url)}
+                                    onToggleFavorite={handleToggleFavorite}
+                                    showFavorite={!!user}
+                                  />
+                                ))}
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
-              );
-            })}
-          </div>
+                          );
+                        })}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                );
+              })}
+            </div>
+          </FadeIn>
         )}
       </div>
 

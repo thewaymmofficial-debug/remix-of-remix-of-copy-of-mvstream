@@ -1,4 +1,5 @@
 import { ArrowLeft, Bookmark, X } from 'lucide-react';
+import { FadeIn } from '@/components/FadeIn';
 import { Link, useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
@@ -77,6 +78,7 @@ const Watchlist = () => {
             <p className="text-sm text-muted-foreground animate-pulse">Loading watchlist...</p>
           </div>
         ) : watchlist && watchlist.length > 0 ? (
+          <FadeIn>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {watchlist.map((item) => (
               <div key={item.id} className="relative group">
@@ -99,6 +101,7 @@ const Watchlist = () => {
               </div>
             ))}
           </div>
+          </FadeIn>
         ) : (
           <div className="text-center py-20">
             <Bookmark className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />

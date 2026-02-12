@@ -10,6 +10,7 @@ import { LoginRequiredModal } from '@/components/LoginRequiredModal';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { MovieQuickPreview } from '@/components/MovieQuickPreview';
 import { SkeletonRow } from '@/components/SkeletonCard';
+import { FadeIn } from '@/components/FadeIn';
 import { AnnouncementBanner } from '@/components/AnnouncementBanner';
 import { CategoryGrid } from '@/components/CategoryGrid';
 import { InfoCarousel } from '@/components/InfoCarousel';
@@ -220,6 +221,7 @@ const Index = () => {
             )}
           </div>
         ) : (
+          <FadeIn>
           <>
             {/* Continue Watching Row */}
             {user && continueWatching && continueWatching.length > 0 && !isFiltering && (
@@ -317,6 +319,7 @@ const Index = () => {
               />
             ))}
           </>
+          </FadeIn>
         )}
       </div>
       )}

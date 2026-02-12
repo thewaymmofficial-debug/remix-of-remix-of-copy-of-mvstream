@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { FadeIn } from '@/components/FadeIn';
 import { History as HistoryIcon, Trash2, X, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Navbar } from '@/components/Navbar';
@@ -83,15 +84,18 @@ export default function History() {
               <p className="text-sm text-muted-foreground animate-pulse">Loading history...</p>
             </div>
           ) : !history || history.length === 0 ? (
-            <div className="text-center py-20">
-              <HistoryIcon className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h2 className="text-xl font-semibold mb-2">No Watch History</h2>
-              <p className="text-muted-foreground mb-6">
-                Movies you watch will appear here
-              </p>
-              <Button onClick={() => navigate('/')}>Browse Movies</Button>
-            </div>
+            <FadeIn>
+              <div className="text-center py-20">
+                <HistoryIcon className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                <h2 className="text-xl font-semibold mb-2">No Watch History</h2>
+                <p className="text-muted-foreground mb-6">
+                  Movies you watch will appear here
+                </p>
+                <Button onClick={() => navigate('/')}>Browse Movies</Button>
+              </div>
+            </FadeIn>
           ) : (
+            <FadeIn>
             <div className="space-y-4">
               {history.map((item) => (
                 <div
@@ -160,6 +164,7 @@ export default function History() {
                 </div>
               ))}
             </div>
+            </FadeIn>
           )}
         </div>
       </div>
