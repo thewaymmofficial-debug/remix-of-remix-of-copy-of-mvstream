@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Settings, Save, Loader2, Megaphone, ChevronDown, CreditCard, Phone } from 'lucide-react';
+import { Settings, Save, Loader2, Megaphone, ChevronDown, CreditCard, Phone, Tv, Plus, Trash2, Globe } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { useSiteSettings, useUpdateSiteSettings, AdminContacts, SubscriptionPrices, AnnouncementSettings } from '@/hooks/useSiteSettings';
+import { useSiteSettings, useUpdateSiteSettings, AdminContacts, SubscriptionPrices, AnnouncementSettings, LiveTvSource } from '@/hooks/useSiteSettings';
 import { TelegramIcon, ViberIcon } from '@/components/ContactIcons';
 import { Mail } from 'lucide-react';
 
@@ -40,11 +41,16 @@ export default function SettingsAdmin() {
     opacity: 100,
   });
 
+  // Live TV Sources state
+  const [liveTvSources, setLiveTvSources] = useState<LiveTvSource[]>([]);
+  const [newSourceUrl, setNewSourceUrl] = useState('');
+
   // Collapsible states for mobile
   const [openSections, setOpenSections] = useState({
     announcement: true,
     contacts: false,
     prices: false,
+    liveTv: false,
   });
 
   // Load settings into form when fetched
@@ -57,6 +63,9 @@ export default function SettingsAdmin() {
     }
     if (settings?.announcement) {
       setAnnouncement(settings.announcement);
+    }
+    if (settings?.liveTvSources) {
+      setLiveTvSources(settings.liveTvSources);
     }
   }, [settings]);
 
@@ -85,6 +94,45 @@ export default function SettingsAdmin() {
 
   const handleSaveAnnouncement = () => {
     updateSettings.mutate({ key: 'announcement', value: announcement });
+  };
+
+  // Live TV Sources helpers
+  function parseCategoryFromUrl(url: string): string {
+    try {
+      const pathname = new URL(url).pathname;
+      const segments = pathname.split('/').filter(Boolean);
+      if (segments.length >= 3) {
+        const type = segments[segments.length - 3];
+        const country = segments[segments.length - 2];
+        const formattedType = type.replace(/([a-z])([A-Z])/g, '$1 $2');
+        return `${formattedType} - ${country}`;
+      }
+      if (segments.length >= 2) {
+        const type = segments[segments.length - 2];
+        return type.replace(/([a-z])([A-Z])/g, '$1 $2');
+      }
+      return 'Other';
+    } catch {
+      return 'Invalid URL';
+    }
+  }
+
+  const handleAddSource = () => {
+    if (!newSourceUrl.trim()) return;
+    setLiveTvSources([...liveTvSources, { url: newSourceUrl.trim(), enabled: true }]);
+    setNewSourceUrl('');
+  };
+
+  const handleRemoveSource = (index: number) => {
+    setLiveTvSources(liveTvSources.filter((_, i) => i !== index));
+  };
+
+  const handleToggleSource = (index: number) => {
+    setLiveTvSources(liveTvSources.map((s, i) => i === index ? { ...s, enabled: !s.enabled } : s));
+  };
+
+  const handleSaveLiveTvSources = () => {
+    updateSettings.mutate({ key: 'live_tv_sources', value: liveTvSources });
   };
 
   if (isLoading) {
@@ -531,6 +579,96 @@ export default function SettingsAdmin() {
                     <Save className="w-4 h-4 mr-2" />
                   )}
                   Save Prices
+                </Button>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
+        {/* Live TV Sources - Collapsible */}
+        <Collapsible 
+          open={openSections.liveTv} 
+          onOpenChange={(open) => setOpenSections(prev => ({ ...prev, liveTv: open }))}
+          className="w-full"
+        >
+          <Card className="glass w-full box-border">
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors px-3 py-3 sm:px-6 sm:py-4">
+                <CardTitle className="flex items-center justify-between text-base sm:text-lg">
+                  <div className="flex items-center gap-2">
+                    <Tv className="w-5 h-5" />
+                    Live TV Sources
+                  </div>
+                  <ChevronDown className={`w-5 h-5 transition-transform ${openSections.liveTv ? 'rotate-180' : ''}`} />
+                </CardTitle>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="space-y-4 pt-0 px-3 sm:px-6">
+                {/* Current sources */}
+                {liveTvSources.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">No sources added yet</p>
+                ) : (
+                  <div className="space-y-3">
+                    {liveTvSources.map((source, index) => (
+                      <div key={index} className="p-3 bg-muted rounded-lg space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="shrink-0 text-xs">
+                            <Globe className="w-3 h-3 mr-1" />
+                            {parseCategoryFromUrl(source.url)}
+                          </Badge>
+                          <div className="flex-1" />
+                          <Switch
+                            checked={source.enabled}
+                            onCheckedChange={() => handleToggleSource(index)}
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => handleRemoveSource(index)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground break-all">{source.url}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add new source */}
+                <div className="space-y-2">
+                  <Label className="text-sm">Add Source URL</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={newSourceUrl}
+                      onChange={(e) => setNewSourceUrl(e.target.value)}
+                      placeholder="https://raw.githubusercontent.com/..."
+                      className="text-sm flex-1 min-w-0"
+                    />
+                    <Button size="sm" variant="outline" onClick={handleAddSource} disabled={!newSourceUrl.trim()}>
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  {newSourceUrl.trim() && (
+                    <Badge variant="outline" className="text-xs">
+                      Preview: {parseCategoryFromUrl(newSourceUrl)}
+                    </Badge>
+                  )}
+                </div>
+
+                <Button
+                  onClick={handleSaveLiveTvSources}
+                  disabled={updateSettings.isPending}
+                  className="w-full"
+                  size="sm"
+                >
+                  {updateSettings.isPending ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-2" />
+                  )}
+                  Save Sources
                 </Button>
               </CardContent>
             </CollapsibleContent>
