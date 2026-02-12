@@ -246,7 +246,7 @@
   }
 
   .lamp-svg {
-    filter: drop-shadow(0 0 4px hsl(45 93% 47% / 0.5));
+    filter: drop-shadow(0 0 6px hsl(45 93% 47% / 0.7)) drop-shadow(0 0 14px hsl(45 93% 47% / 0.4));
   }
 }
 

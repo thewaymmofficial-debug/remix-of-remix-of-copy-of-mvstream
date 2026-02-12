@@ -129,8 +129,8 @@ export default {
           "100%": { transform: "scaleY(1) scaleX(1)" },
         },
         "lamp-glow": {
-          "0%, 100%": { filter: "drop-shadow(0 0 3px hsl(45 93% 47% / 0.4))" },
-          "50%": { filter: "drop-shadow(0 0 8px hsl(45 93% 47% / 0.7))" },
+          "0%, 100%": { filter: "drop-shadow(0 0 6px hsl(45 93% 47% / 0.6)) drop-shadow(0 0 12px hsl(45 93% 47% / 0.3))" },
+          "50%": { filter: "drop-shadow(0 0 14px hsl(45 93% 47% / 0.9)) drop-shadow(0 0 24px hsl(45 93% 47% / 0.5))" },
         },
       },
       animation: {
