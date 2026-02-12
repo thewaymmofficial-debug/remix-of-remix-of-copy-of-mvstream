@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Film, Monitor, Clock, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -81,7 +82,7 @@ export default function MovieRequest() {
           <div className="flex-1 flex flex-col">
             {requestsLoading ? (
               <div className="flex-1 flex items-center justify-center">
-                <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+                <LoadingSpinner message="Loading requests..." />
               </div>
             ) : requests && requests.length > 0 ? (
               <div className="px-4 space-y-3 pb-24">

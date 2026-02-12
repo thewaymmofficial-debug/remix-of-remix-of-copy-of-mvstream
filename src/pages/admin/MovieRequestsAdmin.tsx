@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Film, Check, X, Loader2, Clock, CheckCircle, XCircle, Users } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -205,11 +206,7 @@ export default function MovieRequestsAdmin() {
     group.requests.some(r => r.status === 'pending');
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <LoadingSpinner message="Loading requests..." />;
   }
 
   return (

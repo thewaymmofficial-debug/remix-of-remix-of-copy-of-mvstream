@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import {
   Play,
   Crown,
@@ -59,13 +60,7 @@ export default function MovieDetails() {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <div className="flex flex-col items-center justify-center py-32 gap-4">
-          <div className="relative w-16 h-16">
-            <div className="absolute inset-0 rounded-full border-4 border-muted" />
-            <div className="absolute inset-0 rounded-full border-4 border-t-primary animate-spin" />
-          </div>
-          <p className="text-sm text-muted-foreground animate-pulse">Loading details...</p>
-        </div>
+        <LoadingSpinner message="Loading details..." />
       </div>
     );
   }
