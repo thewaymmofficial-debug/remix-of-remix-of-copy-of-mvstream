@@ -7,6 +7,7 @@ import { MovieQuickPreview } from '@/components/MovieQuickPreview';
 import { LoginModal } from '@/components/LoginModal';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { FadeIn } from '@/components/FadeIn';
 import { useMovies, useFeaturedMovies } from '@/hooks/useMovies';
 import { useTrendingMovies } from '@/hooks/useTrending';
 import { useAuth } from '@/hooks/useAuth';
@@ -106,28 +107,32 @@ const Browse = () => {
         {isLoading ? (
           <LoadingSpinner message="Loading movies..." />
         ) : movies.length === 0 ? (
-          <div className="text-center py-20">
-            <p className="text-muted-foreground text-lg mb-4">
-              No content available yet. Check back soon!
-            </p>
-            <button
-              onClick={() => refetch()}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-muted hover:bg-muted/80 rounded-lg transition-colors"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Refresh
-            </button>
-          </div>
+          <FadeIn>
+            <div className="text-center py-20">
+              <p className="text-muted-foreground text-lg mb-4">
+                No content available yet. Check back soon!
+              </p>
+              <button
+                onClick={() => refetch()}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-muted hover:bg-muted/80 rounded-lg transition-colors"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Refresh
+              </button>
+            </div>
+          </FadeIn>
         ) : (
-          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
-            {movies.map((movie) => (
-              <MovieCard
-                key={movie.id}
-                movie={movie}
-                onClick={() => handleMovieClick(movie)}
-              />
-            ))}
-          </div>
+          <FadeIn>
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
+              {movies.map((movie) => (
+                <MovieCard
+                  key={movie.id}
+                  movie={movie}
+                  onClick={() => handleMovieClick(movie)}
+                />
+              ))}
+            </div>
+          </FadeIn>
         )}
       </div>
 

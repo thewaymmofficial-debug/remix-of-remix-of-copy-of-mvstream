@@ -8,6 +8,7 @@ import { useMovies } from '@/hooks/useMovies';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from 'next-themes';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
+import { FadeIn } from '@/components/FadeIn';
 import type { Movie } from '@/types/database';
 
 export default function SearchPage() {
@@ -107,6 +108,7 @@ export default function SearchPage() {
           </div>
         )}
 
+        <FadeIn>
         {results.map((movie) => (
           <button
             key={movie.id}
@@ -166,6 +168,7 @@ export default function SearchPage() {
             </div>
           </button>
         ))}
+        </FadeIn>
       </div>
 
       <MobileBottomNav />
