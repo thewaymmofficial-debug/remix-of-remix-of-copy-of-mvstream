@@ -42,6 +42,8 @@ import MovieRequestsAdmin from "./pages/admin/MovieRequestsAdmin";
 import ChannelsAdmin from "./pages/admin/ChannelsAdmin";
 import FootballAdmin from "./pages/admin/FootballAdmin";
 import Football from "./pages/Football";
+import FootballLanding from "./pages/FootballLanding";
+import FootballHighlights from "./pages/FootballHighlights";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -97,7 +99,9 @@ const App = () => (
                   <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
                   <Route path="/premium-renewal" element={<ProtectedRoute><PremiumRenewal /></ProtectedRoute>} />
                   <Route path="/request" element={<ProtectedRoute><MovieRequest /></ProtectedRoute>} />
+                  <Route path="/football-landing" element={<FootballLanding />} />
                   <Route path="/football" element={<Football />} />
+                  <Route path="/football-highlights" element={<FootballHighlights />} />
                   <Route path="/tv-channels" element={<ProtectedRoute><TvChannels /></ProtectedRoute>} />
                   <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
                     <Route index element={<Dashboard />} />
