@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Settings, Save, Loader2, Megaphone, ChevronDown, CreditCard, Phone, Tv, Plus, Trash2, Globe } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -54,18 +54,22 @@ export default function SettingsAdmin() {
     liveTv: true,
   });
 
-  // Load settings into form when fetched
+  const initialLoadDone = useRef(false);
+
+  // Load settings into form when fetched (only on initial load)
   useEffect(() => {
-    if (settings?.adminContacts) {
+    if (!settings || initialLoadDone.current) return;
+    initialLoadDone.current = true;
+    if (settings.adminContacts) {
       setContacts(settings.adminContacts);
     }
-    if (settings?.subscriptionPrices) {
+    if (settings.subscriptionPrices) {
       setPrices(settings.subscriptionPrices);
     }
-    if (settings?.announcement) {
+    if (settings.announcement) {
       setAnnouncement(settings.announcement);
     }
-    if (settings?.liveTvSources) {
+    if (settings.liveTvSources) {
       const sources = settings.liveTvSources;
       setLiveTvSources(Array.isArray(sources) ? sources : []);
     }

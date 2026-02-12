@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Outlet, Link, useLocation } from 'react-router-dom';
 import { Film, Users, LayoutDashboard, ArrowLeft, Tags, Settings, BarChart3, Menu, ChevronRight, Image, CreditCard, Shield, MessageSquare, Tv, Trophy, WifiOff } from 'lucide-react';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Button } from '@/components/ui/button';
 import { Navbar } from '@/components/Navbar';
 import { useAuth } from '@/hooks/useAuth';
@@ -185,7 +186,9 @@ export default function AdminLayout() {
 
         {/* Main content */}
         <main className="flex-1 md:ml-64 p-3 md:p-8 mt-12 md:mt-0 w-full min-w-0 overflow-x-hidden">
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
     </div>

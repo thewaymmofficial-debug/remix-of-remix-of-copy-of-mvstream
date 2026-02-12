@@ -69,9 +69,10 @@ export function useUpdateSiteSettings() {
 
   return useMutation({
     mutationFn: async ({ key, value }: { key: string; value: any }) => {
+      const serialized = typeof value === 'string' ? value : JSON.stringify(value);
       const { error } = await supabase
         .from('site_settings')
-        .update({ value })
+        .update({ value: serialized })
         .eq('key', key);
 
       if (error) throw error;
