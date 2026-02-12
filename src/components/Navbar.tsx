@@ -23,6 +23,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { LoginModal } from './LoginModal';
 import { LanguageToggle } from './LanguageToggle';
+import { CineverseLogo } from './CineverseLogo';
 import { useFilter } from '@/contexts/FilterContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
@@ -56,7 +57,7 @@ export function Navbar({ children, categories = [], years = [] }: NavbarProps) {
         <div className="flex items-center justify-between px-4 md:px-6 h-14 max-w-[1920px] mx-auto">
           {/* Logo */}
           <Link to="/" className="flex items-center flex-shrink-0">
-            <span className="text-lg font-bold text-white tracking-wide">CINEVERSE</span>
+            <CineverseLogo />
           </Link>
 
           {/* Desktop: Search and Filters */}
