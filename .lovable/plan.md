@@ -1,104 +1,114 @@
 
 
-## Live TV Streaming Module
+## Dynamic Live TV Sources with Admin Management
 
-### What This Does
+### Overview
 
-Transforms the existing TV Channels page from a static Supabase-based list into a dynamic live streaming hub that fetches channels from GitHub JSON sources and plays them inline using HLS.js -- no external apps needed.
+Allow admins to add/remove GitHub JSON source URLs from the admin panel. The system auto-categorizes each source by parsing the URL path (e.g., `/LiveTV/Thailand/` becomes "Live TV - Thailand", `/Movies/Bollywood/` becomes "Movies - Bollywood"). The TV Channels page groups channels by these country/type categories.
 
 ### Architecture
 
 ```text
-User Browser
+Admin Panel (Settings)
     |
     v
-Edge Function: "live-tv-proxy"
+site_settings table (key: "live_tv_sources")
     |
     v
-GitHub Raw JSON (multiple source URLs)
+Edge Function reads sources from DB
     |
     v
-Returns merged channel list with 5-min cache
+Fetches each GitHub URL, tags channels with parsed category
+    |
+    v
+Frontend groups by country/type tabs
 ```
 
-A Supabase Edge Function acts as the backend proxy (since Lovable cannot run Node.js). This avoids CORS issues, GitHub rate limits, and allows caching.
+### Changes
 
-### Changes Overview
+**1. Database: Insert `live_tv_sources` setting**
 
-1. **New Edge Function**: `supabase/functions/live-tv-proxy/index.ts`
-2. **New Component**: `src/components/LiveTvPlayer.tsx` (HLS.js video player)
-3. **Updated Page**: `src/pages/TvChannels.tsx` (fetch from edge function, inline player)
-4. **New Dependency**: `hls.js` for .m3u8 stream playback
-5. **Config Update**: `supabase/config.toml` (add function entry)
+Insert a new row in `site_settings` with key `live_tv_sources` and a default JSON value containing the existing Arabic source URL. Structure:
 
-### Detailed Plan
+```json
+[
+  {
+    "url": "https://raw.githubusercontent.com/.../LiveTV/Arabic/LiveTV.json",
+    "enabled": true
+  }
+]
+```
 
-**Step 1 -- Edge Function: `live-tv-proxy`**
+The category label is auto-derived from the URL path at runtime -- no need to store it.
 
-- Accepts GET requests with an optional `sources` query param (comma-separated GitHub raw URLs)
-- Has a default list of source URLs (the Arabic one provided, plus any others you add later)
-- Fetches each source URL, parses JSON, merges all channels into a single response grouped by category
-- Returns `{ date, channels: { "Category": [...] } }` format
-- Adds `Cache-Control: public, max-age=300` (5-min cache) so repeated requests don't hit GitHub
-- Full CORS headers for web app access
-- No JWT required (`verify_jwt = false`)
+**2. Edge Function: `supabase/functions/live-tv-proxy/index.ts`**
 
-**Step 2 -- HLS Video Player Component**
+Major update:
+- Instead of hardcoded DEFAULT_SOURCES, fetch the source list from `site_settings` table using Supabase client
+- Parse each source URL to extract category: take the two path segments before the filename (e.g., `LiveTV/Arabic`, `Movies/Bollywood`) and format as "Live TV - Arabic", "Movies - Bollywood"
+- Tag every channel with a `country` field based on the parsed category
+- Return response grouped by country/type instead of by the JSON's internal `group` field
+- Response format changes to: `{ date, sources: { "Live TV - Arabic": { channels: {...} }, "Live TV - Thailand": { channels: {...} } } }`
+- Keep the 5-minute cache, but key it on the source URLs so cache invalidates when admin changes sources
 
-- New `LiveTvPlayer` component using `hls.js`
-- Accepts a stream URL prop
-- Auto-detects HLS support (native Safari vs hls.js polyfill)
-- Fullscreen-capable, with controls
-- Error detection with user-friendly message if stream is offline
-- Close button to dismiss player
+**3. Admin Panel: `src/pages/admin/SettingsAdmin.tsx`**
 
-**Step 3 -- Rewrite TvChannels Page**
+Add a new collapsible "Live TV Sources" section with:
+- List of current source URLs with their auto-detected category label shown as a badge
+- Input field to add a new GitHub raw URL
+- URL preview showing the auto-parsed category (e.g., typing a URL instantly shows "Live TV - Thailand" badge)
+- Enable/disable toggle per source
+- Delete button per source
+- Save button that updates `site_settings` key `live_tv_sources`
 
-- Replace Supabase query with edge function fetch via React Query
-- Keep existing search and category grouping logic (already works well)
-- Add inline video player at the top when a channel is selected (instead of opening external URL)
-- Show channel logo from GitHub JSON `logo` field
-- Display channel count per category
-- Loading skeletons (already exist)
-- Netflix-style grid layout (already exists, kept as-is)
+**4. Site Settings Hook: `src/hooks/useSiteSettings.tsx`**
 
-**Step 4 -- Config and Dependencies**
+Add the `live_tv_sources` type to the settings hook so the admin page can read/write it.
 
-- Add `[functions.live-tv-proxy]` with `verify_jwt = false` to `supabase/config.toml`
-- Install `hls.js` package
+**5. Frontend: `src/pages/TvChannels.tsx`**
 
-### Data Mapping
+Update to handle the new response format:
+- Show country/type tabs or accordion sections (e.g., "Live TV - Arabic", "Live TV - Thailand", "Movies - Bollywood")
+- Each section contains its own channel categories (General, News, Sports, etc.) from the JSON
+- Search works across all sources
+- Collapsible country sections for cleaner navigation
 
-GitHub JSON channel fields map to the UI as follows:
+### URL Parsing Logic
 
 ```text
-GitHub JSON        -->  UI Usage
------------             --------
-name               -->  Channel name label
-logo               -->  Channel thumbnail image
-group              -->  Category section header
-url                -->  HLS stream URL (passed to player)
-source             -->  Not displayed (internal reference)
+URL: https://raw.githubusercontent.com/.../LiveTV/Thailand/LiveTV.json
+Path segments: ["LiveTV", "Thailand", "LiveTV.json"]
+Category: "Live TV - Thailand"
+
+URL: https://raw.githubusercontent.com/.../Movies/Bollywood/Movies.json
+Path segments: ["Movies", "Bollywood", "Movies.json"]  
+Category: "Movies - Bollywood"
+
+Rule: Take the two segments before the filename, format first as title case with spaces.
 ```
+
+### What Admins Will See
+
+1. Go to Admin > Settings
+2. Open "Live TV Sources" section
+3. See existing sources with auto-detected labels
+4. Paste a new URL like `https://raw.githubusercontent.com/.../LiveTV/Thailand/LiveTV.json`
+5. Instantly see "Live TV - Thailand" badge appear
+6. Click Save
+7. TV Channels page automatically shows the new country section
 
 ### What Users Will See
 
 1. Open TV Channels page
-2. Channels load dynamically from GitHub (with 5-min cache)
-3. Channels grouped by category (General, News, Sports, etc.)
-4. Search works across names and categories
-5. Tap a channel -- inline video player appears at top and starts streaming
-6. Tap X or another channel to switch
-7. If a stream fails, a friendly error message appears
+2. See channels grouped by country/type: "Live TV - Arabic", "Live TV - Thailand", etc.
+3. Each country section has sub-categories (General, News, Sports) from the JSON
+4. Search works across all countries and categories
 
-### Adding More Sources Later
+### Files to Create/Edit
 
-To add more GitHub JSON sources, simply update the default source URLs array in the edge function. The system merges all sources automatically. No frontend changes needed.
-
-### Technical Notes
-
-- HLS.js handles .m3u8 streams on all browsers (Safari uses native HLS)
-- Some streams may fail due to their own CORS restrictions -- this is expected and the player will show an error state
-- The edge function caches responses for 5 minutes, so GitHub updates reflect within that window
-- Existing Supabase `tv_channels` table is NOT removed -- it can coexist for manually-added channels if desired
+- `supabase/functions/live-tv-proxy/index.ts` -- read sources from DB, parse URL categories
+- `src/pages/admin/SettingsAdmin.tsx` -- add Live TV Sources management section
+- `src/hooks/useSiteSettings.tsx` -- add `live_tv_sources` type
+- `src/pages/TvChannels.tsx` -- update for country-grouped response format
+- Database: insert `live_tv_sources` row into `site_settings`
 
