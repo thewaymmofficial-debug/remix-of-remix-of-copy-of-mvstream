@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, RotateCcw, Wifi } from 'lucide-react';
+import { ArrowLeft, Video, Wifi } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Navbar } from '@/components/Navbar';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
@@ -12,7 +12,7 @@ import { useFootballVideos, useFootballCategories, FootballVideo } from '@/hooks
 import { useAuth } from '@/hooks/useAuth';
 import { useDownloadManager } from '@/contexts/DownloadContext';
 
-export default function Football() {
+export default function FootballHighlights() {
   const navigate = useNavigate();
   const { user, isPremium } = useAuth();
   const { startDownload } = useDownloadManager();
@@ -23,7 +23,7 @@ export default function Football() {
 
   const filteredVideos = useMemo(() => {
     if (!videos) return [];
-    let list = videos.filter(v => v.show_in_replay);
+    let list = videos.filter(v => v.show_in_highlights);
     if (activeCategory !== 'all') list = list.filter(v => v.category === activeCategory);
     return list;
   }, [videos, activeCategory]);
@@ -53,7 +53,7 @@ export default function Football() {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <h1 className="text-xl font-bold flex items-center gap-2">
-            <RotateCcw className="w-5 h-5" /> ဘောလုံးပွဲပြန်ကြည့်
+            <Video className="w-5 h-5" /> Highlights
           </h1>
         </div>
 
@@ -70,12 +70,12 @@ export default function Football() {
 
         <div className="px-4">
           {isLoading ? (
-            <LoadingSpinner message="Loading replays..." />
+            <LoadingSpinner message="Loading highlights..." />
           ) : filteredVideos.length === 0 ? (
             <FadeIn>
               <div className="text-center py-20">
-                <RotateCcw className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No replays yet</p>
+                <Video className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">No highlights yet</p>
               </div>
             </FadeIn>
           ) : (

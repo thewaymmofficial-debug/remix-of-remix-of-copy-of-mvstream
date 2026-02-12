@@ -119,7 +119,7 @@ const categorySections: CategorySection[] = [
         icon: <CalendarDays className="w-8 h-8" />,
         labelEn: 'Highlight',
         labelMm: 'Highlight',
-        path: '/football',
+        path: '/football-highlights',
         color: 'text-orange-500',
       },
     ],
