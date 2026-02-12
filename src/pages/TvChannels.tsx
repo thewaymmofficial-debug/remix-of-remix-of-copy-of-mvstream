@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, Play, Tv, ChevronDown, Heart, ChevronRight, Loader2 } from 'lucide-react';
@@ -69,9 +69,12 @@ export default function TvChannels() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Step 2: Fetch each source individually in parallel
+  // Step 2: Fetch each source in batches of 5 to avoid memory exhaustion
+  const BATCH_SIZE = 5;
+  const [loadedBatch, setLoadedBatch] = useState(1);
+
   const sourceQueries = useQueries({
-    queries: (sourceUrls || []).map((url) => ({
+    queries: (sourceUrls || []).map((url, index) => ({
       queryKey: ['live-tv-source', url],
       queryFn: async (): Promise<SourceResult> => {
         const res = await fetch(
@@ -89,8 +92,20 @@ export default function TvChannels() {
       },
       staleTime: 5 * 60 * 1000,
       retry: 1,
+      enabled: index < loadedBatch * BATCH_SIZE,
     })),
   });
+
+  // Load next batch when current batch finishes
+  useEffect(() => {
+    if (!sourceUrls || sourceUrls.length === 0) return;
+    const enabledCount = Math.min(loadedBatch * BATCH_SIZE, sourceUrls.length);
+    const enabledQueries = sourceQueries.slice(0, enabledCount);
+    const allDone = enabledQueries.length > 0 && enabledQueries.every(q => !q.isLoading);
+    if (allDone && enabledCount < sourceUrls.length) {
+      setLoadedBatch(prev => prev + 1);
+    }
+  }, [sourceQueries, sourceUrls, loadedBatch]);
 
   // Broken channels
   const [localBroken, setLocalBroken] = useState<string[]>(() => {
