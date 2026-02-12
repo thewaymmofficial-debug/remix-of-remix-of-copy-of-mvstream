@@ -8,7 +8,7 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { FadeIn } from '@/components/FadeIn';
 import { LoginRequiredModal } from '@/components/LoginRequiredModal';
 import { FootballVideoCard } from '@/components/FootballVideoCard';
-import { useFootballVideos, useFootballCategories, FootballVideo } from '@/hooks/useFootball';
+import { useFootballVideos, FootballVideo } from '@/hooks/useFootball';
 import { useAuth } from '@/hooks/useAuth';
 import { useDownloadManager } from '@/contexts/DownloadContext';
 
@@ -17,19 +17,15 @@ export default function FootballHighlights() {
   const { user, isPremium } = useAuth();
   const { startDownload } = useDownloadManager();
   const { data: videos, isLoading } = useFootballVideos();
-  const { data: categories } = useFootballCategories();
-  const [activeCategory, setActiveCategory] = useState('all');
   const [loginModal, setLoginModal] = useState(false);
 
-  const filteredVideos = useMemo(() => {
+  const highlightVideos = useMemo(() => {
     if (!videos) return [];
-    let list = videos.filter(v => v.show_in_highlights);
-    if (activeCategory !== 'all') list = list.filter(v => v.category === activeCategory);
-    return list;
-  }, [videos, activeCategory]);
+    return videos.filter(v => v.show_in_highlights);
+  }, [videos]);
 
-  const liveVideos = useMemo(() => filteredVideos.filter(v => v.is_live), [filteredVideos]);
-  const nonLiveVideos = useMemo(() => filteredVideos.filter(v => !v.is_live), [filteredVideos]);
+  const liveVideos = useMemo(() => highlightVideos.filter(v => v.is_live), [highlightVideos]);
+  const nonLiveVideos = useMemo(() => highlightVideos.filter(v => !v.is_live), [highlightVideos]);
 
   const handlePlay = (video: FootballVideo) => {
     if (video.is_premium && !isPremium) { setLoginModal(true); return; }
@@ -49,7 +45,7 @@ export default function FootballHighlights() {
       <Navbar />
       <div className="pt-16 pb-24 md:pb-8">
         <div className="px-4 py-4 flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/football-landing')} className="rounded-full">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="rounded-full">
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <h1 className="text-xl font-bold flex items-center gap-2">
@@ -57,21 +53,10 @@ export default function FootballHighlights() {
           </h1>
         </div>
 
-        {categories && categories.length > 0 && (
-          <div className="px-4 pb-3">
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-              <Button size="sm" variant={activeCategory === 'all' ? 'default' : 'outline'} className="shrink-0 text-xs" onClick={() => setActiveCategory('all')}>All</Button>
-              {categories.map((cat) => (
-                <Button key={cat} size="sm" variant={activeCategory === cat ? 'default' : 'outline'} className="shrink-0 text-xs" onClick={() => setActiveCategory(cat)}>{cat}</Button>
-              ))}
-            </div>
-          </div>
-        )}
-
         <div className="px-4">
           {isLoading ? (
             <LoadingSpinner message="Loading highlights..." />
-          ) : filteredVideos.length === 0 ? (
+          ) : highlightVideos.length === 0 ? (
             <FadeIn>
               <div className="text-center py-20">
                 <Video className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
