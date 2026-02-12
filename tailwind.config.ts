@@ -110,6 +110,28 @@ export default {
           "80%": { transform: "scale(0.95)" },
           "100%": { transform: "scale(1)" },
         },
+        "letter-fade-up": {
+          "0%": { opacity: "0", transform: "translateY(12px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        "lamp-drop": {
+          "0%": { opacity: "0", transform: "translateY(-20px)" },
+          "50%": { opacity: "1", transform: "translateY(2px)" },
+          "70%": { transform: "translateY(-3px)" },
+          "85%": { transform: "translateY(1px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        "letter-squish": {
+          "0%": { transform: "scaleY(1) scaleX(1)" },
+          "40%": { transform: "scaleY(0.5) scaleX(1.2)" },
+          "70%": { transform: "scaleY(1.15) scaleX(0.9)" },
+          "85%": { transform: "scaleY(0.95) scaleX(1.02)" },
+          "100%": { transform: "scaleY(1) scaleX(1)" },
+        },
+        "lamp-glow": {
+          "0%, 100%": { filter: "drop-shadow(0 0 3px hsl(45 93% 47% / 0.4))" },
+          "50%": { filter: "drop-shadow(0 0 8px hsl(45 93% 47% / 0.7))" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -122,6 +144,10 @@ export default {
         "marquee-slow": "marquee 30s linear infinite",
         "marquee-fast": "marquee 10s linear infinite",
         "nav-bounce": "nav-bounce 0.4s ease-out",
+        "letter-fade-up": "letter-fade-up 0.4s ease-out forwards",
+        "lamp-drop": "lamp-drop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
+        "letter-squish": "letter-fade-up 0.4s ease-out forwards, letter-squish 0.4s ease-out 500ms",
+        "lamp-glow": "lamp-glow 2s ease-in-out infinite",
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],

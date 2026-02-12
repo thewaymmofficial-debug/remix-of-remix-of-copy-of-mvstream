@@ -239,6 +239,15 @@
   .dark .theme-toggle-ring {
     @apply ring-2 ring-primary ring-offset-1 ring-offset-background;
   }
+
+  /* Lamp glow effect for Cineverse logo */
+  .lamp-element {
+    transform-origin: bottom center;
+  }
+
+  .lamp-svg {
+    filter: drop-shadow(0 0 4px hsl(45 93% 47% / 0.5));
+  }
 }
 
 @layer utilities {
