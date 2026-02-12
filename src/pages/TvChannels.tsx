@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, Play, Tv, ChevronDown, Heart } from 'lucide-react';
+import { ArrowLeft, Search, Play, Tv, ChevronDown, Heart, ChevronRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Navbar } from '@/components/Navbar';
@@ -11,7 +11,10 @@ import { FadeIn } from '@/components/FadeIn';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
+const SUPABASE_FUNCTIONS_URL = 'https://icnfjixjohbxjxqbnnac.supabase.co/functions/v1';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljbmZqaXhqb2hieGp4cWJubmFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzMTYyNjMsImV4cCI6MjA4NTg5MjI2M30.aiU8qAgb1wicSC17EneEs4qAlLtFZbYeyMnhi4NHI7Y';
+import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useFavoriteChannels, useToggleFavoriteChannel } from '@/hooks/useFavoriteChannels';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -23,15 +26,12 @@ interface Channel {
   source?: string;
 }
 
-interface SourceData {
+interface SourceResult {
   category: string;
   channels: Record<string, Channel[]>;
 }
 
-interface LiveTvResponse {
-  date: string;
-  sources: Record<string, SourceData>;
-}
+const CHANNELS_PER_GROUP = 30;
 
 export default function TvChannels() {
   const navigate = useNavigate();
@@ -41,6 +41,7 @@ export default function TvChannels() {
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
   const [openSources, setOpenSources] = useState<Record<string, boolean>>({});
   const [showFavorites, setShowFavorites] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const queryClient = useQueryClient();
 
   const { favorites } = useFavoriteChannels();
@@ -48,18 +49,50 @@ export default function TvChannels() {
 
   const favoriteUrls = useMemo(() => new Set(favorites.map(f => f.channel_url)), [favorites]);
 
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['live-tv-channels'],
+  // Step 1: Fetch the list of source URLs (lightweight)
+  const { data: sourceUrls, isLoading: isLoadingSources, isError: isSourcesError, refetch: refetchSources } = useQuery({
+    queryKey: ['live-tv-source-list'],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('live-tv-proxy');
-      if (error) throw error;
-      return data as LiveTvResponse;
+      const res = await fetch(
+        `${SUPABASE_FUNCTIONS_URL}/live-tv-proxy?listSources=true`,
+        {
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+        }
+      );
+      if (!res.ok) throw new Error('Failed to fetch source list');
+      const json = await res.json();
+      return (json.sources || []) as string[];
     },
     staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch globally broken channels
-  // Load locally reported broken URLs from localStorage for instant filtering
+  // Step 2: Fetch each source individually in parallel
+  const sourceQueries = useQueries({
+    queries: (sourceUrls || []).map((url) => ({
+      queryKey: ['live-tv-source', url],
+      queryFn: async (): Promise<SourceResult> => {
+        const res = await fetch(
+          `${SUPABASE_FUNCTIONS_URL}/live-tv-proxy?sourceUrl=${encodeURIComponent(url)}`,
+          {
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            },
+          }
+        );
+        if (!res.ok) throw new Error(`Failed to fetch source: ${url}`);
+        const json = await res.json();
+        return { category: json.category, channels: json.channels };
+      },
+      staleTime: 5 * 60 * 1000,
+      retry: 1,
+    })),
+  });
+
+  // Broken channels
   const [localBroken, setLocalBroken] = useState<string[]>(() => {
     try {
       return JSON.parse(localStorage.getItem('broken_channels') || '[]');
@@ -71,7 +104,6 @@ export default function TvChannels() {
     queryFn: async () => {
       const { data } = await supabase.from('broken_channels').select('channel_url');
       const urls = (data || []).map(r => r.channel_url);
-      // Sync to localStorage for persistence across refreshes
       localStorage.setItem('broken_channels', JSON.stringify(urls));
       return urls;
     },
@@ -79,11 +111,9 @@ export default function TvChannels() {
   });
 
   const brokenUrls = useMemo(() => {
-    const merged = new Set([...(brokenChannels || []), ...localBroken]);
-    return merged;
+    return new Set([...(brokenChannels || []), ...localBroken]);
   }, [brokenChannels, localBroken]);
 
-  // Report a broken channel globally
   const reportBroken = useMutation({
     mutationFn: async ({ url, name }: { url: string; name: string }) => {
       await supabase.from('broken_channels').upsert(
@@ -96,13 +126,22 @@ export default function TvChannels() {
     },
   });
 
-  // All sources start collapsed by default — no auto-open
+  // Collect loaded sources into a map
+  const loadedSources = useMemo(() => {
+    const map: Record<string, SourceResult> = {};
+    sourceQueries.forEach((q) => {
+      if (q.data && Object.keys(q.data.channels).length > 0) {
+        map[q.data.category] = q.data;
+      }
+    });
+    return map;
+  }, [sourceQueries]);
 
-  // Flatten all channels for search
+  // Only flatten for search — lazy computation
   const allChannels = useMemo(() => {
-    if (!data?.sources) return [];
+    if (!searchQuery.trim()) return [];
     const channels: (Channel & { sourceCategory: string })[] = [];
-    for (const [category, source] of Object.entries(data.sources)) {
+    for (const [category, source] of Object.entries(loadedSources)) {
       for (const group of Object.values(source.channels)) {
         for (const ch of group) {
           if (!brokenUrls.has(ch.url)) {
@@ -112,9 +151,8 @@ export default function TvChannels() {
       }
     }
     return channels;
-  }, [data, brokenUrls]);
+  }, [loadedSources, brokenUrls, searchQuery]);
 
-  // Filter by search
   const filteredChannels = useMemo(() => {
     if (!searchQuery.trim()) return null;
     const q = searchQuery.toLowerCase();
@@ -126,7 +164,6 @@ export default function TvChannels() {
     );
   }, [allChannels, searchQuery]);
 
-  // Favorite channels mapped from saved data
   const favoriteChannelsList = useMemo(() => {
     return favorites.map(f => ({
       name: f.channel_name,
@@ -137,12 +174,26 @@ export default function TvChannels() {
     }));
   }, [favorites]);
 
+  // Total channel count from loaded sources
+  const totalChannels = useMemo(() => {
+    let count = 0;
+    for (const source of Object.values(loadedSources)) {
+      for (const group of Object.values(source.channels)) {
+        count += group.filter(ch => !brokenUrls.has(ch.url)).length;
+      }
+    }
+    return count;
+  }, [loadedSources, brokenUrls]);
+
+  const isLoading = isLoadingSources || (sourceUrls && sourceUrls.length > 0 && sourceQueries.every(q => q.isLoading));
+  const someLoading = sourceQueries.some(q => q.isLoading);
+  const isError = isSourcesError && !sourceUrls;
+
   const handlePlay = (channel: Channel) => {
     setActiveChannel(channel);
   };
 
   const handleStreamError = (url: string, name: string) => {
-    // Immediately hide locally
     setLocalBroken(prev => {
       const updated = [...prev, url];
       localStorage.setItem('broken_channels', JSON.stringify(updated));
@@ -172,7 +223,9 @@ export default function TvChannels() {
     setOpenSources((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const totalChannels = allChannels.length;
+  const toggleGroupExpand = useCallback((key: string) => {
+    setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+  }, []);
 
   return (
     <div className="min-h-screen bg-background mobile-nav-spacing">
@@ -217,8 +270,10 @@ export default function TvChannels() {
           />
         </div>
         <div className="flex items-center justify-between mt-2">
-          {!isLoading && totalChannels > 0 && (
-            <p className="text-xs text-muted-foreground">{totalChannels} channels available</p>
+          {totalChannels > 0 && (
+            <p className="text-xs text-muted-foreground">
+              {totalChannels} channels{someLoading ? ' (loading more...)' : ' available'}
+            </p>
           )}
           {user && (
             <Button
@@ -244,7 +299,7 @@ export default function TvChannels() {
               <Tv className="w-16 h-16 text-destructive mb-4" />
               <p className="text-foreground font-semibold mb-2">Failed to load channels</p>
               <p className="text-sm text-muted-foreground mb-4">Please check your connection and try again</p>
-              <Button onClick={() => refetch()} variant="outline">
+              <Button onClick={() => refetchSources()} variant="outline">
                 Retry
               </Button>
             </div>
@@ -306,7 +361,7 @@ export default function TvChannels() {
               </div>
             )}
           </FadeIn>
-        ) : !data?.sources || Object.keys(data.sources).length === 0 ? (
+        ) : Object.keys(loadedSources).length === 0 && !someLoading ? (
           <FadeIn>
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <Tv className="w-16 h-16 text-muted-foreground mb-4" />
@@ -316,8 +371,11 @@ export default function TvChannels() {
         ) : (
           <FadeIn>
             <div className="space-y-4">
-              {Object.entries(data.sources).map(([sourceCategory, sourceData]) => {
-                const channelCount = Object.values(sourceData.channels).flat().length;
+              {Object.entries(loadedSources).map(([sourceCategory, sourceData]) => {
+                const channelCount = Object.values(sourceData.channels)
+                  .flat()
+                  .filter(c => !brokenUrls.has(c.url)).length;
+                if (channelCount === 0) return null;
                 return (
                   <Collapsible
                     key={sourceCategory}
@@ -339,13 +397,19 @@ export default function TvChannels() {
                         {Object.entries(sourceData.channels).map(([group, channels]) => {
                           const validChannels = channels.filter(c => !brokenUrls.has(c.url));
                           if (validChannels.length === 0) return null;
+                          const groupKey = `${sourceCategory}::${group}`;
+                          const isExpanded = expandedGroups[groupKey] ?? false;
+                          const displayChannels = validChannels.length > CHANNELS_PER_GROUP && !isExpanded
+                            ? validChannels.slice(0, CHANNELS_PER_GROUP)
+                            : validChannels;
+                          const hasMore = validChannels.length > CHANNELS_PER_GROUP && !isExpanded;
                           return (
                             <div key={group}>
                               <h3 className="text-sm font-semibold text-muted-foreground mb-3 pl-1">
                                 {group} ({validChannels.length})
                               </h3>
                               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                {validChannels.map((channel, idx) => (
+                                {displayChannels.map((channel, idx) => (
                                   <ChannelCard
                                     key={`${channel.name}-${idx}`}
                                     channel={channel}
@@ -357,6 +421,17 @@ export default function TvChannels() {
                                   />
                                 ))}
                               </div>
+                              {hasMore && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => toggleGroupExpand(groupKey)}
+                                  className="w-full mt-2 text-primary"
+                                >
+                                  Show all {validChannels.length} channels
+                                  <ChevronRight className="w-4 h-4 ml-1" />
+                                </Button>
+                              )}
                             </div>
                           );
                         })}
@@ -365,6 +440,12 @@ export default function TvChannels() {
                   </Collapsible>
                 );
               })}
+              {someLoading && (
+                <div className="flex items-center justify-center gap-2 py-4 text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-sm">Loading more sources...</span>
+                </div>
+              )}
             </div>
           </FadeIn>
         )}
