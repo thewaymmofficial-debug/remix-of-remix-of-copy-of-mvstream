@@ -88,40 +88,13 @@ async function fetchSources(): Promise<SourceEntry[]> {
   }
 }
 
-async function checkUrl(url: string): Promise<boolean> {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 2000);
-    const res = await fetch(url, { method: "HEAD", signal: controller.signal });
-    clearTimeout(timeout);
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
-
-async function fetchBrokenUrls(): Promise<Set<string>> {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const supabase = createClient(supabaseUrl, supabaseKey);
-  const { data } = await supabase.from("broken_channels").select("channel_url");
-  return new Set((data || []).map((r: any) => r.channel_url));
-}
-
-async function filterChannels(
+function filterChannels(
   channels: Record<string, GitHubChannel[]>,
   brokenUrls: Set<string>
-): Promise<Record<string, GitHubChannel[]>> {
+): Record<string, GitHubChannel[]> {
   const filtered: Record<string, GitHubChannel[]> = {};
   for (const [group, list] of Object.entries(channels)) {
-    // First exclude globally broken channels
-    const notBroken = list.filter((ch) => !brokenUrls.has(ch.url));
-    const checks = await Promise.allSettled(
-      notBroken.map(async (ch) => ({ ch, ok: await checkUrl(ch.url) }))
-    );
-    const valid = checks
-      .filter((r) => r.status === "fulfilled" && r.value.ok)
-      .map((r) => (r as PromiseFulfilledResult<{ ch: GitHubChannel; ok: boolean }>).value.ch);
+    const valid = list.filter((ch) => !brokenUrls.has(ch.url));
     if (valid.length > 0) {
       filtered[group] = valid;
     }
@@ -148,7 +121,7 @@ async function fetchAllSources(
       const res = await fetch(source.url);
       if (!res.ok) throw new Error(`Failed: ${res.status}`);
       const json = (await res.json()) as GitHubResponse;
-      const validChannels = await filterChannels(json.channels || {}, brokenUrls);
+      const validChannels = filterChannels(json.channels || {}, brokenUrls);
       return { category, channels: validChannels };
     })
   );
