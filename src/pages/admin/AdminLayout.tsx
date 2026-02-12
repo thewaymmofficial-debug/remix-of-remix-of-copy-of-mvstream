@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Outlet, Link, useLocation } from 'react-router-dom';
-import { Film, Users, LayoutDashboard, ArrowLeft, Tags, Settings, BarChart3, Menu, ChevronRight, Image, CreditCard, Shield, MessageSquare, Tv } from 'lucide-react';
+import { Film, Users, LayoutDashboard, ArrowLeft, Tags, Settings, BarChart3, Menu, ChevronRight, Image, CreditCard, Shield, MessageSquare, Tv, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Navbar } from '@/components/Navbar';
 import { useAuth } from '@/hooks/useAuth';
@@ -53,6 +53,7 @@ export default function AdminLayout() {
     { path: '/admin/premium-requests', label: 'Premium Req', icon: Shield },
     { path: '/admin/movie-requests', label: 'Movie Req', icon: MessageSquare },
     { path: '/admin/channels', label: 'Channels', icon: Tv },
+    { path: '/admin/football', label: 'Football', icon: Trophy },
     { path: '/admin/settings', label: 'Settings', icon: Settings },
   ];
 
