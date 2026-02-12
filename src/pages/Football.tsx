@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Play, Trophy, Crown, Wifi, Download, Video, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Play, Trophy, Crown, Wifi, Download, Video, Eye, EyeOff, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/Navbar';
@@ -19,7 +19,6 @@ export default function Football() {
   const { data: videos, isLoading } = useFootballVideos();
   const { data: categories } = useFootballCategories();
   const [activeCategory, setActiveCategory] = useState('all');
-  const [showHighlights, setShowHighlights] = useState(true);
   const [loginModal, setLoginModal] = useState(false);
 
   const filteredVideos = useMemo(() => {
@@ -30,6 +29,7 @@ export default function Football() {
 
   const liveVideos = useMemo(() => filteredVideos.filter(v => v.is_live), [filteredVideos]);
   const highlightVideos = useMemo(() => filteredVideos.filter(v => !v.is_live && v.show_in_highlights), [filteredVideos]);
+  const replayVideos = useMemo(() => filteredVideos.filter(v => !v.is_live && v.show_in_replay), [filteredVideos]);
 
   const handlePlay = (video: FootballVideo) => {
     if (video.is_premium && !isPremium) {
@@ -77,17 +77,6 @@ export default function Football() {
             <Trophy className="w-5 h-5" />
             ဘောလုံး
           </h1>
-          <div className="ml-auto">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowHighlights(!showHighlights)}
-              className="text-xs gap-1.5"
-            >
-              {showHighlights ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-              Highlights
-            </Button>
-          </div>
         </div>
 
         {/* Category Tabs */}
@@ -151,14 +140,34 @@ export default function Football() {
               )}
 
               {/* Highlights Section */}
-              {showHighlights && highlightVideos.length > 0 && (
+              {highlightVideos.length > 0 && (
                 <div>
                   <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
                     <Video className="w-4 h-4" />
-                    Highlights & Replays
+                    Highlights
                   </h2>
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                     {highlightVideos.map((video) => (
+                      <VideoCard
+                        key={video.id}
+                        video={video}
+                        onPlay={handlePlay}
+                        onDownload={handleDownload}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Replay Section */}
+              {replayVideos.length > 0 && (
+                <div className="mt-6">
+                  <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
+                    <RotateCcw className="w-4 h-4" />
+                    ဘောလုံးပွဲပြန်ကြည့်
+                  </h2>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {replayVideos.map((video) => (
                       <VideoCard
                         key={video.id}
                         video={video}

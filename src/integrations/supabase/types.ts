@@ -154,6 +154,7 @@ export type Database = {
           is_live: boolean | null
           is_premium: boolean | null
           show_in_highlights: boolean
+          show_in_replay: boolean
           stream_url: string | null
           thumbnail_url: string | null
           title: string
@@ -167,6 +168,7 @@ export type Database = {
           is_live?: boolean | null
           is_premium?: boolean | null
           show_in_highlights?: boolean
+          show_in_replay?: boolean
           stream_url?: string | null
           thumbnail_url?: string | null
           title: string
@@ -180,6 +182,7 @@ export type Database = {
           is_live?: boolean | null
           is_premium?: boolean | null
           show_in_highlights?: boolean
+          show_in_replay?: boolean
           stream_url?: string | null
           thumbnail_url?: string | null
           title?: string

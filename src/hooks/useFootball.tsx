@@ -11,6 +11,7 @@ export interface FootballVideo {
   is_premium: boolean;
   is_live: boolean;
   show_in_highlights: boolean;
+  show_in_replay: boolean;
   created_at: string;
   updated_at: string;
 }
