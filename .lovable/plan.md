@@ -1,75 +1,52 @@
 
 
-## Fix: Blank Screen in APK and Admin Panel Flashing
+## Fix: App Crashing with 26+ Channel Sources
 
-### Problems Identified
+### Root Cause
 
-**1. Blank screen in WebToApp APK (TV Channels page)**
-- The `useNetworkRefresh` hook in `App.tsx` calls `window.location.reload()` whenever the device goes from offline to online. WebToApp APKs on mobile frequently trigger brief offline/online events (e.g. switching between WiFi and mobile data, or signal fluctuations). This causes constant page reloads, resulting in a blank/white screen.
-- Additionally, if the edge function returns a 500 error, the `useQuery` in `TvChannels.tsx` throws but there is no error UI -- it just shows loading forever or crashes to a blank screen.
+The `live-tv-proxy` edge function fetches ALL sources and returns ALL channels in a single massive JSON response. With 26 sources, the response is already **541,000+ lines of JSON (10-20+ MB)**. Adding more sources makes this even worse. Mobile browsers and WebToApp APKs run out of memory parsing and rendering this data, causing crashes and blank screens.
 
-**2. Admin panel flashing when adding channels and scrolling**
-- In `ChannelsAdmin.tsx`, the `useEffect` on line 40-45 syncs `settings.liveTvSources` into local `sources` state. After clicking "Save All Changes", the mutation's `onSuccess` invalidates the `site-settings` query, which re-fetches data and triggers the `useEffect` again, resetting the `sources` state. This causes a visible flash/re-render of the entire channel list.
-- With 27 sources, every state change (add, toggle, edit) re-runs `parseCategoryFromUrl` for all items, adding unnecessary computation.
-
----
+This is NOT a limit of 26 channels — it's a memory/payload size problem that gets worse with each source added.
 
 ### Plan
 
-**Fix 1: Prevent APK blank screen from network refresh**
-- File: `src/hooks/useNetworkRefresh.tsx`
-- Add a debounce/cooldown so the page does not reload more than once per 30 seconds. Also add a minimum offline duration check (e.g. must be offline for at least 3 seconds before triggering a reload on reconnect). This prevents rapid offline/online toggles in mobile APKs from causing constant blank-screen reloads.
+**Fix 1: Fetch sources individually on the client (split the load)**
+- Instead of one giant edge function call returning everything, fetch each source category separately
+- The edge function will accept an optional `sourceUrl` parameter to fetch just one source
+- The client will make parallel requests per source, so each response is small (~500KB instead of 20MB)
+- Failed sources won't break the entire page — only that category shows an error
 
-**Fix 2: Add error handling to TvChannels**
-- File: `src/pages/TvChannels.tsx`
-- Capture the `error` and `isError` states from the `useQuery` hook and show a proper error UI with a retry button instead of a blank screen.
+**Fix 2: Lazy-load channel categories (render only what's visible)**
+- Currently ALL channels are rendered in the DOM even when categories are collapsed
+- Only render channel cards when a category is expanded (already using Collapsible, but `allChannels` memo processes everything upfront)
+- Move the heavy `allChannels` flattening to only run when searching, not on every render
 
-**Fix 3: Fix admin panel flashing**
-- File: `src/pages/admin/ChannelsAdmin.tsx`
-- Add a `useRef` flag (`initialLoadDone`) so the `useEffect` only syncs from server data on the initial load, not on every query refetch after saving. This prevents the flash caused by the mutation's `onSuccess` invalidation overwriting local state.
+**Fix 3: Add pagination/virtualization for large channel lists**
+- When a category has 100+ channels, only show the first 30 with a "Show more" button
+- This prevents the DOM from being overwhelmed when expanding a large category
 
 ---
 
 ### Technical Details
 
-**useNetworkRefresh.tsx changes:**
-```typescript
-// Add minimum offline duration check
-const offlineAtRef = useRef<number>(0);
-
-const handleOffline = () => {
-  wasOfflineRef.current = true;
-  offlineAtRef.current = Date.now();
-};
-
-const handleOnline = () => {
-  if (wasOfflineRef.current) {
-    const offlineDuration = Date.now() - offlineAtRef.current;
-    wasOfflineRef.current = false;
-    // Only reload if offline for more than 3 seconds
-    if (offlineDuration > 3000) {
-      window.location.reload();
-    }
-  }
-};
-```
+**Edge function changes (`supabase/functions/live-tv-proxy/index.ts`):**
+- Add a `sourceUrl` query parameter to fetch a single source
+- When provided, fetch only that one source and return its channels
+- When not provided (backward compatible), return all sources as before but with a size warning
+- This allows the client to split the load across multiple smaller requests
 
 **TvChannels.tsx changes:**
-- Destructure `isError` from the channels query
-- Show error fallback UI with retry button when `isError` is true
+- Replace the single `useQuery` for all channels with individual queries per source
+- Use `useQueries` from TanStack Query to fetch each enabled source in parallel
+- Each source loads independently — fast sources appear immediately, slow ones show loading
+- The `allChannels` memo for search only computes when the user actually types a search query
+- Add a "Show more" limit (30 channels per group) with expand button
 
-**ChannelsAdmin.tsx changes:**
-```typescript
-const initialLoadDone = useRef(false);
+**ChannelsAdmin.tsx — no changes needed** (already fixed in previous plan)
 
-useEffect(() => {
-  if (settings?.liveTvSources && !initialLoadDone.current) {
-    const s = settings.liveTvSources;
-    setSources(Array.isArray(s) ? s : []);
-    initialLoadDone.current = true;
-  }
-}, [settings]);
-```
-
-This ensures the server data only populates local state once on mount, so subsequent saves don't cause a flash by resetting the list.
+**Estimated impact:**
+- Each individual source response: ~500KB-1MB (manageable)
+- DOM nodes reduced by 80%+ (only expanded categories render cards)
+- Mobile APK will no longer crash since memory usage stays bounded
+- Progressive loading gives faster perceived performance
 
