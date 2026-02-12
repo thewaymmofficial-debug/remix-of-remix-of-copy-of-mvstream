@@ -190,17 +190,12 @@ export default function TvChannels() {
       {/* Content */}
       <div className="px-4 pb-24">
         {isLoading ? (
-          <div className="space-y-6">
-            {[1, 2, 3].map((i) => (
-              <div key={i}>
-                <div className="h-6 w-48 bg-muted rounded mb-4 animate-pulse" />
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  <div className="aspect-video bg-muted rounded-xl animate-pulse" />
-                  <div className="aspect-video bg-muted rounded-xl animate-pulse" />
-                  <div className="aspect-video bg-muted rounded-xl animate-pulse" />
-                </div>
-              </div>
-            ))}
+          <div className="flex flex-col items-center justify-center py-32 gap-4">
+            <div className="relative w-16 h-16">
+              <div className="absolute inset-0 rounded-full border-4 border-muted" />
+              <div className="absolute inset-0 rounded-full border-4 border-t-primary animate-spin" />
+            </div>
+            <p className="text-sm text-muted-foreground animate-pulse">Loading channels...</p>
           </div>
         ) : showFavorites ? (
           // Favorites view
