@@ -88,6 +88,14 @@ async function fetchSources(): Promise<SourceEntry[]> {
   }
 }
 
+async function fetchBrokenUrls(): Promise<Set<string>> {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabase = createClient(supabaseUrl, supabaseKey);
+  const { data } = await supabase.from("broken_channels").select("channel_url");
+  return new Set((data || []).map((r: any) => r.channel_url));
+}
+
 function filterChannels(
   channels: Record<string, GitHubChannel[]>,
   brokenUrls: Set<string>
