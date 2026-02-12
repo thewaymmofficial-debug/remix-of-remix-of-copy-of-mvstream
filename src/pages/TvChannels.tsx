@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, Play, Tv, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Search, Play, Tv, ChevronDown, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Navbar } from '@/components/Navbar';
@@ -10,6 +10,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import { useFavoriteChannels, useToggleFavoriteChannel } from '@/hooks/useFavoriteChannels';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Channel {
   name: string;
@@ -32,9 +34,16 @@ interface LiveTvResponse {
 export default function TvChannels() {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
   const [openSources, setOpenSources] = useState<Record<string, boolean>>({});
+  const [showFavorites, setShowFavorites] = useState(false);
+
+  const { favorites } = useFavoriteChannels();
+  const toggleFavorite = useToggleFavoriteChannel();
+
+  const favoriteUrls = useMemo(() => new Set(favorites.map(f => f.channel_url)), [favorites]);
 
   const { data, isLoading } = useQuery({
     queryKey: ['live-tv-channels'],
@@ -82,9 +91,34 @@ export default function TvChannels() {
     );
   }, [allChannels, searchQuery]);
 
+  // Favorite channels mapped from saved data
+  const favoriteChannelsList = useMemo(() => {
+    return favorites.map(f => ({
+      name: f.channel_name,
+      url: f.channel_url,
+      logo: f.channel_logo || '',
+      group: f.channel_group || '',
+      sourceCategory: f.source_category || '',
+    }));
+  }, [favorites]);
+
   const handlePlay = (channel: Channel) => {
     setActiveChannel(channel);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleToggleFavorite = (channel: Channel & { sourceCategory?: string }) => {
+    if (!user) return;
+    toggleFavorite.mutate({
+      channel: {
+        name: channel.name,
+        url: channel.url,
+        logo: channel.logo,
+        group: channel.group,
+        sourceCategory: (channel as any).sourceCategory,
+      },
+      isFavorite: favoriteUrls.has(channel.url),
+    });
   };
 
   const toggleSource = (key: string) => {
@@ -134,9 +168,22 @@ export default function TvChannels() {
             className="pl-12 h-14 rounded-xl border-border text-base"
           />
         </div>
-        {!isLoading && totalChannels > 0 && (
-          <p className="text-xs text-muted-foreground mt-2">{totalChannels} channels available</p>
-        )}
+        <div className="flex items-center justify-between mt-2">
+          {!isLoading && totalChannels > 0 && (
+            <p className="text-xs text-muted-foreground">{totalChannels} channels available</p>
+          )}
+          {user && (
+            <Button
+              variant={showFavorites ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => { setShowFavorites(!showFavorites); setSearchQuery(''); }}
+              className="gap-1.5 ml-auto"
+            >
+              <Heart className={`w-4 h-4 ${showFavorites ? 'fill-current' : ''}`} />
+              Favorites {favorites.length > 0 && `(${favorites.length})`}
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Content */}
@@ -154,6 +201,34 @@ export default function TvChannels() {
               </div>
             ))}
           </div>
+        ) : showFavorites ? (
+          // Favorites view
+          favoriteChannelsList.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <Heart className="w-16 h-16 text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">No favorite channels yet</p>
+              <p className="text-xs text-muted-foreground mt-1">Tap the heart icon on any channel to save it</p>
+            </div>
+          ) : (
+            <div>
+              <h2 className="text-lg font-bold text-foreground mb-4">
+                Favorites ({favoriteChannelsList.length})
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {favoriteChannelsList.map((channel, idx) => (
+                  <ChannelCard
+                    key={`fav-${channel.url}-${idx}`}
+                    channel={channel}
+                    isActive={activeChannel?.url === channel.url}
+                    onPlay={handlePlay}
+                    isFavorite={true}
+                    onToggleFavorite={handleToggleFavorite}
+                    showFavorite={!!user}
+                  />
+                ))}
+              </div>
+            </div>
+          )
         ) : filteredChannels !== null ? (
           // Search results
           filteredChannels.length === 0 ? (
@@ -173,6 +248,9 @@ export default function TvChannels() {
                     channel={channel}
                     isActive={activeChannel?.url === channel.url}
                     onPlay={handlePlay}
+                    isFavorite={favoriteUrls.has(channel.url)}
+                    onToggleFavorite={handleToggleFavorite}
+                    showFavorite={!!user}
                   />
                 ))}
               </div>
@@ -218,6 +296,9 @@ export default function TvChannels() {
                                 channel={channel}
                                 isActive={activeChannel?.url === channel.url}
                                 onPlay={handlePlay}
+                                isFavorite={favoriteUrls.has(channel.url)}
+                                onToggleFavorite={handleToggleFavorite}
+                                showFavorite={!!user}
                               />
                             ))}
                           </div>
@@ -241,38 +322,57 @@ function ChannelCard({
   channel,
   isActive,
   onPlay,
+  isFavorite,
+  onToggleFavorite,
+  showFavorite,
 }: {
   channel: Channel;
   isActive: boolean;
   onPlay: (c: Channel) => void;
+  isFavorite?: boolean;
+  onToggleFavorite?: (c: Channel) => void;
+  showFavorite?: boolean;
 }) {
   return (
-    <button
-      onClick={() => onPlay(channel)}
-      className={`text-left group ${isActive ? 'ring-2 ring-primary rounded-xl' : ''}`}
-    >
-      <div className="relative aspect-video rounded-xl overflow-hidden bg-muted border border-border mb-2">
-        {channel.logo ? (
-          <img
-            src={channel.logo}
-            alt={channel.name}
-            className="w-full h-full object-contain bg-white p-2"
-            loading="lazy"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-muted">
-            <span className="text-lg font-bold text-muted-foreground">
-              {channel.name[0]}
-            </span>
-          </div>
-        )}
-        <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity">
-          <div className="w-12 h-12 rounded-full bg-white/80 flex items-center justify-center">
-            <Play className="w-6 h-6 text-black fill-black" />
+    <div className={`text-left group relative ${isActive ? 'ring-2 ring-primary rounded-xl' : ''}`}>
+      <button
+        onClick={() => onPlay(channel)}
+        className="w-full text-left"
+      >
+        <div className="relative aspect-video rounded-xl overflow-hidden bg-muted border border-border mb-2">
+          {channel.logo ? (
+            <img
+              src={channel.logo}
+              alt={channel.name}
+              className="w-full h-full object-contain bg-white p-2"
+              loading="lazy"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-muted">
+              <span className="text-lg font-bold text-muted-foreground">
+                {channel.name[0]}
+              </span>
+            </div>
+          )}
+          <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="w-12 h-12 rounded-full bg-white/80 flex items-center justify-center">
+              <Play className="w-6 h-6 text-black fill-black" />
+            </div>
           </div>
         </div>
-      </div>
+      </button>
+      {showFavorite && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleFavorite?.(channel);
+          }}
+          className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-black/50 flex items-center justify-center hover:bg-black/70 transition-colors"
+        >
+          <Heart className={`w-4 h-4 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+        </button>
+      )}
       <p className="text-sm font-medium text-foreground truncate">{channel.name}</p>
-    </button>
+    </div>
   );
 }
