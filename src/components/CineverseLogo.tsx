@@ -20,7 +20,7 @@ export function CineverseLogo() {
   useEffect(() => {
     const interval = setInterval(() => {
       startAnimation();
-    }, 5000);
+    }, 10000);
     return () => clearInterval(interval);
   }, [startAnimation]);
 
