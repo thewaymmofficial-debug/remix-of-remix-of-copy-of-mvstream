@@ -139,7 +139,6 @@ export default function TvChannels() {
 
   const handlePlay = (channel: Channel) => {
     setActiveChannel(channel);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleStreamError = (url: string, name: string) => {
