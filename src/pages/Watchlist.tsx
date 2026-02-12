@@ -69,10 +69,12 @@ const Watchlist = () => {
 
         {/* Content */}
         {isLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="aspect-[2/3] bg-muted rounded-lg animate-pulse" />
-            ))}
+          <div className="flex flex-col items-center justify-center py-32 gap-4">
+            <div className="relative w-16 h-16">
+              <div className="absolute inset-0 rounded-full border-4 border-muted" />
+              <div className="absolute inset-0 rounded-full border-4 border-t-primary animate-spin" />
+            </div>
+            <p className="text-sm text-muted-foreground animate-pulse">Loading watchlist...</p>
           </div>
         ) : watchlist && watchlist.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">

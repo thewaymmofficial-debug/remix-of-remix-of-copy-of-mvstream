@@ -59,19 +59,12 @@ export default function MovieDetails() {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <div className="pt-20 px-4">
-          <div className="animate-pulse space-y-4">
-            <div className="flex gap-4">
-              <div className="w-40 h-56 bg-muted rounded-lg flex-shrink-0" />
-              <div className="flex-1 space-y-3">
-                <div className="h-6 w-3/4 bg-muted rounded" />
-                <div className="h-4 w-1/2 bg-muted rounded" />
-                <div className="h-6 w-32 bg-muted rounded-full" />
-                <div className="h-4 w-full bg-muted rounded" />
-              </div>
-            </div>
-            <div className="h-14 bg-muted rounded-xl" />
+        <div className="flex flex-col items-center justify-center py-32 gap-4">
+          <div className="relative w-16 h-16">
+            <div className="absolute inset-0 rounded-full border-4 border-muted" />
+            <div className="absolute inset-0 rounded-full border-4 border-t-primary animate-spin" />
           </div>
+          <p className="text-sm text-muted-foreground animate-pulse">Loading details...</p>
         </div>
       </div>
     );
