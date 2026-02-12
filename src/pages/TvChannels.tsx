@@ -1,70 +1,64 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, Play } from 'lucide-react';
+import { ArrowLeft, Search, Play, Tv } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Navbar } from '@/components/Navbar';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
+import { LiveTvPlayer } from '@/components/LiveTvPlayer';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 
-interface TvChannel {
-  id: string;
+interface Channel {
   name: string;
-  category: string;
-  stream_url: string | null;
-  thumbnail_url: string | null;
-  display_order: number;
-  is_active: boolean;
+  logo: string;
+  url: string;
+  group: string;
+  source?: string;
+}
+
+interface LiveTvResponse {
+  date: string;
+  channels: Record<string, Channel[]>;
 }
 
 export default function TvChannels() {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
 
-  const { data: channels, isLoading } = useQuery({
-    queryKey: ['tv-channels'],
+  const { data, isLoading } = useQuery({
+    queryKey: ['live-tv-channels'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('tv_channels')
-        .select('*')
-        .eq('is_active', true)
-        .order('display_order', { ascending: true });
+      const { data, error } = await supabase.functions.invoke('live-tv-proxy');
       if (error) throw error;
-      return data as TvChannel[];
+      return data as LiveTvResponse;
     },
+    staleTime: 5 * 60 * 1000, // 5 min
   });
 
-  // Filter channels by search
+  // Flatten all channels for search
+  const allChannels = useMemo(() => {
+    if (!data?.channels) return [];
+    return Object.values(data.channels).flat();
+  }, [data]);
+
+  // Filter by search
   const filteredChannels = useMemo(() => {
-    if (!channels) return [];
-    if (!searchQuery.trim()) return channels;
+    if (!searchQuery.trim()) return null; // null = show by category
     const q = searchQuery.toLowerCase();
-    return channels.filter(
+    return allChannels.filter(
       (c) =>
         c.name.toLowerCase().includes(q) ||
-        c.category.toLowerCase().includes(q)
+        c.group.toLowerCase().includes(q)
     );
-  }, [channels, searchQuery]);
+  }, [allChannels, searchQuery]);
 
-  // Group by category
-  const groupedChannels = useMemo(() => {
-    const groups: Record<string, TvChannel[]> = {};
-    filteredChannels.forEach((channel) => {
-      if (!groups[channel.category]) {
-        groups[channel.category] = [];
-      }
-      groups[channel.category].push(channel);
-    });
-    return groups;
-  }, [filteredChannels]);
-
-  const handlePlay = (channel: TvChannel) => {
-    if (channel.stream_url) {
-      window.open(channel.stream_url, '_blank', 'noopener,noreferrer');
-    }
+  const handlePlay = (channel: Channel) => {
+    setActiveChannel(channel);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
@@ -86,6 +80,17 @@ export default function TvChannels() {
         </h1>
       </div>
 
+      {/* Inline Player */}
+      {activeChannel && (
+        <div className="px-4">
+          <LiveTvPlayer
+            url={activeChannel.url}
+            channelName={activeChannel.name}
+            onClose={() => setActiveChannel(null)}
+          />
+        </div>
+      )}
+
       {/* Search */}
       <div className="px-4 mb-6">
         <div className="relative">
@@ -106,41 +111,59 @@ export default function TvChannels() {
             {[1, 2, 3].map((i) => (
               <div key={i}>
                 <div className="h-6 w-48 bg-muted rounded mb-4 animate-pulse" />
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="aspect-video bg-muted rounded-xl animate-pulse" />
                   <div className="aspect-video bg-muted rounded-xl animate-pulse" />
                   <div className="aspect-video bg-muted rounded-xl animate-pulse" />
                 </div>
               </div>
             ))}
           </div>
-        ) : Object.keys(groupedChannels).length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <Play className="w-16 h-16 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">{t('noChannels')}</p>
-          </div>
-        ) : (
-          <div className="space-y-8">
-            {/* All channels section */}
+        ) : filteredChannels !== null ? (
+          // Search results mode
+          filteredChannels.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <Tv className="w-16 h-16 text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">No channels found</p>
+            </div>
+          ) : (
             <div>
               <h2 className="text-lg font-bold text-foreground mb-4">
-                {t('allTvChannels')} ({filteredChannels.length})
+                Results ({filteredChannels.length})
               </h2>
-              <div className="grid grid-cols-2 gap-3">
-                {filteredChannels.slice(0, 4).map((channel) => (
-                  <ChannelCard key={`all-${channel.id}`} channel={channel} onPlay={handlePlay} />
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {filteredChannels.map((channel, idx) => (
+                  <ChannelCard
+                    key={`${channel.name}-${idx}`}
+                    channel={channel}
+                    isActive={activeChannel?.url === channel.url}
+                    onPlay={handlePlay}
+                  />
                 ))}
               </div>
             </div>
-
-            {/* By category */}
-            {Object.entries(groupedChannels).map(([category, categoryChannels]) => (
+          )
+        ) : !data?.channels || Object.keys(data.channels).length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <Tv className="w-16 h-16 text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">{t('noChannels')}</p>
+          </div>
+        ) : (
+          // Category mode
+          <div className="space-y-8">
+            {Object.entries(data.channels).map(([category, channels]) => (
               <div key={category}>
                 <h2 className="text-lg font-bold text-foreground mb-4">
-                  {category} ({categoryChannels.length})
+                  {category} ({channels.length})
                 </h2>
-                <div className="grid grid-cols-2 gap-3">
-                  {categoryChannels.map((channel) => (
-                    <ChannelCard key={channel.id} channel={channel} onPlay={handlePlay} />
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {channels.map((channel, idx) => (
+                    <ChannelCard
+                      key={`${channel.name}-${idx}`}
+                      channel={channel}
+                      isActive={activeChannel?.url === channel.url}
+                      onPlay={handlePlay}
+                    />
                   ))}
                 </div>
               </div>
@@ -156,26 +179,31 @@ export default function TvChannels() {
 
 function ChannelCard({
   channel,
+  isActive,
   onPlay,
 }: {
-  channel: TvChannel;
-  onPlay: (c: TvChannel) => void;
+  channel: Channel;
+  isActive: boolean;
+  onPlay: (c: Channel) => void;
 }) {
   return (
     <button
       onClick={() => onPlay(channel)}
-      className="text-left group"
+      className={`text-left group ${isActive ? 'ring-2 ring-primary rounded-xl' : ''}`}
     >
       <div className="relative aspect-video rounded-xl overflow-hidden bg-muted border border-border mb-2">
-        {channel.thumbnail_url ? (
+        {channel.logo ? (
           <img
-            src={channel.thumbnail_url}
+            src={channel.logo}
             alt={channel.name}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain bg-white p-2"
+            loading="lazy"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-muted">
-            <span className="text-lg font-bold text-muted-foreground">{channel.name[0]}</span>
+            <span className="text-lg font-bold text-muted-foreground">
+              {channel.name[0]}
+            </span>
           </div>
         )}
         {/* Play overlay */}
