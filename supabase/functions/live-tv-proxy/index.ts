@@ -25,34 +25,23 @@ interface SourceEntry {
   enabled: boolean;
 }
 
-interface SourceResult {
-  category: string;
-  channels: Record<string, GitHubChannel[]>;
-}
-
-// Cache keyed on source URLs hash
-let cache: { data: any; urlsHash: string; timestamp: number } = {
-  data: null,
-  urlsHash: "",
-  timestamp: 0,
-};
+// Per-source cache
+const sourceCache: Record<string, { data: any; timestamp: number }> = {};
 const CACHE_TTL = 5 * 60 * 1000;
 
 function parseCategoryFromUrl(url: string): string {
   try {
     const pathname = new URL(url).pathname;
     const segments = pathname.split("/").filter(Boolean);
-    // Find the last segment (filename) and take the two before it
     if (segments.length >= 3) {
-      const type = segments[segments.length - 3]; // e.g. "LiveTV", "Movies"
-      const country = segments[segments.length - 2]; // e.g. "Arabic", "Thailand"
-      const formattedType = type.replace(/([a-z])([A-Z])/g, "$1 $2"); // "LiveTV" -> "Live TV"
+      const type = segments[segments.length - 3];
+      const country = segments[segments.length - 2];
+      const formattedType = type.replace(/([a-z])([A-Z])/g, "$1 $2");
       return `${formattedType} - ${country}`;
     }
     if (segments.length >= 2) {
       const type = segments[segments.length - 2];
-      const formattedType = type.replace(/([a-z])([A-Z])/g, "$1 $2");
-      return formattedType;
+      return type.replace(/([a-z])([A-Z])/g, "$1 $2");
     }
     return "Other";
   } catch {
@@ -110,41 +99,26 @@ function filterChannels(
   return filtered;
 }
 
-async function fetchAllSources(
-  sources: SourceEntry[]
-): Promise<Record<string, SourceResult>> {
-  const urlsHash = sources.map((s) => s.url).sort().join("|");
+// Fetch a single source with caching
+async function fetchSingleSource(
+  sourceUrl: string,
+  brokenUrls: Set<string>
+): Promise<{ category: string; channels: Record<string, GitHubChannel[]> }> {
   const now = Date.now();
-
-  if (cache.data && cache.urlsHash === urlsHash && now - cache.timestamp < CACHE_TTL) {
-    return cache.data;
+  const cached = sourceCache[sourceUrl];
+  if (cached && now - cached.timestamp < CACHE_TTL) {
+    return cached.data;
   }
 
-  const brokenUrls = await fetchBrokenUrls();
-  const results: Record<string, SourceResult> = {};
+  const category = parseCategoryFromUrl(sourceUrl);
+  const res = await fetch(sourceUrl);
+  if (!res.ok) throw new Error(`Failed to fetch source: ${res.status}`);
+  const json = (await res.json()) as GitHubResponse;
+  const validChannels = filterChannels(json.channels || {}, brokenUrls);
 
-  const fetches = await Promise.allSettled(
-    sources.map(async (source) => {
-      const category = parseCategoryFromUrl(source.url);
-      const res = await fetch(source.url);
-      if (!res.ok) throw new Error(`Failed: ${res.status}`);
-      const json = (await res.json()) as GitHubResponse;
-      const validChannels = filterChannels(json.channels || {}, brokenUrls);
-      return { category, channels: validChannels };
-    })
-  );
-
-  for (const result of fetches) {
-    if (result.status === "fulfilled") {
-      const { category, channels } = result.value;
-      if (Object.keys(channels).length > 0) {
-        results[category] = { category, channels };
-      }
-    }
-  }
-
-  cache = { data: results, urlsHash, timestamp: now };
-  return results;
+  const result = { category, channels: validChannels };
+  sourceCache[sourceUrl] = { data: result, timestamp: now };
+  return result;
 }
 
 serve(async (req) => {
@@ -153,11 +127,63 @@ serve(async (req) => {
   }
 
   try {
+    const url = new URL(req.url);
+    const sourceUrl = url.searchParams.get("sourceUrl");
+
+    // Mode 1: Fetch just the list of enabled sources (lightweight)
+    if (url.searchParams.get("listSources") === "true") {
+      const sources = await fetchSources();
+      return new Response(
+        JSON.stringify({ sources: sources.map((s) => s.url) }),
+        {
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "Cache-Control": "public, max-age=300",
+          },
+        }
+      );
+    }
+
+    // Mode 2: Fetch a single source by URL
+    if (sourceUrl) {
+      const brokenUrls = await fetchBrokenUrls();
+      const result = await fetchSingleSource(sourceUrl, brokenUrls);
+      return new Response(
+        JSON.stringify({ date: new Date().toISOString(), ...result }),
+        {
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "Cache-Control": "public, max-age=300",
+          },
+        }
+      );
+    }
+
+    // Mode 3 (legacy): Fetch ALL sources at once — kept for backward compat
     const sources = await fetchSources();
-    const data = await fetchAllSources(sources);
+    const brokenUrls = await fetchBrokenUrls();
+    const results: Record<string, any> = {};
+
+    const fetches = await Promise.allSettled(
+      sources.map(async (source) => {
+        const result = await fetchSingleSource(source.url, brokenUrls);
+        return { url: source.url, ...result };
+      })
+    );
+
+    for (const result of fetches) {
+      if (result.status === "fulfilled") {
+        const { category, channels } = result.value;
+        if (Object.keys(channels).length > 0) {
+          results[category] = { category, channels };
+        }
+      }
+    }
 
     return new Response(
-      JSON.stringify({ date: new Date().toISOString(), sources: data }),
+      JSON.stringify({ date: new Date().toISOString(), sources: results }),
       {
         headers: {
           ...corsHeaders,
