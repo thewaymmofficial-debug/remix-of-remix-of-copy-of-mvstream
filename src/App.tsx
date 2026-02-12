@@ -39,6 +39,7 @@ import SlidesAdmin from "./pages/admin/SlidesAdmin";
 import PaymentSettingsAdmin from "./pages/admin/PaymentSettingsAdmin";
 import PremiumRequestsAdmin from "./pages/admin/PremiumRequestsAdmin";
 import MovieRequestsAdmin from "./pages/admin/MovieRequestsAdmin";
+import ChannelsAdmin from "./pages/admin/ChannelsAdmin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -106,6 +107,7 @@ const App = () => (
                     <Route path="payment-settings" element={<PaymentSettingsAdmin />} />
                     <Route path="premium-requests" element={<PremiumRequestsAdmin />} />
                     <Route path="movie-requests" element={<MovieRequestsAdmin />} />
+                    <Route path="channels" element={<ChannelsAdmin />} />
                     <Route path="analytics" element={<Analytics />} />
                   </Route>
                   <Route path="*" element={<NotFound />} />
