@@ -101,13 +101,13 @@ export default function ChannelsAdmin() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 mb-6">
-        <Card className="glass">
+      <Card className="bg-card border border-border">
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Total Sources</p>
             <p className="text-2xl font-bold">{totalChannelSources}</p>
           </CardContent>
         </Card>
-        <Card className="glass">
+      <Card className="bg-card border border-border">
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Active Sources</p>
             <p className="text-2xl font-bold text-primary">{enabledSources}</p>
@@ -116,7 +116,7 @@ export default function ChannelsAdmin() {
       </div>
 
       {/* Add New Source */}
-      <Card className="glass mb-6">
+      <Card className="bg-card border border-border mb-6">
         <CardHeader className="px-3 py-3 sm:px-6 sm:py-4">
           <CardTitle className="text-base sm:text-lg flex items-center gap-2">
             <Plus className="w-5 h-5" />
@@ -126,7 +126,7 @@ export default function ChannelsAdmin() {
         <CardContent className="px-3 sm:px-6 space-y-3">
           <div className="space-y-2">
             <Label className="text-sm">GitHub JSON Source URL</Label>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Input
                 value={newSourceUrl}
                 onChange={(e) => setNewSourceUrl(e.target.value)}
@@ -150,7 +150,7 @@ export default function ChannelsAdmin() {
       </Card>
 
       {/* Source List */}
-      <Card className="glass">
+      <Card className="bg-card border border-border">
         <CardHeader className="px-3 py-3 sm:px-6 sm:py-4">
           <CardTitle className="text-base sm:text-lg flex items-center justify-between">
             <span className="flex items-center gap-2">
@@ -169,35 +169,38 @@ export default function ChannelsAdmin() {
           ) : (
             sources.map((source, index) => (
               <div key={index} className="p-3 bg-muted rounded-lg space-y-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Badge variant={source.enabled ? 'default' : 'secondary'} className="shrink-0 text-xs">
-                    <Globe className="w-3 h-3 mr-1" />
-                    {parseCategoryFromUrl(source.url)}
-                  </Badge>
-                  <Badge variant={source.enabled ? 'outline' : 'secondary'} className="text-xs">
-                    {source.enabled ? 'Active' : 'Disabled'}
-                  </Badge>
-                  <div className="flex-1" />
-                  <Switch
-                    checked={source.enabled}
-                    onCheckedChange={() => handleToggle(index)}
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => handleStartEdit(index)}
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive hover:text-destructive"
-                    onClick={() => handleRemove(index)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-wrap min-w-0">
+                    <Badge variant={source.enabled ? 'default' : 'secondary'} className="shrink-0 text-xs">
+                      <Globe className="w-3 h-3 mr-1" />
+                      {parseCategoryFromUrl(source.url)}
+                    </Badge>
+                    <Badge variant={source.enabled ? 'outline' : 'secondary'} className="text-xs">
+                      {source.enabled ? 'Active' : 'Disabled'}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Switch
+                      checked={source.enabled}
+                      onCheckedChange={() => handleToggle(index)}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => handleStartEdit(index)}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={() => handleRemove(index)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
 
                 {editingIndex === index ? (
@@ -217,7 +220,7 @@ export default function ChannelsAdmin() {
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <p className="text-xs text-muted-foreground break-all flex-1">{source.url}</p>
+                    <p className="text-xs text-muted-foreground truncate flex-1" title={source.url}>{source.url}</p>
                     <a
                       href={source.url}
                       target="_blank"
