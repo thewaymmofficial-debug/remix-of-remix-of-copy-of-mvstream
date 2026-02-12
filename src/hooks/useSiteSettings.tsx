@@ -46,14 +46,18 @@ export function useSiteSettings() {
 
       const settings: Record<string, any> = {};
       data?.forEach((item) => {
-        settings[item.key] = item.value;
+        try {
+          settings[item.key] = typeof item.value === 'string' ? JSON.parse(item.value) : item.value;
+        } catch {
+          settings[item.key] = item.value;
+        }
       });
 
       return {
         adminContacts: settings['admin_contacts'] as AdminContacts | undefined,
         subscriptionPrices: settings['subscription_prices'] as SubscriptionPrices | undefined,
         announcement: settings['announcement'] as AnnouncementSettings | undefined,
-        liveTvSources: settings['live_tv_sources'] as LiveTvSource[] | undefined,
+        liveTvSources: (Array.isArray(settings['live_tv_sources']) ? settings['live_tv_sources'] : []) as LiveTvSource[],
       };
     },
   });
