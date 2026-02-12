@@ -59,15 +59,29 @@ export default function TvChannels() {
   });
 
   // Fetch globally broken channels
+  // Load locally reported broken URLs from localStorage for instant filtering
+  const [localBroken, setLocalBroken] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('broken_channels') || '[]');
+    } catch { return []; }
+  });
+
   const { data: brokenChannels } = useQuery({
     queryKey: ['broken-channels'],
     queryFn: async () => {
       const { data } = await supabase.from('broken_channels').select('channel_url');
-      return (data || []).map(r => r.channel_url);
+      const urls = (data || []).map(r => r.channel_url);
+      // Sync to localStorage for persistence across refreshes
+      localStorage.setItem('broken_channels', JSON.stringify(urls));
+      return urls;
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 2 * 60 * 1000,
   });
-  const brokenUrls = useMemo(() => new Set(brokenChannels || []), [brokenChannels]);
+
+  const brokenUrls = useMemo(() => {
+    const merged = new Set([...(brokenChannels || []), ...localBroken]);
+    return merged;
+  }, [brokenChannels, localBroken]);
 
   // Report a broken channel globally
   const reportBroken = useMutation({
@@ -129,6 +143,12 @@ export default function TvChannels() {
   };
 
   const handleStreamError = (url: string, name: string) => {
+    // Immediately hide locally
+    setLocalBroken(prev => {
+      const updated = [...prev, url];
+      localStorage.setItem('broken_channels', JSON.stringify(updated));
+      return updated;
+    });
     if (user) {
       reportBroken.mutate({ url, name });
     }
@@ -174,9 +194,9 @@ export default function TvChannels() {
         </h1>
       </div>
 
-      {/* Inline Player */}
+      {/* Sticky Inline Player */}
       {activeChannel && (
-        <div className="px-4">
+        <div className="sticky top-16 z-40 px-4 bg-background pb-2">
           <LiveTvPlayer
             url={activeChannel.url}
             channelName={activeChannel.name}
