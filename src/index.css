@@ -248,6 +248,49 @@
   .lamp-svg {
     filter: drop-shadow(0 0 6px hsl(45 93% 47% / 0.7)) drop-shadow(0 0 14px hsl(45 93% 47% / 0.4));
   }
+
+  /* Loading spinner logo animation - loops continuously */
+  .logo-loading-loop {
+    animation: loading-logo-cycle 2s ease-in-out infinite;
+  }
+
+  @keyframes logo-fade-up-loop {
+    0% { opacity: 0; transform: translateY(12px); }
+    30% { opacity: 1; transform: translateY(0); }
+    70% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-8px); }
+  }
+
+  @keyframes logo-squish-loop {
+    0%, 25% { transform: scaleY(1) scaleX(1); }
+    35% { transform: scaleY(0.5) scaleX(1.2); }
+    45% { transform: scaleY(1.15) scaleX(0.9); }
+    55% { transform: scaleY(0.95) scaleX(1.02); }
+    65%, 100% { transform: scaleY(1) scaleX(1); }
+  }
+
+  @keyframes logo-lamp-loop {
+    0%, 20% { opacity: 0; transform: translateY(-20px); }
+    35% { opacity: 1; transform: translateY(2px); }
+    42% { transform: translateY(-3px); }
+    50% { opacity: 1; transform: translateY(0); }
+    70% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-20px); }
+  }
+
+  .logo-letter-anim {
+    opacity: 0;
+    animation: logo-fade-up-loop 2s ease-in-out infinite;
+  }
+
+  .logo-squish-anim {
+    animation: logo-fade-up-loop 2s ease-in-out infinite, logo-squish-loop 2s ease-in-out infinite;
+  }
+
+  .logo-lamp-anim {
+    opacity: 0;
+    animation: logo-lamp-loop 2s ease-in-out infinite;
+  }
 }
 
 @layer utilities {
