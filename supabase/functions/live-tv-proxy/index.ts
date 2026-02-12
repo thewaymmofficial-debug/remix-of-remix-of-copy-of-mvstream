@@ -1,14 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
-
-const DEFAULT_SOURCES = [
-  "https://raw.githubusercontent.com/bugsfreeweb/LiveTVCollector/main/LiveTV/Arabic/LiveTV.json",
-];
 
 interface GitHubChannel {
   name: string;
@@ -23,51 +20,105 @@ interface GitHubResponse {
   channels?: Record<string, GitHubChannel[]>;
 }
 
-// Simple in-memory cache
-let cache: { data: GitHubResponse | null; timestamp: number } = {
+interface SourceEntry {
+  url: string;
+  enabled: boolean;
+}
+
+interface SourceResult {
+  category: string;
+  channels: Record<string, GitHubChannel[]>;
+}
+
+// Cache keyed on source URLs hash
+let cache: { data: any; urlsHash: string; timestamp: number } = {
   data: null,
+  urlsHash: "",
   timestamp: 0,
 };
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL = 5 * 60 * 1000;
 
-async function fetchAndMergeSources(sourceUrls: string[]): Promise<GitHubResponse> {
+function parseCategoryFromUrl(url: string): string {
+  try {
+    const pathname = new URL(url).pathname;
+    const segments = pathname.split("/").filter(Boolean);
+    // Find the last segment (filename) and take the two before it
+    if (segments.length >= 3) {
+      const type = segments[segments.length - 3]; // e.g. "LiveTV", "Movies"
+      const country = segments[segments.length - 2]; // e.g. "Arabic", "Thailand"
+      const formattedType = type.replace(/([a-z])([A-Z])/g, "$1 $2"); // "LiveTV" -> "Live TV"
+      return `${formattedType} - ${country}`;
+    }
+    if (segments.length >= 2) {
+      const type = segments[segments.length - 2];
+      const formattedType = type.replace(/([a-z])([A-Z])/g, "$1 $2");
+      return formattedType;
+    }
+    return "Other";
+  } catch {
+    return "Other";
+  }
+}
+
+async function fetchSources(): Promise<SourceEntry[]> {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  const { data, error } = await supabase
+    .from("site_settings")
+    .select("value")
+    .eq("key", "live_tv_sources")
+    .single();
+
+  if (error || !data?.value) {
+    return [
+      {
+        url: "https://raw.githubusercontent.com/bugsfreeweb/LiveTVCollector/main/LiveTV/Arabic/LiveTV.json",
+        enabled: true,
+      },
+    ];
+  }
+
+  try {
+    const parsed = typeof data.value === "string" ? JSON.parse(data.value) : data.value;
+    return (parsed as SourceEntry[]).filter((s) => s.enabled);
+  } catch {
+    return [];
+  }
+}
+
+async function fetchAllSources(
+  sources: SourceEntry[]
+): Promise<Record<string, SourceResult>> {
+  const urlsHash = sources.map((s) => s.url).sort().join("|");
   const now = Date.now();
 
-  // Return cache if still valid
-  if (cache.data && now - cache.timestamp < CACHE_TTL) {
+  if (cache.data && cache.urlsHash === urlsHash && now - cache.timestamp < CACHE_TTL) {
     return cache.data;
   }
 
-  const mergedChannels: Record<string, GitHubChannel[]> = {};
+  const results: Record<string, SourceResult> = {};
 
-  const results = await Promise.allSettled(
-    sourceUrls.map(async (url) => {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
-      return (await res.json()) as GitHubResponse;
+  const fetches = await Promise.allSettled(
+    sources.map(async (source) => {
+      const category = parseCategoryFromUrl(source.url);
+      const res = await fetch(source.url);
+      if (!res.ok) throw new Error(`Failed: ${res.status}`);
+      const json = (await res.json()) as GitHubResponse;
+      return { category, channels: json.channels || {} };
     })
   );
 
-  for (const result of results) {
-    if (result.status === "fulfilled" && result.value?.channels) {
-      for (const [category, channels] of Object.entries(result.value.channels)) {
-        if (!mergedChannels[category]) {
-          mergedChannels[category] = [];
-        }
-        mergedChannels[category].push(...channels);
-      }
+  for (const result of fetches) {
+    if (result.status === "fulfilled") {
+      const { category, channels } = result.value;
+      results[category] = { category, channels };
     }
   }
 
-  const response: GitHubResponse = {
-    date: new Date().toISOString(),
-    channels: mergedChannels,
-  };
-
-  // Update cache
-  cache = { data: response, timestamp: now };
-
-  return response;
+  cache = { data: results, urlsHash, timestamp: now };
+  return results;
 }
 
 serve(async (req) => {
@@ -76,21 +127,19 @@ serve(async (req) => {
   }
 
   try {
-    const url = new URL(req.url);
-    const sourcesParam = url.searchParams.get("sources");
-    const sourceUrls = sourcesParam
-      ? sourcesParam.split(",").map((s) => s.trim()).filter(Boolean)
-      : DEFAULT_SOURCES;
+    const sources = await fetchSources();
+    const data = await fetchAllSources(sources);
 
-    const data = await fetchAndMergeSources(sourceUrls);
-
-    return new Response(JSON.stringify(data), {
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "application/json",
-        "Cache-Control": "public, max-age=300",
-      },
-    });
+    return new Response(
+      JSON.stringify({ date: new Date().toISOString(), sources: data }),
+      {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+          "Cache-Control": "public, max-age=300",
+        },
+      }
+    );
   } catch (error) {
     console.error("live-tv-proxy error:", error);
     return new Response(

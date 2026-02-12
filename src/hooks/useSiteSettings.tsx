@@ -29,6 +29,11 @@ export interface AnnouncementSettings {
   opacity: number;
 }
 
+export interface LiveTvSource {
+  url: string;
+  enabled: boolean;
+}
+
 export function useSiteSettings() {
   return useQuery({
     queryKey: ['site-settings'],
@@ -48,6 +53,7 @@ export function useSiteSettings() {
         adminContacts: settings['admin_contacts'] as AdminContacts | undefined,
         subscriptionPrices: settings['subscription_prices'] as SubscriptionPrices | undefined,
         announcement: settings['announcement'] as AnnouncementSettings | undefined,
+        liveTvSources: settings['live_tv_sources'] as LiveTvSource[] | undefined,
       };
     },
   });
