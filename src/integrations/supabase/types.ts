@@ -145,6 +145,45 @@ export type Database = {
         }
         Relationships: []
       }
+      football_videos: {
+        Row: {
+          category: string
+          created_at: string
+          download_url: string | null
+          id: string
+          is_live: boolean | null
+          is_premium: boolean | null
+          stream_url: string | null
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          download_url?: string | null
+          id?: string
+          is_live?: boolean | null
+          is_premium?: boolean | null
+          stream_url?: string | null
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          download_url?: string | null
+          id?: string
+          is_live?: boolean | null
+          is_premium?: boolean | null
+          stream_url?: string | null
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       info_slides: {
         Row: {
           accent_color: string
