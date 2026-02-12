@@ -1,49 +1,59 @@
 
 
-# Auto-Hide Broken/CORS Channels
+# Pixar-Style "CINEVERSE" Logo Animation
 
-## Problem
-Some channels in the list have stream URLs that are blocked by CORS or are offline. When users try to play them, they see an error, which is confusing.
+Inspired by Pixar's iconic lamp animation, we'll create a playful text logo animation where a spotlight/lamp-like element bounces onto one of the letters, squishing it down -- then the full text settles into place.
 
-## Approach
-Track channels that fail to play on the client side, then automatically hide them from the list. This is fast, doesn't slow down the edge function, and gives users a clean experience.
+## How It Works
 
-## Changes
+1. The letters "C-I-N-E-V-E-R-S-E" animate in with a staggered fade-up effect
+2. A small spotlight icon (or a star/lamp shape) drops from above and "lands" on the letter "I", squishing it briefly
+3. The "I" compresses, then springs back to normal height
+4. The spotlight settles on top of the "I" and glows softly
+5. The animation plays once on page load (not on every navigation)
 
-### 1. Edge Function: Server-side URL validation (`supabase/functions/live-tv-proxy/index.ts`)
-- After fetching channel data from GitHub sources, perform a quick HEAD request (2-second timeout) on each channel URL
-- Filter out channels whose URLs return errors or are unreachable
-- This happens server-side (no CORS issues) and results are cached for 5 minutes, so performance impact is minimal
+## Technical Approach
 
-### 2. Client-side fallback: Track failed channels (`src/pages/TvChannels.tsx`)
-- When a channel fails to play (CORS or network error in the player), add its URL to a local "broken channels" set stored in React state
-- Filter those channels out of the displayed list so users don't see them again during the session
-- Pass an `onError` callback from TvChannels into the LiveTvPlayer
+### 1. Create a new `CineverseLogo` component (`src/components/CineverseLogo.tsx`)
 
-### 3. Player error callback (`src/components/LiveTvPlayer.tsx`)
-- Add an optional `onError` prop that fires when a fatal network/CORS error occurs
-- This lets the parent component (TvChannels) know which channel failed
+- Split "CINEVERSE" into individual letter `<span>` elements
+- Each letter gets a staggered `animation-delay` for a sequential fade-up entrance
+- The "I" letter has a special squish keyframe (scaleY compress then bounce back)
+- A small lamp/spotlight SVG element animates downward onto the "I" with a bounce
+- Use `sessionStorage` to track if animation already played this session, so it only runs once on first load (not every route change)
 
-## Technical Details
+### 2. Add keyframes to `tailwind.config.ts`
 
-**Edge function validation (server-side):**
+- `letter-fade-up`: Letters fade and slide up into place
+- `lamp-drop`: Lamp drops from above with a bounce easing
+- `letter-squish`: The "I" compresses vertically then springs back
+- `lamp-glow`: Subtle glow pulse on the lamp after landing
+
+### 3. Update `Navbar.tsx`
+
+- Replace the plain `<span>CINEVERSE</span>` with the new `<CineverseLogo />` component
+- No other navbar changes needed
+
+### 4. Add supporting CSS in `src/index.css`
+
+- Lamp glow effect using a small `box-shadow` or `text-shadow`
+- Ensure the animation doesn't cause layout shift (fixed dimensions on the logo container)
+
+## Visual Timeline
+
 ```text
-For each channel URL:
-  - Send HEAD request with 2s timeout
-  - If request fails or returns error status -> exclude channel
-  - Results cached with existing 5-min cache
+Time:  0ms    100ms   200ms   300ms   400ms   500ms   600ms   700ms   800ms
+       |-------|-------|-------|-------|-------|-------|-------|-------|
+Letters: C...I...N...E...V...E...R...S...E  (staggered fade-up)
+Lamp:                          [drops down--->bounces on "I"]
+"I":                                         [squish---spring back]
+Glow:                                                  [soft pulse]
 ```
 
-**Client-side tracking:**
-```text
-- State: brokenUrls = Set<string>
-- On player error: add channel URL to brokenUrls
-- Filter channel lists to exclude brokenUrls
-- Player closes automatically on error
-```
+## Files to Create/Edit
 
-**Files to modify:**
-- `supabase/functions/live-tv-proxy/index.ts` - Add URL validation
-- `src/components/LiveTvPlayer.tsx` - Add onError callback prop
-- `src/pages/TvChannels.tsx` - Track broken channels and filter them out
+- **New**: `src/components/CineverseLogo.tsx` -- animated logo component
+- **Edit**: `src/components/Navbar.tsx` -- swap plain text for new component
+- **Edit**: `tailwind.config.ts` -- add new keyframes and animations
+- **Edit**: `src/index.css` -- add lamp glow styles
 
