@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Tv, Plus, Trash2, Globe, Save, Loader2, ExternalLink, Pencil, X, Check } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -36,11 +36,13 @@ export default function ChannelsAdmin() {
   const [newSourceUrl, setNewSourceUrl] = useState('');
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editUrl, setEditUrl] = useState('');
+  const initialLoadDone = useRef(false);
 
   useEffect(() => {
-    if (settings?.liveTvSources) {
+    if (settings?.liveTvSources && !initialLoadDone.current) {
       const s = settings.liveTvSources;
       setSources(Array.isArray(s) ? s : []);
+      initialLoadDone.current = true;
     }
   }, [settings]);
 
