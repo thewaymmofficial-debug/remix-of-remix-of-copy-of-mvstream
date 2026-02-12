@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, Play, Tv, ChevronDown, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -191,13 +192,7 @@ export default function TvChannels() {
       {/* Content */}
       <div className="px-4 pb-24">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-32 gap-4">
-            <div className="relative w-16 h-16">
-              <div className="absolute inset-0 rounded-full border-4 border-muted" />
-              <div className="absolute inset-0 rounded-full border-4 border-t-primary animate-spin" />
-            </div>
-            <p className="text-sm text-muted-foreground animate-pulse">Loading channels...</p>
-          </div>
+          <LoadingSpinner message="Loading channels..." />
         ) : showFavorites ? (
           <FadeIn>
             {favoriteChannelsList.length === 0 ? (
