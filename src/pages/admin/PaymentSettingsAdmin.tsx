@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { CreditCard, Plus, Trash2, Edit, Loader2, Save } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -61,11 +62,7 @@ export default function PaymentSettingsAdmin() {
   };
 
   if (methodsLoading || plansLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <LoadingSpinner message="Loading payment settings..." />;
   }
 
   return (

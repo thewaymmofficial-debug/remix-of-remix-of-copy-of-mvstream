@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Copy, Upload, FileText, Moon, Sun, HelpCircle, Shield, Gem, Loader2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -141,9 +142,7 @@ export default function PremiumRenewal() {
       </header>
 
       {isLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-        </div>
+        <LoadingSpinner message="Loading..." />
       ) : (
         <div className="px-4 py-6 max-w-lg mx-auto space-y-6">
 

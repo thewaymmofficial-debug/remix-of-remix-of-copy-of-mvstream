@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ArrowLeft, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Navbar } from '@/components/Navbar';
@@ -21,16 +22,7 @@ export default function ActorDetail() {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <div className="pt-20 px-4">
-          <div className="animate-pulse space-y-4">
-            <div className="h-8 w-48 bg-muted rounded" />
-            <div className="grid grid-cols-2 gap-3">
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className="aspect-[2/3] bg-muted rounded-lg" />
-              ))}
-            </div>
-          </div>
-        </div>
+        <LoadingSpinner message="Loading actor..." />
       </div>
     );
   }

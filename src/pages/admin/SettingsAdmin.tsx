@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Settings, Save, Loader2, Megaphone, ChevronDown, CreditCard, Phone, Tv, Plus, Trash2, Globe } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -137,11 +138,7 @@ export default function SettingsAdmin() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <LoadingSpinner message="Loading settings..." />;
   }
 
   return (

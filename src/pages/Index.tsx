@@ -10,6 +10,7 @@ import { LoginRequiredModal } from '@/components/LoginRequiredModal';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { MovieQuickPreview } from '@/components/MovieQuickPreview';
 import { SkeletonRow } from '@/components/SkeletonCard';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { FadeIn } from '@/components/FadeIn';
 import { AnnouncementBanner } from '@/components/AnnouncementBanner';
 import { CategoryGrid } from '@/components/CategoryGrid';
@@ -176,13 +177,7 @@ const Index = () => {
       {isFiltering && (
       <div className="py-8 relative z-30 bg-background">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-32 gap-4">
-            <div className="relative w-16 h-16">
-              <div className="absolute inset-0 rounded-full border-4 border-muted" />
-              <div className="absolute inset-0 rounded-full border-4 border-t-primary animate-spin" />
-            </div>
-            <p className="text-sm text-muted-foreground animate-pulse">Loading movies...</p>
-          </div>
+          <LoadingSpinner message="Loading movies..." />
         ) : isError ? (
           <div className="text-center py-20 px-4">
             <p className="text-destructive text-lg mb-4">
