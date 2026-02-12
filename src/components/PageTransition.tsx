@@ -1,6 +1,5 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useRef, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { cn } from '@/lib/utils';
 
 interface PageTransitionProps {
   children: ReactNode;
@@ -8,34 +7,44 @@ interface PageTransitionProps {
 
 export function PageTransition({ children }: PageTransitionProps) {
   const location = useLocation();
+  const [stage, setStage] = useState<'visible' | 'fading-out' | 'fading-in'>('visible');
   const [displayChildren, setDisplayChildren] = useState(children);
-  const [transitionStage, setTransitionStage] = useState<'enter' | 'exit'>('enter');
+  const prevPathRef = useRef(location.pathname);
 
   useEffect(() => {
-    if (children !== displayChildren) {
-      setTransitionStage('exit');
+    if (location.pathname !== prevPathRef.current) {
+      prevPathRef.current = location.pathname;
+      setStage('fading-out');
+    } else {
+      // Same path, just update children directly
+      setDisplayChildren(children);
     }
-  }, [children, displayChildren]);
+  }, [location.pathname, children]);
 
   useEffect(() => {
-    if (transitionStage === 'exit') {
+    if (stage === 'fading-out') {
       const timeout = setTimeout(() => {
         setDisplayChildren(children);
-        setTransitionStage('enter');
-      }, 150); // Match exit animation duration
-
+        window.scrollTo(0, 0);
+        setStage('fading-in');
+      }, 120);
       return () => clearTimeout(timeout);
     }
-  }, [transitionStage, children]);
+    if (stage === 'fading-in') {
+      const timeout = setTimeout(() => setStage('visible'), 200);
+      return () => clearTimeout(timeout);
+    }
+  }, [stage, children]);
 
   return (
     <div
-      className={cn(
-        'transition-all duration-150 ease-out',
-        transitionStage === 'enter' && 'animate-fade-in opacity-100',
-        transitionStage === 'exit' && 'opacity-0'
-      )}
-      key={location.pathname}
+      style={{
+        opacity: stage === 'fading-out' ? 0 : 1,
+        transform: stage === 'fading-out' ? 'translateY(6px)' : stage === 'fading-in' ? 'translateY(0)' : undefined,
+        transition: stage === 'fading-out'
+          ? 'opacity 120ms ease-out, transform 120ms ease-out'
+          : 'opacity 200ms ease-out, transform 200ms ease-out',
+      }}
     >
       {displayChildren}
     </div>
