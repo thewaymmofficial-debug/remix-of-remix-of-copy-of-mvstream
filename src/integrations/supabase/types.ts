@@ -112,6 +112,39 @@ export type Database = {
           },
         ]
       }
+      favorite_channels: {
+        Row: {
+          channel_group: string | null
+          channel_logo: string | null
+          channel_name: string
+          channel_url: string
+          created_at: string
+          id: string
+          source_category: string | null
+          user_id: string
+        }
+        Insert: {
+          channel_group?: string | null
+          channel_logo?: string | null
+          channel_name: string
+          channel_url: string
+          created_at?: string
+          id?: string
+          source_category?: string | null
+          user_id: string
+        }
+        Update: {
+          channel_group?: string | null
+          channel_logo?: string | null
+          channel_name?: string
+          channel_url?: string
+          created_at?: string
+          id?: string
+          source_category?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       info_slides: {
         Row: {
           accent_color: string

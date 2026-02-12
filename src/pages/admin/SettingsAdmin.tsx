@@ -50,7 +50,7 @@ export default function SettingsAdmin() {
     announcement: true,
     contacts: false,
     prices: false,
-    liveTv: false,
+    liveTv: true,
   });
 
   // Load settings into form when fetched
