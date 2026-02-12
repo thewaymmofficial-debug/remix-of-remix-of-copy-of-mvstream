@@ -29,7 +29,7 @@ export default function Football() {
   }, [videos, activeCategory]);
 
   const liveVideos = useMemo(() => filteredVideos.filter(v => v.is_live), [filteredVideos]);
-  const highlightVideos = useMemo(() => filteredVideos.filter(v => !v.is_live), [filteredVideos]);
+  const highlightVideos = useMemo(() => filteredVideos.filter(v => !v.is_live && v.show_in_highlights), [filteredVideos]);
 
   const handlePlay = (video: FootballVideo) => {
     if (video.is_premium && !isPremium) {

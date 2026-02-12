@@ -32,6 +32,7 @@ const defaultForm = {
   category: 'Highlights',
   is_premium: false,
   is_live: false,
+  show_in_highlights: false,
 };
 
 export default function FootballAdmin() {
@@ -61,6 +62,7 @@ export default function FootballAdmin() {
       category: video.category,
       is_premium: video.is_premium,
       is_live: video.is_live,
+      show_in_highlights: video.show_in_highlights,
     });
     setDialogOpen(true);
   };
@@ -245,6 +247,10 @@ export default function FootballAdmin() {
             <div className="flex items-center justify-between">
               <Label>Live Stream</Label>
               <Switch checked={form.is_live} onCheckedChange={(v) => setForm({ ...form, is_live: v })} />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label>Show in Highlights</Label>
+              <Switch checked={form.show_in_highlights} onCheckedChange={(v) => setForm({ ...form, show_in_highlights: v })} />
             </div>
             <div className="flex items-center justify-between">
               <Label>Premium Only</Label>

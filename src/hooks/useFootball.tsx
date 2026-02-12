@@ -10,6 +10,7 @@ export interface FootballVideo {
   category: string;
   is_premium: boolean;
   is_live: boolean;
+  show_in_highlights: boolean;
   created_at: string;
   updated_at: string;
 }
