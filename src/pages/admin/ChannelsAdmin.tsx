@@ -125,12 +125,12 @@ export default function ChannelsAdmin() {
         </CardHeader>
         <CardContent className="px-3 sm:px-6 space-y-3">
           <div className="space-y-2">
-            <Label className="text-sm">GitHub JSON Source URL</Label>
+            <Label className="text-sm">Source URL (JSON or M3U)</Label>
             <div className="flex flex-col sm:flex-row gap-2">
               <Input
                 value={newSourceUrl}
                 onChange={(e) => setNewSourceUrl(e.target.value)}
-                placeholder="https://raw.githubusercontent.com/..."
+                placeholder="https://...LiveTV.json or playlist.m3u8"
                 className="text-sm flex-1 min-w-0"
                 onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
               />
@@ -142,7 +142,7 @@ export default function ChannelsAdmin() {
             {newSourceUrl.trim() && (
               <Badge variant="outline" className="text-xs">
                 <Globe className="w-3 h-3 mr-1" />
-                Auto-category: {parseCategoryFromUrl(newSourceUrl)}
+                {newSourceUrl.trim().toLowerCase().includes('.m3u') ? 'M3U Playlist' : `Auto-category: ${parseCategoryFromUrl(newSourceUrl)}`}
               </Badge>
             )}
           </div>
@@ -164,7 +164,7 @@ export default function ChannelsAdmin() {
             <div className="text-center py-8">
               <Tv className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
               <p className="text-sm text-muted-foreground">No sources added yet</p>
-              <p className="text-xs text-muted-foreground mt-1">Add a GitHub JSON URL above to get started</p>
+              <p className="text-xs text-muted-foreground mt-1">Add a JSON or M3U playlist URL above to get started</p>
             </div>
           ) : (
             sources.map((source, index) => (
@@ -173,7 +173,7 @@ export default function ChannelsAdmin() {
                   <div className="flex items-center gap-2 flex-wrap min-w-0">
                     <Badge variant={source.enabled ? 'default' : 'secondary'} className="shrink-0 text-xs">
                       <Globe className="w-3 h-3 mr-1" />
-                      {parseCategoryFromUrl(source.url)}
+                      {source.url.toLowerCase().includes('.m3u') ? 'M3U Playlist' : parseCategoryFromUrl(source.url)}
                     </Badge>
                     <Badge variant={source.enabled ? 'outline' : 'secondary'} className="text-xs">
                       {source.enabled ? 'Active' : 'Disabled'}
