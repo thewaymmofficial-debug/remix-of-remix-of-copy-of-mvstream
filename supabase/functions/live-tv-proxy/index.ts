@@ -23,6 +23,7 @@ interface GitHubResponse {
 interface SourceEntry {
   url: string;
   enabled: boolean;
+  label?: string;
 }
 
 // Per-source cache
@@ -132,15 +133,17 @@ function filterChannels(
 // Fetch a single source with caching
 async function fetchSingleSource(
   sourceUrl: string,
-  brokenUrls: Set<string>
+  brokenUrls: Set<string>,
+  label?: string
 ): Promise<{ category: string; channels: Record<string, GitHubChannel[]> }> {
+  const cacheKey = `${sourceUrl}::${label || ''}`;
   const now = Date.now();
-  const cached = sourceCache[sourceUrl];
+  const cached = sourceCache[cacheKey];
   if (cached && now - cached.timestamp < CACHE_TTL) {
     return cached.data;
   }
 
-  const category = parseCategoryFromUrl(sourceUrl);
+  const category = label || parseCategoryFromUrl(sourceUrl);
   const res = await fetch(sourceUrl);
   if (!res.ok) throw new Error(`Failed to fetch source: ${res.status}`);
   const text = await res.text();
@@ -154,7 +157,7 @@ async function fetchSingleSource(
   }
 
   const result = { category, channels: validChannels };
-  sourceCache[sourceUrl] = { data: result, timestamp: now };
+  sourceCache[cacheKey] = { data: result, timestamp: now };
   return result;
 }
 
@@ -166,12 +169,13 @@ serve(async (req) => {
   try {
     const url = new URL(req.url);
     const sourceUrl = url.searchParams.get("sourceUrl");
+    const labelParam = url.searchParams.get("label");
 
     // Mode 1: Fetch just the list of enabled sources (lightweight)
     if (url.searchParams.get("listSources") === "true") {
       const sources = await fetchSources();
       return new Response(
-        JSON.stringify({ sources: sources.map((s) => s.url) }),
+        JSON.stringify({ sources: sources.map((s) => ({ url: s.url, label: s.label || '' })) }),
         {
           headers: {
             ...corsHeaders,
@@ -185,7 +189,7 @@ serve(async (req) => {
     // Mode 2: Fetch a single source by URL
     if (sourceUrl) {
       const brokenUrls = await fetchBrokenUrls();
-      const result = await fetchSingleSource(sourceUrl, brokenUrls);
+      const result = await fetchSingleSource(sourceUrl, brokenUrls, labelParam || undefined);
       return new Response(
         JSON.stringify({ date: new Date().toISOString(), ...result }),
         {
@@ -198,14 +202,14 @@ serve(async (req) => {
       );
     }
 
-    // Mode 3 (legacy): Fetch ALL sources at once — kept for backward compat
+    // Mode 3 (legacy): Fetch ALL sources at once
     const sources = await fetchSources();
     const brokenUrls = await fetchBrokenUrls();
     const results: Record<string, any> = {};
 
     const fetches = await Promise.allSettled(
       sources.map(async (source) => {
-        const result = await fetchSingleSource(source.url, brokenUrls);
+        const result = await fetchSingleSource(source.url, brokenUrls, source.label || undefined);
         return { url: source.url, ...result };
       })
     );

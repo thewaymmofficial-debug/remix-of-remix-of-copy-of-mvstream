@@ -46,10 +46,15 @@ export default function ChannelsAdmin() {
     }
   }, [settings]);
 
+  const [newSourceLabel, setNewSourceLabel] = useState('');
+
   const handleAdd = () => {
     if (!newSourceUrl.trim()) return;
-    setSources([...sources, { url: newSourceUrl.trim(), enabled: true }]);
+    const newSource: LiveTvSource = { url: newSourceUrl.trim(), enabled: true };
+    if (newSourceLabel.trim()) newSource.label = newSourceLabel.trim();
+    setSources([...sources, newSource]);
     setNewSourceUrl('');
+    setNewSourceLabel('');
   };
 
   const handleRemove = (index: number) => {
@@ -134,18 +139,29 @@ export default function ChannelsAdmin() {
                 className="text-sm flex-1 min-w-0"
                 onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
               />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-sm">Label (optional - custom category name)</Label>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Input
+                value={newSourceLabel}
+                onChange={(e) => setNewSourceLabel(e.target.value)}
+                placeholder="e.g. Myanmar TV, Sports HD"
+                className="text-sm flex-1 min-w-0"
+              />
               <Button size="sm" onClick={handleAdd} disabled={!newSourceUrl.trim()}>
                 <Plus className="w-4 h-4 mr-1" />
                 Add
               </Button>
             </div>
-            {newSourceUrl.trim() && (
-              <Badge variant="outline" className="text-xs">
-                <Globe className="w-3 h-3 mr-1" />
-                {newSourceUrl.trim().toLowerCase().includes('.m3u') ? 'M3U Playlist' : `Auto-category: ${parseCategoryFromUrl(newSourceUrl)}`}
-              </Badge>
-            )}
           </div>
+          {newSourceUrl.trim() && (
+            <Badge variant="outline" className="text-xs">
+              <Globe className="w-3 h-3 mr-1" />
+              {newSourceLabel.trim() ? `Label: ${newSourceLabel.trim()}` : newSourceUrl.trim().toLowerCase().includes('.m3u') ? 'M3U Playlist' : `Auto-category: ${parseCategoryFromUrl(newSourceUrl)}`}
+            </Badge>
+          )}
         </CardContent>
       </Card>
 
@@ -173,7 +189,7 @@ export default function ChannelsAdmin() {
                   <div className="flex items-center gap-2 flex-wrap min-w-0">
                     <Badge variant={source.enabled ? 'default' : 'secondary'} className="shrink-0 text-xs">
                       <Globe className="w-3 h-3 mr-1" />
-                      {source.url.toLowerCase().includes('.m3u') ? 'M3U Playlist' : parseCategoryFromUrl(source.url)}
+                      {source.label || (source.url.toLowerCase().includes('.m3u') ? 'M3U Playlist' : parseCategoryFromUrl(source.url))}
                     </Badge>
                     <Badge variant={source.enabled ? 'outline' : 'secondary'} className="text-xs">
                       {source.enabled ? 'Active' : 'Disabled'}

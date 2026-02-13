@@ -49,8 +49,8 @@ export default function TvChannels() {
 
   const favoriteUrls = useMemo(() => new Set(favorites.map(f => f.channel_url)), [favorites]);
 
-  // Step 1: Fetch the list of source URLs (lightweight)
-  const { data: sourceUrls, isLoading: isLoadingSources, isError: isSourcesError, refetch: refetchSources } = useQuery({
+  // Step 1: Fetch the list of source URLs with labels (lightweight)
+  const { data: sourceEntries, isLoading: isLoadingSources, isError: isSourcesError, refetch: refetchSources } = useQuery({
     queryKey: ['live-tv-source-list'],
     queryFn: async () => {
       const res = await fetch(
@@ -64,7 +64,7 @@ export default function TvChannels() {
       );
       if (!res.ok) throw new Error('Failed to fetch source list');
       const json = await res.json();
-      return (json.sources || []) as string[];
+      return (json.sources || []) as { url: string; label: string }[];
     },
     staleTime: 5 * 60 * 1000,
   });
@@ -74,11 +74,12 @@ export default function TvChannels() {
   const [loadedBatch, setLoadedBatch] = useState(1);
 
   const sourceQueries = useQueries({
-    queries: (sourceUrls || []).map((url, index) => ({
-      queryKey: ['live-tv-source', url],
+    queries: (sourceEntries || []).map((entry, index) => ({
+      queryKey: ['live-tv-source', entry.url],
       queryFn: async (): Promise<SourceResult> => {
+        const labelParam = entry.label ? `&label=${encodeURIComponent(entry.label)}` : '';
         const res = await fetch(
-          `${SUPABASE_FUNCTIONS_URL}/live-tv-proxy?sourceUrl=${encodeURIComponent(url)}`,
+          `${SUPABASE_FUNCTIONS_URL}/live-tv-proxy?sourceUrl=${encodeURIComponent(entry.url)}${labelParam}`,
           {
             headers: {
               'apikey': SUPABASE_ANON_KEY,
@@ -86,7 +87,7 @@ export default function TvChannels() {
             },
           }
         );
-        if (!res.ok) throw new Error(`Failed to fetch source: ${url}`);
+        if (!res.ok) throw new Error(`Failed to fetch source: ${entry.url}`);
         const json = await res.json();
         return { category: json.category, channels: json.channels };
       },
@@ -97,7 +98,7 @@ export default function TvChannels() {
   });
 
   // Reset batch when source list changes (e.g. admin adds new sources)
-  const sourceCount = sourceUrls?.length ?? 0;
+  const sourceCount = sourceEntries?.length ?? 0;
   useEffect(() => {
     setLoadedBatch(1);
   }, [sourceCount]);
@@ -207,9 +208,9 @@ export default function TvChannels() {
     return count;
   }, [loadedSources, brokenUrls]);
 
-  const isLoading = isLoadingSources || (sourceUrls && sourceUrls.length > 0 && sourceQueries.every(q => q.isLoading));
+  const isLoading = isLoadingSources || (sourceEntries && sourceEntries.length > 0 && sourceQueries.every(q => q.isLoading));
   const someLoading = sourceQueries.some(q => q.isLoading);
-  const isError = isSourcesError && !sourceUrls;
+  const isError = isSourcesError && !sourceEntries;
 
   const handlePlay = (channel: Channel) => {
     setActiveChannel(channel);
@@ -393,7 +394,7 @@ export default function TvChannels() {
         ) : (
           <FadeIn>
             <div className="space-y-4">
-              {Object.entries(loadedSources).map(([sourceCategory, sourceData]) => {
+              {Object.entries(loadedSources).sort(([a], [b]) => a.localeCompare(b)).map(([sourceCategory, sourceData]) => {
                 const channelCount = Object.values(sourceData.channels)
                   .flat()
                   .filter(c => !brokenUrls.has(c.url)).length;
