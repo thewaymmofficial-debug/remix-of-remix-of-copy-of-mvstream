@@ -1,22 +1,35 @@
 
 
-# Accordion-style Collapsible for TV Channel Categories
+# Speed Up TV Channel Category Opening
 
-## Change
-Update the `toggleSource` function in `TvChannels.tsx` so that opening one category automatically closes all others (accordion behavior).
+## Problem
+When opening a category, all channel cards render at once (some categories have 100+ channels across groups). Additionally, the `ChannelCard` component re-renders on every state change because it's not memoized.
 
-## Technical Detail
-In `src/pages/TvChannels.tsx`, replace the `toggleSource` function (currently toggles individual keys independently) with logic that sets only the clicked source as open:
+## Solution
 
-```typescript
-const toggleSource = (key: string) => {
-  setOpenSources((prev) => ({
-    [key]: !prev[key],  // close all others, toggle clicked one
-  }));
-};
-```
+### 1. Memoize `ChannelCard` with `React.memo`
+Wrap the `ChannelCard` function component in `React.memo` so it only re-renders when its props actually change. This prevents unnecessary re-renders of all visible cards when toggling categories or interacting with one card.
 
-This replaces the current spread (`...prev`) with a fresh object containing only the toggled key, ensuring only one category can be open at a time.
+### 2. Reduce initial channel render per group
+Lower `CHANNELS_PER_GROUP` from 30 to 12 so fewer cards render on first open. Users can still tap "Show all" to see the rest. This cuts initial DOM nodes by ~60%.
 
-One file changed: `src/pages/TvChannels.tsx` (1 line edit).
+### 3. Virtualize nothing (keep it simple)
+Since we already cap per-group rendering and the accordion ensures only one category is open, these two changes should be sufficient without adding a virtualization library.
+
+---
+
+## Technical Details
+
+**File: `src/pages/TvChannels.tsx`**
+
+- Change `CHANNELS_PER_GROUP` from `30` to `12`
+- Wrap `ChannelCard` with `React.memo`:
+  ```typescript
+  const ChannelCard = React.memo(function ChannelCard({ ... }) {
+    return ( ... );
+  });
+  ```
+- Memoize `handlePlay` and `handleToggleFavorite` callbacks with `useCallback` so memo'd cards don't receive new function references each render
+
+One file changed, ~10 lines modified.
 
