@@ -64,7 +64,9 @@ export default function TvChannels() {
       );
       if (!res.ok) throw new Error('Failed to fetch source list');
       const json = await res.json();
-      return (json.sources || []) as { url: string; label: string }[];
+      const raw = json.sources || [];
+      // Handle both old format (string[]) and new format ({url, label}[])
+      return raw.map((s: any) => typeof s === 'string' ? { url: s, label: '' } : { url: s.url, label: s.label || '' }) as { url: string; label: string }[];
     },
     staleTime: 5 * 60 * 1000,
   });
