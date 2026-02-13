@@ -27,23 +27,25 @@ export function LiveTvPlayer({ url, channelName, onClose, onError }: LiveTvPlaye
 
     // Native HTML5 playback for .mp4 and other non-HLS URLs
     if (!isHLSUrl(url)) {
+      video.crossOrigin = 'anonymous';
       video.src = url;
 
-      const onCanPlay = () => {
+      const handleCanPlay = () => {
         setLoading(false);
         video.play().catch(() => {});
       };
-      const onError = () => {
+      const handleNativeError = () => {
         setLoading(false);
         setError('Video failed to load.');
+        onError?.(url, channelName);
       };
 
-      video.addEventListener('canplay', onCanPlay);
-      video.addEventListener('error', onError);
+      video.addEventListener('canplay', handleCanPlay);
+      video.addEventListener('error', handleNativeError);
 
       return () => {
-        video.removeEventListener('canplay', onCanPlay);
-        video.removeEventListener('error', onError);
+        video.removeEventListener('canplay', handleCanPlay);
+        video.removeEventListener('error', handleNativeError);
         video.src = '';
       };
     }
