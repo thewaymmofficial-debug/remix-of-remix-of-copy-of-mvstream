@@ -69,6 +69,31 @@ function parseM3U(text: string): Record<string, GitHubChannel[]> {
   return channels;
 }
 
+function parseCustomText(text: string): Record<string, GitHubChannel[]> {
+  const channels: Record<string, GitHubChannel[]> = {};
+  let currentGroup = 'Other';
+
+  for (const block of text.split(/^-{5,}$/m)) {
+    const lines = block.trim().split('\n');
+    if (!lines[0]) continue;
+    let name = '', url = '', logo = '';
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('Group:')) currentGroup = trimmed.slice(6).trim() || 'Other';
+      else if (trimmed.startsWith('Name:')) name = trimmed.slice(5).trim();
+      else if (trimmed.startsWith('URL:')) url = trimmed.slice(4).trim();
+      else if (trimmed.startsWith('Logo:')) logo = trimmed.slice(5).trim();
+    }
+
+    if (name && url) {
+      if (!channels[currentGroup]) channels[currentGroup] = [];
+      channels[currentGroup].push({ name, logo, url, group: currentGroup });
+    }
+  }
+  return channels;
+}
+
 function parseCategoryFromUrl(url: string): string {
   try {
     const pathname = new URL(url).pathname;
@@ -161,13 +186,12 @@ async function fetchSingleSource(
   if (text.trimStart().startsWith('#EXTM3U')) {
     validChannels = filterChannels(parseM3U(text), brokenUrls);
   } else {
-    const json = JSON.parse(text);
-    // Format 1: { channels: { group: [...] } }
-    if (json.channels && typeof json.channels === 'object' && !Array.isArray(json.channels)) {
+    let json: any = null;
+    try { json = JSON.parse(text); } catch {}
+
+    if (json && json.channels && typeof json.channels === 'object' && !Array.isArray(json.channels)) {
       validChannels = filterChannels(json.channels as Record<string, GitHubChannel[]>, brokenUrls);
-    }
-    // Format 2: Array of { group, name, logo, uris: [url], title }
-    else if (Array.isArray(json)) {
+    } else if (json && Array.isArray(json)) {
       const grouped: Record<string, GitHubChannel[]> = {};
       for (const item of json as AltChannel[]) {
         const g = item.group || 'Other';
@@ -182,6 +206,8 @@ async function fetchSingleSource(
         });
       }
       validChannels = filterChannels(grouped, brokenUrls);
+    } else if (/^Name:/m.test(text) && /^URL:/m.test(text)) {
+      validChannels = filterChannels(parseCustomText(text), brokenUrls);
     } else {
       validChannels = {};
     }
