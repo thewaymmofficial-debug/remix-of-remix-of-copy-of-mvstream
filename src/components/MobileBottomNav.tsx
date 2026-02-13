@@ -12,14 +12,14 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { LoginModal } from './LoginModal';
+
 
 export function MobileBottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, role, isAdmin, signOut } = useAuth();
   const pendingCount = usePendingRequestCount();
-  const [showLoginModal, setShowLoginModal] = useState(false);
+  
   const [profileSheetOpen, setProfileSheetOpen] = useState(false);
   const [tappedPath, setTappedPath] = useState<string | null>(null);
 
@@ -206,7 +206,7 @@ export function MobileBottomNav() {
         </div>
       </nav>
 
-      <LoginModal open={showLoginModal} onOpenChange={setShowLoginModal} />
+      
     </>
   );
 }
