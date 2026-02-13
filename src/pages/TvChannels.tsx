@@ -396,7 +396,12 @@ export default function TvChannels() {
         ) : (
           <FadeIn>
             <div className="space-y-4">
-              {Object.entries(loadedSources).sort(([a], [b]) => a.localeCompare(b)).map(([sourceCategory, sourceData]) => {
+              {Object.entries(loadedSources).sort(([a], [b]) => {
+                // Pin "Myanmar TV" to the top
+                if (a === 'Myanmar TV') return -1;
+                if (b === 'Myanmar TV') return 1;
+                return a.localeCompare(b);
+              }).map(([sourceCategory, sourceData]) => {
                 const channelCount = Object.values(sourceData.channels)
                   .flat()
                   .filter(c => !brokenUrls.has(c.url)).length;
