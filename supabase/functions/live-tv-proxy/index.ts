@@ -20,6 +20,15 @@ interface GitHubResponse {
   channels?: Record<string, GitHubChannel[]>;
 }
 
+interface AltChannel {
+  group?: string;
+  logo?: string;
+  name?: string;
+  title?: string;
+  uris?: string[];
+  headers?: Record<string, string>;
+}
+
 interface SourceEntry {
   url: string;
   enabled: boolean;
@@ -152,8 +161,30 @@ async function fetchSingleSource(
   if (text.trimStart().startsWith('#EXTM3U')) {
     validChannels = filterChannels(parseM3U(text), brokenUrls);
   } else {
-    const json = JSON.parse(text) as GitHubResponse;
-    validChannels = filterChannels(json.channels || {}, brokenUrls);
+    const json = JSON.parse(text);
+    // Format 1: { channels: { group: [...] } }
+    if (json.channels && typeof json.channels === 'object' && !Array.isArray(json.channels)) {
+      validChannels = filterChannels(json.channels as Record<string, GitHubChannel[]>, brokenUrls);
+    }
+    // Format 2: Array of { group, name, logo, uris: [url], title }
+    else if (Array.isArray(json)) {
+      const grouped: Record<string, GitHubChannel[]> = {};
+      for (const item of json as AltChannel[]) {
+        const g = item.group || 'Other';
+        const streamUrl = item.uris?.[0] || '';
+        if (!streamUrl) continue;
+        if (!grouped[g]) grouped[g] = [];
+        grouped[g].push({
+          name: item.name || item.title || 'Unknown',
+          logo: item.logo || '',
+          url: streamUrl,
+          group: g,
+        });
+      }
+      validChannels = filterChannels(grouped, brokenUrls);
+    } else {
+      validChannels = {};
+    }
   }
 
   const result = { category, channels: validChannels };

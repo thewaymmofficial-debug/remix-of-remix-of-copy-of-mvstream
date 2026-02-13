@@ -71,12 +71,23 @@ export default function TvChannels() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Step 2: Fetch each source in batches of 5 to avoid memory exhaustion
+  // Step 2: Reorder sources so Myanmar TV loads first
   const BATCH_SIZE = 5;
   const [loadedBatch, setLoadedBatch] = useState(1);
 
+  const orderedSourceEntries = useMemo(() => {
+    if (!sourceEntries) return [];
+    const myanmar: typeof sourceEntries = [];
+    const rest: typeof sourceEntries = [];
+    for (const entry of sourceEntries) {
+      if (entry.label === 'Myanmar TV') myanmar.push(entry);
+      else rest.push(entry);
+    }
+    return [...myanmar, ...rest];
+  }, [sourceEntries]);
+
   const sourceQueries = useQueries({
-    queries: (sourceEntries || []).map((entry, index) => ({
+    queries: orderedSourceEntries.map((entry, index) => ({
       queryKey: ['live-tv-source', entry.url],
       queryFn: async (): Promise<SourceResult> => {
         const labelParam = entry.label ? `&label=${encodeURIComponent(entry.label)}` : '';
