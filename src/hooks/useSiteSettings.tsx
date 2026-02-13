@@ -32,6 +32,7 @@ export interface AnnouncementSettings {
 export interface LiveTvSource {
   url: string;
   enabled: boolean;
+  label?: string;
 }
 
 export function useSiteSettings() {
