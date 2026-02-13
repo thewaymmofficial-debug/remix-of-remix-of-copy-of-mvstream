@@ -1,81 +1,58 @@
 
+# Add Direct Channel Links via Admin Panel
 
-# Add Custom Text Format Parser for TV Source
-
-## What's Needed
-The source URL uses a custom plain-text format with `Group:`, `Name:`, `URL:`, `Logo:` fields separated by dashed lines. The edge function currently only handles M3U and JSON -- this format needs a new parser.
+## Overview
+You already have a `tv_channels` database table with columns for `name`, `stream_url`, `thumbnail_url`, `category`, `is_active`, and `display_order` -- but it's empty and not wired up. This plan connects everything so you can add individual .m3u8 links from the admin panel and they appear alongside your other channels.
 
 ## Changes
 
-### 1. Add `parseCustomText()` function to edge function
-**File: `supabase/functions/live-tv-proxy/index.ts`**
+### 1. New Admin Page: Direct Channels Manager
+**New file: `src/pages/admin/DirectChannelsAdmin.tsx`**
 
-New function that:
-- Splits text by `--------------------------------------------------` separator lines
-- Extracts `Group:`, `Name:`, `URL:`, and `Logo:` fields from each block
-- Carries `Group:` forward (it only appears once per group, subsequent entries inherit it)
-- Returns the same `Record<string, GitHubChannel[]>` structure used by other parsers
+A CRUD admin page where you can:
+- Add a new channel with: Name, Stream URL (.m3u8), Logo URL (optional), Category (text input)
+- See all direct channels listed in a table/card layout
+- Toggle channels active/inactive
+- Edit or delete channels
+- Data is stored in the existing `tv_channels` database table
 
-### 2. Update format detection in `fetchSingleSource()`
-Currently the else branch after the M3U check does `JSON.parse(text)` directly, which would throw on this text format. Change to:
+### 2. Add Route and Nav Link
+**Files: `src/App.tsx`, `src/pages/admin/AdminLayout.tsx`**
 
-1. Starts with `#EXTM3U` -- use M3U parser
-2. Try `JSON.parse` -- if successful, use JSON parser
-3. If JSON fails and text contains `Name:` and `URL:` lines -- use custom text parser
-4. Otherwise -- empty result
+- Add a new admin route `/admin/direct-channels` pointing to the new page
+- Add a nav item "Direct Ch." with a Link icon in the admin sidebar
 
-### 3. Admin adds the source
-After deploying, go to Channels Admin and add the URL with a label. No UI changes needed -- channels will appear and play like all others.
+### 3. Integrate Direct Channels into TV Channels Page
+**File: `src/pages/TvChannels.tsx`**
 
-## Technical Detail
+- Fetch active channels from the `tv_channels` table using Supabase client
+- Group them by `category` column
+- Merge them into `loadedSources` as an additional source category called "Direct Channels" (or grouped by their individual categories)
+- They appear in the same collapsible accordion UI as proxy-fetched channels
+- The HLS player already handles .m3u8 links, so playback works automatically
 
-```typescript
-function parseCustomText(text: string): Record<string, GitHubChannel[]> {
-  const channels: Record<string, GitHubChannel[]> = {};
-  let currentGroup = 'Other';
+### 4. Create a Hook for Direct Channels
+**New file: `src/hooks/useDirectChannels.tsx`**
 
-  for (const block of text.split(/^-{5,}$/m)) {
-    const lines = block.trim().split('\n');
-    if (!lines[0]) continue;
-    let name = '', url = '', logo = '';
+- `useDirectChannels()` - fetches all active channels from `tv_channels` table
+- Returns them grouped by category in the same `Record<string, Channel[]>` format
 
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (trimmed.startsWith('Group:')) currentGroup = trimmed.slice(6).trim() || 'Other';
-      else if (trimmed.startsWith('Name:')) name = trimmed.slice(5).trim();
-      else if (trimmed.startsWith('URL:')) url = trimmed.slice(4).trim();
-      else if (trimmed.startsWith('Logo:')) logo = trimmed.slice(5).trim();
-    }
+## How It Works End-to-End
 
-    if (name && url) {
-      if (!channels[currentGroup]) channels[currentGroup] = [];
-      channels[currentGroup].push({ name, logo, url, group: currentGroup });
-    }
-  }
-  return channels;
-}
+```text
+Admin Panel                    Database              TV Channels Page
++-----------------+           +------------+         +------------------+
+| Add channel:    |  INSERT   | tv_channels|  SELECT | Merged into      |
+| - Name          | --------> | - name     | ------> | loadedSources    |
+| - Stream URL    |           | - stream_url|        | alongside proxy  |
+| - Category      |           | - category |         | channels         |
+| - Logo URL      |           | - is_active|         +------------------+
++-----------------+           +------------+
 ```
 
-Format detection change in `fetchSingleSource` (lines 160-190):
-```typescript
-let validChannels: Record<string, GitHubChannel[]>;
-if (text.trimStart().startsWith('#EXTM3U')) {
-  validChannels = filterChannels(parseM3U(text), brokenUrls);
-} else {
-  let json: any = null;
-  try { json = JSON.parse(text); } catch {}
+## Technical Details
 
-  if (json && json.channels && typeof json.channels === 'object' && !Array.isArray(json.channels)) {
-    validChannels = filterChannels(json.channels, brokenUrls);
-  } else if (json && Array.isArray(json)) {
-    // existing array format handling...
-  } else if (/^Name:/m.test(text) && /^URL:/m.test(text)) {
-    validChannels = filterChannels(parseCustomText(text), brokenUrls);
-  } else {
-    validChannels = {};
-  }
-}
-```
-
-One file changed: `supabase/functions/live-tv-proxy/index.ts`
-
+- No database changes needed -- `tv_channels` table already has RLS policies for admin CRUD and public SELECT
+- No edge function needed -- direct Supabase client queries work since RLS is configured
+- The existing `LiveTvPlayer` component with hls.js handles .m3u8 playback
+- Direct channels appear as their own categories in the accordion, sorted alphabetically with other sources
