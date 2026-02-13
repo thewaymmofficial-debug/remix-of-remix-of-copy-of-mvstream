@@ -17,6 +17,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useFavoriteChannels, useToggleFavoriteChannel } from '@/hooks/useFavoriteChannels';
 import { useAuth } from '@/hooks/useAuth';
+import { useActiveDirectChannels } from '@/hooks/useDirectChannels';
 
 interface Channel {
   name: string;
@@ -46,6 +47,7 @@ export default function TvChannels() {
 
   const { favorites } = useFavoriteChannels();
   const toggleFavorite = useToggleFavoriteChannel();
+  const { data: directChannels } = useActiveDirectChannels();
 
   const favoriteUrls = useMemo(() => new Set(favorites.map(f => f.channel_url)), [favorites]);
 
@@ -170,8 +172,34 @@ export default function TvChannels() {
         map[q.data.category] = q.data;
       }
     });
+
+    // Merge direct channels from tv_channels table
+    if (directChannels && directChannels.length > 0) {
+      const grouped: Record<string, Channel[]> = {};
+      for (const dc of directChannels) {
+        if (!dc.stream_url) continue;
+        const cat = dc.category || 'Direct Channels';
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push({
+          name: dc.name,
+          url: dc.stream_url,
+          logo: dc.thumbnail_url || '',
+          group: cat,
+          source: 'direct',
+        });
+      }
+      for (const [cat, channels] of Object.entries(grouped)) {
+        const key = `⚡ ${cat}`;
+        if (map[key]) {
+          map[key].channels[cat] = [...(map[key].channels[cat] || []), ...channels];
+        } else {
+          map[key] = { category: key, channels: { [cat]: channels } };
+        }
+      }
+    }
+
     return map;
-  }, [sourceQueries]);
+  }, [sourceQueries, directChannels]);
 
   // Only flatten for search — lazy computation
   const allChannels = useMemo(() => {

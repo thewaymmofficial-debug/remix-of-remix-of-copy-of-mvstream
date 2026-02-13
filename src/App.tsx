@@ -43,6 +43,7 @@ import MovieRequestsAdmin from "./pages/admin/MovieRequestsAdmin";
 import ChannelsAdmin from "./pages/admin/ChannelsAdmin";
 import FootballAdmin from "./pages/admin/FootballAdmin";
 import BrokenChannelsAdmin from "./pages/admin/BrokenChannelsAdmin";
+import DirectChannelsAdmin from "./pages/admin/DirectChannelsAdmin";
 import Football from "./pages/Football";
 import FootballHighlights from "./pages/FootballHighlights";
 import NotFound from "./pages/NotFound";
@@ -119,6 +120,7 @@ const App = () => (
                     <Route path="movie-requests" element={<MovieRequestsAdmin />} />
                     <Route path="channels" element={<ChannelsAdmin />} />
                     <Route path="football" element={<FootballAdmin />} />
+                    <Route path="direct-channels" element={<DirectChannelsAdmin />} />
                     <Route path="broken-channels" element={<BrokenChannelsAdmin />} />
                     <Route path="analytics" element={<Analytics />} />
                   </Route>
