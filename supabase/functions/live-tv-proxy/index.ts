@@ -29,6 +29,36 @@ interface SourceEntry {
 const sourceCache: Record<string, { data: any; timestamp: number }> = {};
 const CACHE_TTL = 5 * 60 * 1000;
 
+function parseM3U(text: string): Record<string, GitHubChannel[]> {
+  const lines = text.split('\n');
+  const channels: Record<string, GitHubChannel[]> = {};
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line.startsWith('#EXTINF:')) continue;
+
+    const name = line.match(/tvg-name="([^"]*)"/)?.[1] ||
+                 line.split(',').pop()?.trim() || 'Unknown';
+    const logo = line.match(/tvg-logo="([^"]*)"/)?.[1] || '';
+    const group = line.match(/group-title="([^"]*)"/)?.[1] || 'Other';
+
+    let streamUrl = '';
+    for (let j = i + 1; j < lines.length; j++) {
+      const next = lines[j].trim();
+      if (next && !next.startsWith('#')) {
+        streamUrl = next;
+        break;
+      }
+    }
+
+    if (streamUrl) {
+      if (!channels[group]) channels[group] = [];
+      channels[group].push({ name, logo, url: streamUrl, group });
+    }
+  }
+  return channels;
+}
+
 function parseCategoryFromUrl(url: string): string {
   try {
     const pathname = new URL(url).pathname;
@@ -113,8 +143,15 @@ async function fetchSingleSource(
   const category = parseCategoryFromUrl(sourceUrl);
   const res = await fetch(sourceUrl);
   if (!res.ok) throw new Error(`Failed to fetch source: ${res.status}`);
-  const json = (await res.json()) as GitHubResponse;
-  const validChannels = filterChannels(json.channels || {}, brokenUrls);
+  const text = await res.text();
+
+  let validChannels: Record<string, GitHubChannel[]>;
+  if (text.trimStart().startsWith('#EXTM3U')) {
+    validChannels = filterChannels(parseM3U(text), brokenUrls);
+  } else {
+    const json = JSON.parse(text) as GitHubResponse;
+    validChannels = filterChannels(json.channels || {}, brokenUrls);
+  }
 
   const result = { category, channels: validChannels };
   sourceCache[sourceUrl] = { data: result, timestamp: now };
