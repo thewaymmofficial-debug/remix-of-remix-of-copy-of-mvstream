@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, Play, Tv, ChevronDown, Heart, ChevronRight, Loader2 } from 'lucide-react';
@@ -31,7 +31,7 @@ interface SourceResult {
   channels: Record<string, Channel[]>;
 }
 
-const CHANNELS_PER_GROUP = 30;
+const CHANNELS_PER_GROUP = 12;
 
 export default function TvChannels() {
   const navigate = useNavigate();
@@ -225,9 +225,9 @@ export default function TvChannels() {
   const someLoading = sourceQueries.some(q => q.isLoading);
   const isError = isSourcesError && !sourceEntries;
 
-  const handlePlay = (channel: Channel) => {
+  const handlePlay = useCallback((channel: Channel) => {
     setActiveChannel(channel);
-  };
+  }, []);
 
   const handleStreamError = (url: string, name: string) => {
     setLocalBroken(prev => {
@@ -241,7 +241,7 @@ export default function TvChannels() {
     setTimeout(() => setActiveChannel(null), 2000);
   };
 
-  const handleToggleFavorite = (channel: Channel & { sourceCategory?: string }) => {
+  const handleToggleFavorite = useCallback((channel: Channel & { sourceCategory?: string }) => {
     if (!user) return;
     toggleFavorite.mutate({
       channel: {
@@ -253,7 +253,7 @@ export default function TvChannels() {
       },
       isFavorite: favoriteUrls.has(channel.url),
     });
-  };
+  }, [user, toggleFavorite, favoriteUrls]);
 
   const toggleSource = (key: string) => {
     setOpenSources((prev) => {
@@ -501,7 +501,7 @@ export default function TvChannels() {
   );
 }
 
-function ChannelCard({
+const ChannelCard = React.memo(function ChannelCard({
   channel,
   isActive,
   onPlay,
@@ -558,4 +558,4 @@ function ChannelCard({
       <p className="text-sm font-medium text-foreground truncate">{channel.name}</p>
     </div>
   );
-}
+});
