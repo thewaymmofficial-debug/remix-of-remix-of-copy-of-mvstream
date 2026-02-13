@@ -1,35 +1,79 @@
 
 
-# Speed Up TV Channel Category Opening
+# Add Support for Custom Text Format TV Source
 
-## Problem
-When opening a category, all channel cards render at once (some categories have 100+ channels across groups). Additionally, the `ChannelCard` component re-renders on every state change because it's not memoized.
+## What's Needed
+The URL `https://raw.githubusercontent.com/bugsfreeweb/LiveTVCollector/refs/heads/main/Movies/SecretWorld/Movies.txt` uses a custom plain-text format that looks like:
 
-## Solution
+```
+Group: Adult TV
+Name: Blowjob
+URL: http://live.adultiptv.net/blowjob.m3u8
+Logo: https://...
+Source: https://...
+--------------------------------------------------
+Name: Teen
+URL: http://live.adultiptv.net/teen.m3u8
+...
+```
 
-### 1. Memoize `ChannelCard` with `React.memo`
-Wrap the `ChannelCard` function component in `React.memo` so it only re-renders when its props actually change. This prevents unnecessary re-renders of all visible cards when toggling categories or interacting with one card.
+The `live-tv-proxy` edge function currently only parses M3U playlists and JSON formats. This new text format needs a parser so these channels work like all other sources.
 
-### 2. Reduce initial channel render per group
-Lower `CHANNELS_PER_GROUP` from 30 to 12 so fewer cards render on first open. Users can still tap "Show all" to see the rest. This cuts initial DOM nodes by ~60%.
+## Changes
 
-### 3. Virtualize nothing (keep it simple)
-Since we already cap per-group rendering and the accordion ensures only one category is open, these two changes should be sufficient without adding a virtualization library.
+### 1. Add text format parser to edge function
+**File: `supabase/functions/live-tv-proxy/index.ts`**
+
+Add a `parseCustomText()` function that:
+- Splits the text by the `--------------------------------------------------` separator
+- Extracts `Group:`, `Name:`, `URL:`, and `Logo:` fields from each block
+- Groups channels by their `Group` value (carries forward from the last seen `Group:` line)
+- Returns the same `Record<string, GitHubChannel[]>` structure used by the other parsers
+
+### 2. Integrate parser into fetch logic
+In the `fetchSingleSource()` function, add detection for this format. If the text is not M3U and not valid JSON, attempt to parse it as the custom text format before returning empty.
+
+Detection: if the text contains `Name:` and `URL:` lines (and is not M3U/JSON), use the new parser.
+
+### 3. Admin adds the source URL
+After deploying, the admin simply adds this URL via the existing Channels Admin page with a label like "Secret World Movies". No other UI changes needed -- the channels will appear and play like all existing ones.
 
 ---
 
-## Technical Details
+## Technical Detail
 
-**File: `src/pages/TvChannels.tsx`**
+New function in the edge function:
 
-- Change `CHANNELS_PER_GROUP` from `30` to `12`
-- Wrap `ChannelCard` with `React.memo`:
-  ```typescript
-  const ChannelCard = React.memo(function ChannelCard({ ... }) {
-    return ( ... );
-  });
-  ```
-- Memoize `handlePlay` and `handleToggleFavorite` callbacks with `useCallback` so memo'd cards don't receive new function references each render
+```typescript
+function parseCustomText(text: string): Record<string, GitHubChannel[]> {
+  const channels: Record<string, GitHubChannel[]> = {};
+  let currentGroup = 'Other';
 
-One file changed, ~10 lines modified.
+  for (const block of text.split(/^-{5,}$/m)) {
+    const lines = block.trim().split('\n');
+    let name = '', url = '', logo = '';
 
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('Group:')) currentGroup = trimmed.slice(6).trim() || 'Other';
+      else if (trimmed.startsWith('Name:')) name = trimmed.slice(5).trim();
+      else if (trimmed.startsWith('URL:')) url = trimmed.slice(4).trim();
+      else if (trimmed.startsWith('Logo:')) logo = trimmed.slice(5).trim();
+    }
+
+    if (name && url) {
+      if (!channels[currentGroup]) channels[currentGroup] = [];
+      channels[currentGroup].push({ name, logo, url, group: currentGroup });
+    }
+  }
+  return channels;
+}
+```
+
+In `fetchSingleSource`, the format detection order becomes:
+1. Starts with `#EXTM3U` -> M3U parser
+2. Valid JSON -> JSON parser
+3. Contains `Name:` and `URL:` -> Custom text parser
+4. Otherwise -> empty result
+
+One file changed: `supabase/functions/live-tv-proxy/index.ts`
