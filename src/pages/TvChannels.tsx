@@ -208,7 +208,7 @@ export default function TvChannels() {
     for (const [category, source] of Object.entries(loadedSources)) {
       for (const group of Object.values(source.channels)) {
         for (const ch of group) {
-          if (!brokenUrls.has(ch.url)) {
+          if (ch.source === 'direct' || !brokenUrls.has(ch.url)) {
             channels.push({ ...ch, sourceCategory: category });
           }
         }
@@ -243,7 +243,7 @@ export default function TvChannels() {
     let count = 0;
     for (const source of Object.values(loadedSources)) {
       for (const group of Object.values(source.channels)) {
-        count += group.filter(ch => !brokenUrls.has(ch.url)).length;
+        count += group.filter(ch => ch.source === 'direct' || !brokenUrls.has(ch.url)).length;
       }
     }
     return count;
@@ -447,7 +447,7 @@ export default function TvChannels() {
               }).map(([sourceCategory, sourceData]) => {
                 const channelCount = Object.values(sourceData.channels)
                   .flat()
-                  .filter(c => !brokenUrls.has(c.url)).length;
+                  .filter(c => c.source === 'direct' || !brokenUrls.has(c.url)).length;
                 if (channelCount === 0) return null;
                 return (
                   <Collapsible
@@ -468,7 +468,7 @@ export default function TvChannels() {
                     <CollapsibleContent>
                       <div className="space-y-6 pt-4">
                         {Object.entries(sourceData.channels).map(([group, channels]) => {
-                          const validChannels = channels.filter(c => !brokenUrls.has(c.url));
+                          const validChannels = channels.filter(c => c.source === 'direct' || !brokenUrls.has(c.url));
                           if (validChannels.length === 0) return null;
                           const groupKey = `${sourceCategory}::${group}`;
                           const isExpanded = expandedGroups[groupKey] ?? false;

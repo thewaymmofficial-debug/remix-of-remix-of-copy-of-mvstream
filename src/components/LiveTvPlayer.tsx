@@ -10,6 +10,8 @@ interface LiveTvPlayerProps {
   onError?: (url: string, channelName: string) => void;
 }
 
+const isHLSUrl = (url: string) => /\.(m3u8?)([\?#]|$)/i.test(url);
+
 export function LiveTvPlayer({ url, channelName, onClose, onError }: LiveTvPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -23,6 +25,30 @@ export function LiveTvPlayer({ url, channelName, onClose, onError }: LiveTvPlaye
     setError(null);
     setLoading(true);
 
+    // Native HTML5 playback for .mp4 and other non-HLS URLs
+    if (!isHLSUrl(url)) {
+      video.src = url;
+
+      const onCanPlay = () => {
+        setLoading(false);
+        video.play().catch(() => {});
+      };
+      const onError = () => {
+        setLoading(false);
+        setError('Video failed to load.');
+      };
+
+      video.addEventListener('canplay', onCanPlay);
+      video.addEventListener('error', onError);
+
+      return () => {
+        video.removeEventListener('canplay', onCanPlay);
+        video.removeEventListener('error', onError);
+        video.src = '';
+      };
+    }
+
+    // HLS playback
     if (Hls.isSupported()) {
       const hls = new Hls({
         enableWorker: true,

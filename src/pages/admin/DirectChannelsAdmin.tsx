@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useDirectChannels, useDirectChannelMutations, DirectChannel } from '@/hooks/useDirectChannels';
 import { useToast } from '@/hooks/use-toast';
+import { BulkChannelImport } from '@/components/admin/BulkChannelImport';
 import {
   Dialog,
   DialogContent,
@@ -96,7 +97,7 @@ export default function DirectChannelsAdmin() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Direct Channels</h1>
-          <p className="text-sm text-muted-foreground">Add .m3u8 stream links directly</p>
+          <p className="text-sm text-muted-foreground">Add .m3u8 or .mp4 stream links directly</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
@@ -115,7 +116,7 @@ export default function DirectChannelsAdmin() {
               </div>
               <div>
                 <Label>Stream URL *</Label>
-                <Input value={form.stream_url} onChange={e => setForm(f => ({ ...f, stream_url: e.target.value }))} placeholder="https://example.com/stream.m3u8" />
+                <Input value={form.stream_url} onChange={e => setForm(f => ({ ...f, stream_url: e.target.value }))} placeholder="https://example.com/stream.m3u8 or .mp4" />
               </div>
               <div>
                 <Label>Logo URL (optional)</Label>
@@ -131,6 +132,11 @@ export default function DirectChannelsAdmin() {
             </div>
           </DialogContent>
         </Dialog>
+      </div>
+
+      {/* Bulk Import */}
+      <div className="mb-6">
+        <BulkChannelImport />
       </div>
 
       {isLoading ? (
