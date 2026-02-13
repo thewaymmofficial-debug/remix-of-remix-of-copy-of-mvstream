@@ -1,94 +1,81 @@
 
 
-## Add M3U Playlist Source Support
+## Fix: Myanmar Source Category Name + Alphabetical Sorting
 
-The URL you shared (`https://raw.githubusercontent.com/tztturbo/Myanmar-TV-Channels/refs/heads/main/Myanmar%20TV%20Channels`) is an **M3U playlist file**, not JSON. The current system only knows how to parse JSON sources. This plan adds M3U parsing support so you can add M3U/M3U8 playlist URLs as channel sources -- they'll be auto-detected and parsed correctly.
+### Problem 1: Myanmar source shows as "heads - main"
 
-### What Changes
+The `parseCategoryFromUrl` function extracts a category from the URL path segments. For the standard sources like `.../LiveTV/India/LiveTV.json`, it correctly produces "Live TV - India". But for the Myanmar URL (`/tztturbo/Myanmar-TV-Channels/refs/heads/main/Myanmar%20TV%20Channels`), it produces "heads - main" because the last segments are `heads/main/Myanmar TV Channels`.
 
-**1. Edge Function -- Add M3U parser (`supabase/functions/live-tv-proxy/index.ts`)**
+**Fix**: Add an optional `label` field to `LiveTvSource`. When present, the edge function uses it as the category name instead of auto-parsing. Then update the Myanmar entry in the database to include `label: "Myanmar TV"`.
 
-The `fetchSingleSource` function currently assumes every source is JSON. We'll add auto-detection:
-- If the fetched content starts with `#EXTM3U`, parse it as an M3U playlist
-- Otherwise, parse it as JSON (existing behavior)
+### Problem 2: Sources are not sorted alphabetically
 
-The M3U parser will extract from each `#EXTINF` line:
-- `tvg-name` -> channel name
-- `tvg-logo` -> channel logo
-- `group-title` -> group/category within the source
-- The next non-comment line -> stream URL
+Currently sources appear in the order they were added to the database. The user wants them sorted A-Z.
 
-Channels are grouped by their `group-title` value (e.g., "Myanmar Channels", "Live", "Sports Channels").
+**Fix**: Sort `Object.entries(loadedSources)` alphabetically by category name in `TvChannels.tsx`.
 
-**2. Admin Panel -- Update label and auto-detect (`src/pages/admin/ChannelsAdmin.tsx`)**
+### Changes
 
-- Change the label from "GitHub JSON Source URL" to "Source URL (JSON or M3U)"
-- Update placeholder to show both formats are accepted
-- Auto-detect badge: show "M3U Playlist" when URL doesn't end in `.json`
+**1. `src/hooks/useSiteSettings.tsx`**
+- Add optional `label` field to `LiveTvSource` interface
 
-**3. Add the Myanmar TV source to the database**
+**2. `supabase/functions/live-tv-proxy/index.ts`**
+- Pass source metadata (label) through `listSources` response
+- Use label as category when available in `fetchSingleSource`
 
-Insert the URL directly into the `site_settings` table alongside the existing 35 sources.
+**3. `src/pages/TvChannels.tsx`**
+- Pass label to edge function when fetching individual sources
+- Sort source categories alphabetically before rendering
+
+**4. `src/pages/admin/ChannelsAdmin.tsx`**
+- Add optional "Label" input when adding/editing sources (for custom category names)
+- Show the label in the source card if set
+
+**5. Database**
+- Update the Myanmar entry to include `"label": "Myanmar TV"`
 
 ### Technical Details
 
-**M3U Parser (added to edge function):**
-
-```text
-function parseM3U(text: string): Record<string, GitHubChannel[]> {
-  const lines = text.split('\n');
-  const channels: Record<string, GitHubChannel[]> = {};
-  
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line.startsWith('#EXTINF:')) continue;
-    
-    // Extract metadata from #EXTINF line
-    const name = line.match(/tvg-name="([^"]*)"/)?.[1] || 
-                 line.split(',').pop()?.trim() || 'Unknown';
-    const logo = line.match(/tvg-logo="([^"]*)"/)?.[1] || '';
-    const group = line.match(/group-title="([^"]*)"/)?.[1] || 'Other';
-    
-    // Next non-empty, non-comment line is the URL
-    let streamUrl = '';
-    for (let j = i + 1; j < lines.length; j++) {
-      const next = lines[j].trim();
-      if (next && !next.startsWith('#')) {
-        streamUrl = next;
-        break;
-      }
-    }
-    
-    if (streamUrl) {
-      if (!channels[group]) channels[group] = [];
-      channels[group].push({ name, logo, url: streamUrl, group });
-    }
-  }
-  return channels;
+**LiveTvSource interface change:**
+```
+export interface LiveTvSource {
+  url: string;
+  enabled: boolean;
+  label?: string;  // Optional custom category name
 }
 ```
 
-**Modified `fetchSingleSource`:**
+**Edge function `listSources` response change:**
+```
+// Current: { sources: ["url1", "url2", ...] }
+// New:     { sources: [{ url: "url1", label: "Arabic" }, { url: "url2", label: "Myanmar TV" }, ...] }
+```
 
-```text
-// Instead of always doing res.json(), check content first:
-const text = await res.text();
+This way TvChannels.tsx can pass the label as a query param: `?sourceUrl=...&label=Myanmar%20TV`
 
-if (text.trimStart().startsWith('#EXTM3U')) {
-  // Parse as M3U playlist
-  const channels = filterChannels(parseM3U(text), brokenUrls);
-  result = { category, channels };
-} else {
-  // Parse as JSON (existing behavior)
-  const json = JSON.parse(text) as GitHubResponse;
-  const channels = filterChannels(json.channels || {}, brokenUrls);
-  result = { category, channels };
-}
+**Edge function `fetchSingleSource` change:**
+```
+// Accept optional label parameter
+// If label is provided, use it as category instead of parseCategoryFromUrl
+const category = label || parseCategoryFromUrl(sourceUrl);
+```
+
+**TvChannels.tsx sorting:**
+```
+// Before rendering, sort alphabetically:
+{Object.entries(loadedSources)
+  .sort(([a], [b]) => a.localeCompare(b))
+  .map(([sourceCategory, sourceData]) => { ... })}
+```
+
+**Database update for Myanmar entry:**
+```json
+{"url": "https://raw.githubusercontent.com/tztturbo/Myanmar-TV-Channels/refs/heads/main/Myanmar%20TV%20Channels", "enabled": true, "label": "Myanmar TV"}
 ```
 
 **Files to modify:**
-1. `supabase/functions/live-tv-proxy/index.ts` -- add M3U parser + auto-detection
-2. `src/pages/admin/ChannelsAdmin.tsx` -- update labels to reflect both formats
-3. Database -- append the Myanmar TV Channels URL to `live_tv_sources`
-
-No changes needed to `TvChannels.tsx` -- the frontend already handles the `{ category, channels }` format regardless of how the edge function parsed the source.
+1. `src/hooks/useSiteSettings.tsx` -- add `label` to interface
+2. `supabase/functions/live-tv-proxy/index.ts` -- support label in listSources and fetchSingleSource
+3. `src/pages/TvChannels.tsx` -- pass labels, sort alphabetically
+4. `src/pages/admin/ChannelsAdmin.tsx` -- add label input field
+5. Database -- update Myanmar entry with label
