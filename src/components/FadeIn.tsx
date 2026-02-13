@@ -1,14 +1,18 @@
-import { ReactNode } from 'react';
+import { forwardRef, ReactNode } from 'react';
 
 interface FadeInProps {
   children: ReactNode;
   className?: string;
 }
 
-export function FadeIn({ children, className = '' }: FadeInProps) {
-  return (
-    <div className={`animate-fade-in ${className}`}>
-      {children}
-    </div>
-  );
-}
+export const FadeIn = forwardRef<HTMLDivElement, FadeInProps>(
+  ({ children, className = '' }, ref) => {
+    return (
+      <div ref={ref} className={`animate-fade-in ${className}`}>
+        {children}
+      </div>
+    );
+  }
+);
+
+FadeIn.displayName = 'FadeIn';
