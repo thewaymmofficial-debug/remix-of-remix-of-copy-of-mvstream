@@ -46,12 +46,17 @@ export function useActiveDirectChannels() {
 export function useDirectChannelMutations() {
   const queryClient = useQueryClient();
 
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: ['direct-channels'] });
+    queryClient.invalidateQueries({ queryKey: ['direct-channels-active'] });
+  };
+
   const addChannel = useMutation({
     mutationFn: async (channel: { name: string; stream_url: string; thumbnail_url?: string; category: string }) => {
       const { error } = await supabase.from('tv_channels').insert(channel);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['direct-channels'] }),
+    onSuccess: invalidateAll,
   });
 
   const updateChannel = useMutation({
@@ -59,7 +64,7 @@ export function useDirectChannelMutations() {
       const { error } = await supabase.from('tv_channels').update(updates).eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['direct-channels'] }),
+    onSuccess: invalidateAll,
   });
 
   const deleteChannel = useMutation({
@@ -67,7 +72,7 @@ export function useDirectChannelMutations() {
       const { error } = await supabase.from('tv_channels').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['direct-channels'] }),
+    onSuccess: invalidateAll,
   });
 
   return { addChannel, updateChannel, deleteChannel };
