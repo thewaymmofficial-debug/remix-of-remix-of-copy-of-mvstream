@@ -256,7 +256,11 @@ export default function TvChannels() {
   };
 
   const toggleSource = (key: string) => {
-    setOpenSources((prev) => ({ [key]: !prev[key] }));
+    setOpenSources((prev) => {
+      const isOpening = !prev[key];
+      if (isOpening) setExpandedGroups({});
+      return { [key]: isOpening };
+    });
   };
 
   const toggleGroupExpand = useCallback((key: string) => {
