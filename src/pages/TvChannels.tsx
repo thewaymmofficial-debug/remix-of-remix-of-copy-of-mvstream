@@ -249,8 +249,8 @@ export default function TvChannels() {
     return count;
   }, [loadedSources, brokenUrls]);
 
-  const isLoading = isLoadingSources || (sourceEntries && sourceEntries.length > 0 && sourceQueries.every(q => q.isLoading));
   const someLoading = sourceQueries.some(q => q.isLoading);
+  const isLoading = isLoadingSources || (sourceEntries && sourceEntries.length > 0 && sourceQueries.every(q => q.isLoading)) || (someLoading && Object.keys(loadedSources).length === 0);
   const isError = isSourcesError && !sourceEntries;
 
   const handlePlay = useCallback((channel: Channel) => {

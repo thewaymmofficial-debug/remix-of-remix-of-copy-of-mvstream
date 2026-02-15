@@ -88,7 +88,7 @@ const App = () => (
                 <ErrorBoundary>
                 <Routes>
                   <Route path="/auth" element={<Auth />} />
-                  <Route path="/" element={<Index />} />
+                  <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
                   <Route path="/movie/:id" element={<MovieDetails />} />
                   <Route path="/browse/:filter" element={<Browse />} />
                   <Route path="/search" element={<SearchPage />} />
