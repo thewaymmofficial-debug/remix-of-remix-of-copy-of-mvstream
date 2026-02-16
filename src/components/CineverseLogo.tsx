@@ -52,7 +52,7 @@ export function CineverseLogo() {
             key={i}
             ref={isI ? iRef : undefined}
             className={`
-              inline-block text-lg font-bold text-white tracking-wide
+              inline-block text-lg font-bold text-foreground tracking-wide
               ${isI ? 'animate-letter-squish' : ''}
               ${isAnimating ? 'animate-letter-fade-up opacity-0' : 'opacity-100'}
             `}
