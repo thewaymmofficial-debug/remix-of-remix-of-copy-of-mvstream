@@ -12,7 +12,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 
-const SUPABASE_FUNCTIONS_URL = 'https://icnfjixjohbxjxqbnnac.supabase.co/functions/v1';
+const SUPABASE_FUNCTIONS_URL = 'https://gentle-star-e538.thewayofthedragg.workers.dev/functions/v1';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljbmZqaXhqb2hieGp4cWJubmFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzMTYyNjMsImV4cCI6MjA4NTg5MjI2M30.aiU8qAgb1wicSC17EneEs4qAlLtFZbYeyMnhi4NHI7Y';
 import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useFavoriteChannels, useToggleFavoriteChannel } from '@/hooks/useFavoriteChannels';
