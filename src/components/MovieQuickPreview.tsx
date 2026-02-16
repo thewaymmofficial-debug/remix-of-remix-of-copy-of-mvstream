@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsInWatchlist, useAddToWatchlist, useRemoveFromWatchlist } from '@/hooks/useMovies';
 import type { Movie } from '@/types/database';
+import { proxyImageUrl } from '@/lib/utils';
 
 interface MovieQuickPreviewProps {
   movie: Movie | null;
@@ -66,7 +67,7 @@ export function MovieQuickPreview({ movie, open, onOpenChange }: MovieQuickPrevi
         <div className="relative w-full aspect-[16/10]">
           {imageUrl ? (
             <img
-              src={imageUrl}
+              src={proxyImageUrl(imageUrl)}
               alt={movie.title}
               className="w-full h-full object-cover"
             />

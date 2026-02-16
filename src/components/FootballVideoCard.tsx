@@ -1,4 +1,5 @@
 import { Play, Trophy, Wifi, Crown, Download } from 'lucide-react';
+import { proxyImageUrl } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { FootballVideo } from '@/hooks/useFootball';
@@ -17,7 +18,7 @@ export function FootballVideoCard({ video, onPlay, onDownload }: FootballVideoCa
         onClick={() => onPlay(video)}
       >
         {video.thumbnail_url ? (
-          <img src={video.thumbnail_url} alt={video.title} className="w-full h-full object-cover" />
+          <img src={proxyImageUrl(video.thumbnail_url)} alt={video.title} className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <Trophy className="w-10 h-10 text-muted-foreground" />

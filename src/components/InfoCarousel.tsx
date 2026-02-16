@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useInfoSlides } from '@/hooks/useInfoSlides';
+import { proxyImageUrl } from '@/lib/utils';
 
 export function InfoCarousel() {
   const [current, setCurrent] = useState(0);
@@ -89,7 +90,7 @@ export function InfoCarousel() {
           {slide.image_url && (
             <>
               <img
-                src={slide.image_url}
+                src={proxyImageUrl(slide.image_url)}
                 alt={slide.title || 'Slide'}
                 className="absolute inset-0 w-full h-full object-cover"
               />
