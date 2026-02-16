@@ -219,7 +219,7 @@ export default function Welcome() {
                 {/* Browse button */}
                 <Button
                   variant="outline"
-                  onClick={() => navigate('/')}
+                  onClick={() => navigate('/', { state: { fromWelcome: true } })}
                   className="w-full h-12 rounded-2xl font-semibold text-base border-border"
                 >
                   <Smile className="w-5 h-5 mr-2" />
