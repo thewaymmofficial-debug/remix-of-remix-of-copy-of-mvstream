@@ -1,5 +1,5 @@
 import { Play, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, proxyImageUrl } from '@/lib/utils';
 import type { Movie } from '@/types/database';
 
 interface ContinueWatchingCardProps {
@@ -28,7 +28,7 @@ export function ContinueWatchingCard({
       {/* Poster/Backdrop Image */}
       {movie.backdrop_url || movie.poster_url ? (
         <img
-          src={movie.backdrop_url || movie.poster_url || ''}
+          src={proxyImageUrl(movie.backdrop_url || movie.poster_url)}
           alt={movie.title}
           className="absolute inset-0 w-full h-full object-cover rounded-lg"
           loading="lazy"

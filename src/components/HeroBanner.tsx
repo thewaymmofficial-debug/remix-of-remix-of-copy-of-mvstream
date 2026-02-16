@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Play, Info, Crown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Movie } from '@/types/database';
-import { cn } from '@/lib/utils';
+import { cn, proxyImageUrl } from '@/lib/utils';
 
 interface HeroBannerProps {
   movies: Movie[];
@@ -178,13 +178,13 @@ export function HeroBanner({ movies, onPlay, onMoreInfo }: HeroBannerProps) {
         >
           {movie.backdrop_url ? (
             <img
-              src={movie.backdrop_url}
+              src={proxyImageUrl(movie.backdrop_url)}
               alt={movie.title}
               className="absolute inset-0 w-full h-full object-cover object-top scale-110"
             />
           ) : movie.poster_url ? (
             <img
-              src={movie.poster_url}
+              src={proxyImageUrl(movie.poster_url)}
               alt={movie.title}
               className="absolute inset-0 w-full h-full object-cover opacity-60 blur-sm scale-110"
             />

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Crown, Play, Star } from 'lucide-react';
 import type { Movie } from '@/types/database';
-import { cn } from '@/lib/utils';
+import { cn, proxyImageUrl } from '@/lib/utils';
 
 interface MovieCardProps {
   movie: Movie;
@@ -29,7 +29,7 @@ export const MovieCard = React.forwardRef<HTMLButtonElement, MovieCardProps>(
         {/* Poster Image */}
         {movie.poster_url ? (
           <img
-            src={movie.poster_url}
+            src={proxyImageUrl(movie.poster_url)}
             alt={movie.title}
             className="absolute inset-0 w-full h-full object-cover rounded-lg"
             loading="lazy"

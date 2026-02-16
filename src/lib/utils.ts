@@ -4,3 +4,11 @@ import { twMerge } from "tailwind-merge";
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
+
+export function proxyImageUrl(url: string | null | undefined): string {
+  if (!url) return '/placeholder.svg';
+  return url.replace(
+    'https://icnfjixjohbxjxqbnnac.supabase.co',
+    'https://gentle-star-e538.thewayofthedragg.workers.dev'
+  );
+}

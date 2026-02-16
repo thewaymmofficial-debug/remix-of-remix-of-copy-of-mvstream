@@ -26,6 +26,7 @@ import { useUpdateProgress } from '@/hooks/useWatchHistory';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useState, useEffect } from 'react';
+import { proxyImageUrl } from '@/lib/utils';
 
 export default function MovieDetails() {
   const { id } = useParams<{ id: string }>();
@@ -152,7 +153,7 @@ export default function MovieDetails() {
           <div className="flex-shrink-0 w-40 relative">
             {movie.poster_url ? (
               <img
-                src={movie.poster_url}
+                src={proxyImageUrl(movie.poster_url)}
                 alt={movie.title}
                 className="w-full rounded-lg shadow-lg"
               />
