@@ -1,5 +1,5 @@
-import { useState, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useMemo, useRef, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Navbar } from '@/components/Navbar';
 
@@ -27,8 +27,16 @@ import type { Movie } from '@/types/database';
 
 const Index = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
+
+  // If user is not authenticated and didn't come from Welcome page, redirect to /auth
+  useEffect(() => {
+    if (!isAuthLoading && !user && !location.state?.fromWelcome) {
+      navigate('/auth', { replace: true });
+    }
+  }, [user, isAuthLoading, navigate, location.state]);
   const { data: moviesByCategory, isLoading, isError, error, refetch } = useMoviesByCategory();
   const { data: watchlistData } = useWatchlist();
   const { data: continueWatching } = useContinueWatching();
