@@ -33,7 +33,7 @@ const Index = () => {
 
   // If user is not authenticated and didn't come from Welcome page, redirect to /auth
   useEffect(() => {
-    if (!isAuthLoading && !user && !location.state?.fromWelcome) {
+    if (!isAuthLoading && !user && !location.state?.fromWelcome && !location.state?.guestBrowse) {
       navigate('/auth', { replace: true });
     }
   }, [user, isAuthLoading, navigate, location.state]);

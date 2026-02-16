@@ -331,7 +331,7 @@ export default function Auth() {
             type="button"
             variant="outline"
             className="w-full h-12 text-base font-semibold rounded-xl border-border"
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/', { state: { guestBrowse: true } })}
           >
             {t('browseFirst')}
           </Button>
