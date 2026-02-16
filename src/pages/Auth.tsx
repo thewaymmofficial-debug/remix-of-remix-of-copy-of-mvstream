@@ -11,7 +11,7 @@ import { LanguageToggle } from '@/components/LanguageToggle';
 import { useTheme } from 'next-themes';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import cineverseLogo from '@/assets/cineverse-logo.png';
+import { CineverseLogo } from '@/components/CineverseLogo';
 import type { UserDevice } from '@/hooks/useDevices';
 
 export default function Auth() {
@@ -238,11 +238,8 @@ export default function Auth() {
           {theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
         </Button>
         
-        {/* Logo centered */}
-        <div className="flex items-center gap-2">
-          <img src={cineverseLogo} alt="Cineverse" className="h-8 w-auto" />
-          <span className="text-lg font-bold text-foreground">Cineverse</span>
-        </div>
+        {/* Animated logo */}
+        <CineverseLogo />
         
         <LanguageToggle className="text-foreground border-border" />
       </div>
