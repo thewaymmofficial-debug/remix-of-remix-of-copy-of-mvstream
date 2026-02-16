@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 
 const LETTERS = ['C', 'I', 'N', 'E', 'V', 'E', 'R', 'S', 'E'];
 
-export function CineverseLogo() {
+export function CineverseLogo({ className = 'text-foreground' }: { className?: string }) {
   const [animKey, setAnimKey] = useState(0);
   const [isAnimating, setIsAnimating] = useState(true);
   const containerRef = useRef<HTMLSpanElement>(null);
@@ -52,7 +52,7 @@ export function CineverseLogo() {
             key={i}
             ref={isI ? iRef : undefined}
             className={`
-              inline-block text-lg font-bold text-foreground tracking-wide
+              inline-block text-lg font-bold ${className} tracking-wide
               ${isI ? 'animate-letter-squish' : ''}
               ${isAnimating ? 'animate-letter-fade-up opacity-0' : 'opacity-100'}
             `}
