@@ -8,6 +8,7 @@ import {
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useDownloadManager } from '@/contexts/DownloadContext';
 import { useNavigate } from 'react-router-dom';
+import { proxyStreamUrl } from '@/lib/utils';
 
 interface ServerDrawerProps {
   open: boolean;
@@ -42,6 +43,7 @@ export function ServerDrawer({
   const navigate = useNavigate();
 
   const handleOpen = (url: string, useInAppPlayer: boolean = false) => {
+    const proxiedUrl = proxyStreamUrl(url);
     // In-app download with progress tracking
     if (type === 'download' && movieInfo) {
       startDownload({
@@ -51,14 +53,14 @@ export function ServerDrawer({
         year: movieInfo.year,
         resolution: movieInfo.resolution,
         fileSize: movieInfo.fileSize,
-        url,
+        url: proxiedUrl,
       });
       navigate('/downloads');
     } else if (useInAppPlayer && type === 'play') {
       const title = movieInfo?.title || 'Video';
-      navigate(`/watch?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}`);
+      navigate(`/watch?url=${encodeURIComponent(proxiedUrl)}&title=${encodeURIComponent(title)}`);
     } else {
-      window.open(url, '_blank', 'noopener,noreferrer');
+      window.open(proxiedUrl, '_blank', 'noopener,noreferrer');
     }
     onOpenChange(false);
   };
