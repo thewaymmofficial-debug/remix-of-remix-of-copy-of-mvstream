@@ -1,103 +1,64 @@
 
+# Fix WebToApp APK -- Two Remaining Issues
 
-# Fix WebToApp APK -- Not Loading Without VPN
+## Problem 1: `current.className.includes is not a function`
 
-## Root Cause
+WebToApp injects its own JavaScript scripts into the page. These scripts try to call `.includes()` on `element.className`, but in Android WebView, SVG elements return an `SVGAnimatedString` object for `className` instead of a regular string. This crashes the injected script and can prevent the app from working properly.
 
-Your app works in all browsers (phone and desktop) without VPN, but fails in the WebToApp APK. The difference is that WebToApp uses **Android WebView**, which handles CORS (Cross-Origin Resource Sharing) differently from regular browsers:
+**Fix**: Add a small polyfill script in `index.html` that patches `SVGAnimatedString.prototype` so `.includes()` works on SVG className properties. This runs before any other script (including WebToApp's injected code).
 
-- Your Cloudflare Worker currently returns `Access-Control-Allow-Headers: *` (wildcard)
-- Regular browsers accept this wildcard and allow all headers
-- **Android WebView does NOT accept the wildcard** -- it requires each header to be explicitly listed
-- Result: every API call (login, fetch movies, fetch channels) is silently blocked by the WebView
+## Problem 2: Missing CORS Headers in Cloudflare Worker
 
-This is why you see "invalid credentials" and "loading" -- the requests never actually reach the server.
+Even though you updated the Worker, the Supabase JS client sends a header called `Content-Profile` on POST/PATCH/DELETE requests (for inserting data, updating records, etc.). This header was **not included** in the explicit CORS list I gave you earlier, so the WebView blocks those requests.
 
-## Solution
-
-### Step 1: You Update Your Cloudflare Worker (Manual -- Outside Lovable)
-
-Go to your Cloudflare dashboard and update the Worker code at `gentle-star-e538.thewayofthedragg.workers.dev` with this:
+**Fix (Your Action Required)**: Update the Cloudflare Worker one more time to add `content-profile` to the allowed headers list:
 
 ```javascript
-export default {
-  async fetch(request) {
-    const url = new URL(request.url);
-    url.hostname = "icnfjixjohbxjxqbnnac.supabase.co";
-
-    const corsHeaders = {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, accept, accept-profile, prefer, range, x-supabase-api-version",
-      "Access-Control-Expose-Headers": "content-range, x-supabase-api-version",
-      "Access-Control-Max-Age": "86400",
-    };
-
-    // Handle preflight -- MUST return explicit headers for WebView
-    if (request.method === "OPTIONS") {
-      return new Response(null, { status: 204, headers: corsHeaders });
-    }
-
-    const newHeaders = new Headers(request.headers);
-    newHeaders.set("Host", "icnfjixjohbxjxqbnnac.supabase.co");
-
-    const newRequest = new Request(url.toString(), {
-      method: request.method,
-      headers: newHeaders,
-      body: request.body,
-      redirect: "follow",
-    });
-
-    const response = await fetch(newRequest);
-    const respHeaders = new Headers(response.headers);
-
-    // Inject CORS headers into every response
-    for (const [key, value] of Object.entries(corsHeaders)) {
-      respHeaders.set(key, value);
-    }
-
-    return new Response(response.body, {
-      status: response.status,
-      statusText: response.statusText,
-      headers: respHeaders,
-    });
-  }
-};
+"Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, content-profile, accept, accept-profile, prefer, range, x-supabase-api-version",
 ```
 
-The critical change is replacing `Access-Control-Allow-Headers: *` with the explicit list of headers that Supabase uses. This makes Android WebView happy.
+Note the addition of `content-profile` compared to the previous version.
 
-### Step 2: Rewrite Watch.tsx (Code Change by Me)
+## Changes
 
-Replace the current redirect-based video player (`window.location.href = url`) with an in-app embedded player:
+### File: `index.html`
+Add a polyfill script before the main app script that:
+- Patches `SVGAnimatedString.prototype` to support `.includes()`, `.indexOf()`, and other string methods
+- This ensures WebToApp's injected scripts don't crash when they encounter SVG elements in the DOM
 
-- For streaming server URLs (containing `/watch/`): embed in a full-screen `<iframe>`
-- For direct `.mp4` / `.m3u8` URLs: use `<video>` element with `hls.js` (already installed)
-- Add a floating back button so users can always return to the app
-- Show loading spinner and error states with timeout handling
+### File: No other code changes needed
+The rest of the fix is updating your Cloudflare Worker (manual step).
 
-This prevents the WebView from navigating away from the app entirely when playing videos.
+## Steps to Complete
 
-### Step 3: Publish and Rebuild APK
+1. I add the polyfill to `index.html`
+2. You update the Cloudflare Worker to add `content-profile` to `Access-Control-Allow-Headers`
+3. Publish the app
+4. Rebuild your WebToApp APK
+5. Test without VPN
 
-1. After I make the Watch.tsx change, **publish the app**
-2. **Rebuild your WebToApp APK** (it needs to pick up the new published version)
-3. Test without VPN
+## Technical Details
 
-## What Each Fix Solves
+The polyfill in `index.html` will look like:
 
-| Problem | Cause | Fix |
-|---------|-------|-----|
-| "Invalid credentials" / can't login | WebView blocks fetch due to CORS wildcard | Explicit CORS headers in Cloudflare Worker |
-| Movies/channels not loading | Same CORS issue blocking all API calls | Same Cloudflare Worker fix |
-| Video player shows dead page | `window.location.href` navigates away | In-app iframe/video player |
+```html
+<script>
+  // Fix for Android WebView: SVGAnimatedString doesn't have string methods
+  try {
+    if (typeof SVGAnimatedString !== 'undefined') {
+      var proto = SVGAnimatedString.prototype;
+      if (!proto.includes) {
+        proto.includes = function(s) { return this.baseVal.includes(s); };
+      }
+      if (!proto.indexOf) {
+        proto.indexOf = function(s) { return this.baseVal.indexOf(s); };
+      }
+      if (!proto.startsWith) {
+        proto.startsWith = function(s) { return this.baseVal.startsWith(s); };
+      }
+    }
+  } catch(e) {}
+</script>
+```
 
-## Files to Modify (by me)
-
-- `src/pages/Watch.tsx` -- Rewrite with in-app player
-
-## Your Action Required
-
-- Update the Cloudflare Worker code (copy-paste the code above into your Cloudflare dashboard)
-- After changes, publish the app and rebuild the APK
-
+This is placed before the main app script so it runs before WebToApp's injected code and before React/next-themes initialize.
