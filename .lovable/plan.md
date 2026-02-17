@@ -1,61 +1,68 @@
 
 
-# Fix: Movie Streaming in WebToApp APK
+# Fix: Movie Streaming Without VPN in WebToApp APK
 
-## Root Cause
+## Problem
 
-The issue is the `sandbox` attribute on the iframe in `Watch.tsx` (line 169):
+The previous fix (removing `sandbox`) didn't fully solve the issue. The real root cause is deeper:
 
-```html
-sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-```
+1. When you tap Play, the stream URL (e.g., `tw.thewayofthedragg.workers.dev/watch/463/file.mkv`) gets proxied through your Vercel proxy (`proxies-lake.vercel.app/stream/watch/463/file.mkv`)
+2. The `/watch/` path on your Cloudflare worker returns an **HTML page** containing a built-in video player
+3. That HTML page's video element tries to load the actual video file **directly from the Cloudflare worker domain** -- not through the proxy
+4. Without VPN, Myanmar ISPs block the Cloudflare worker domain, so the video inside the iframe never loads
 
-Android WebView (used by WebToApp) has stricter security policies than regular browsers. The `sandbox` attribute **blocks media playback** inside the iframe because it's missing the `allow-modals`, `allow-presentation`, and critically -- WebView doesn't fully support sandboxed cross-origin media. The broken image icon you see is the video element inside the Cloudflare worker's HTML page failing to load media due to sandbox restrictions.
+The Vercel proxy only proxies the initial HTML page -- it cannot rewrite the internal video URLs inside that HTML.
 
-Your Cloudflare worker is fine -- the problem is purely on the app side.
+## Solution
 
-## How the Flow Works
+Stop using the Cloudflare worker's HTML player entirely. Instead, extract the **direct file URL** from the stream URL and play it with the native HTML5 video player, routed through the Vercel proxy.
 
-1. User taps "Play" -> URL goes through `proxyStreamUrl()` which rewrites the domain
-2. The URL contains `/watch/` so `isStreamingServer = true`
-3. The page loads the URL in a sandboxed iframe
-4. The Cloudflare worker returns an HTML page with a `<video>` element inside
-5. In browser: sandbox allows enough for playback. In WebView: sandbox blocks media loading
+URL transformation:
+- Stream URL: `/watch/463/AV_File.mkv?hash=X` (returns HTML page)
+- Direct URL: `/463/AV_File.mkv?hash=X` (returns raw video file)
 
-## Changes
+The only difference is removing the `/watch` prefix.
+
+## Technical Changes
 
 ### File: `src/pages/Watch.tsx`
 
-**Change 1**: Remove the `sandbox` attribute from the iframe entirely. Since the content comes from your own Cloudflare worker (a trusted source), sandboxing is unnecessary and causes WebView breakage.
+**Change 1: Add a function to convert streaming server URLs to direct file URLs**
 
-**Change 2**: Add `referrerPolicy="no-referrer"` to prevent referrer-related blocking in WebView.
+Add a helper that strips `/watch` from the path, converting the HTML player URL into a direct video file URL that can be played natively.
 
-**Change 3**: Expand the `allow` attribute to include more permissions needed by WebView.
+**Change 2: Remove the iframe path entirely**
 
-Replace the iframe block (lines 163-171):
-```typescript
-{!error && isStreamingServer && (
-  <iframe
-    src={url}
-    className="w-full h-full border-0"
-    allow="autoplay; fullscreen; encrypted-media; picture-in-picture; accelerometer; gyroscope"
-    allowFullScreen
-    referrerPolicy="no-referrer"
-    onLoad={() => setLoading(false)}
-  />
-)}
-```
+Instead of the current logic:
+- `/watch/` URL -> iframe (loads Cloudflare HTML player)
+- Direct URL -> native video player
 
-Key differences:
-- Removed `sandbox` attribute (the main fix)
-- Added `referrerPolicy="no-referrer"` for WebView compatibility
-- Expanded `allow` to include `accelerometer` and `gyroscope` for fullscreen video controls
+Change to:
+- `/watch/` URL -> strip `/watch`, proxy the direct file URL -> native video player
+- Direct URL -> native video player
 
-### No changes needed to:
-- Cloudflare worker (CORS headers are already correct)
-- WebToApp settings (your current config looks correct with JavaScript, DOM Storage, and Fullscreen Video enabled)
+This means the `isStreamingServer` flag and the iframe code block are no longer needed. All videos play through the native `<video>` element.
 
-## Why This Is Safe
+**Change 3: Update the video setup effect**
 
-The `sandbox` attribute is a security measure for untrusted third-party content. Since the iframe only loads content from your own Cloudflare worker (`tw.thewayofthedragg.workers.dev` or the Vercel proxy), removing it poses no security risk. The worker is already under your control.
+The effect that sets up HLS / direct video playback will now also handle the converted streaming URLs (which are just direct .mkv files after transformation).
+
+### File: `src/lib/utils.ts`
+
+**No changes needed.** The existing `proxyStreamUrl()` function already rewrites the domain to go through the Vercel proxy. After stripping `/watch`, the URL flows through the same proxy path.
+
+### What This Fixes
+
+- Videos play through the Vercel proxy end-to-end (no direct connections to blocked domains)
+- No iframe means no nested cross-origin issues
+- Native video controls work properly in Android WebView
+- The `android-webview-video-poster` CORS error disappears (it was caused by the iframe)
+- Works without VPN because all traffic goes through `proxies-lake.vercel.app`
+
+### No Changes Needed To
+
+- Cloudflare worker (it already serves direct files on non-`/watch/` paths)
+- Vercel proxy configuration
+- WebToApp settings
+- ServerDrawer component (it already proxies URLs before passing to Watch)
 
