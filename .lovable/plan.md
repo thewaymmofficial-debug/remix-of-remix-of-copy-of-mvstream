@@ -1,75 +1,103 @@
 
 
-# Fix Myanmar Access Issues
+# Fix WebToApp APK -- Not Loading Without VPN
 
-## Problem Analysis
+## Root Cause
 
-After investigation, the proxy code changes are correctly in place. There are **two remaining issues**:
+Your app works in all browsers (phone and desktop) without VPN, but fails in the WebToApp APK. The difference is that WebToApp uses **Android WebView**, which handles CORS (Cross-Origin Resource Sharing) differently from regular browsers:
 
-### Issue 1: App Not Published
-The proxy changes only exist in the preview build. You need to **publish the app** for the live URL (`shimmer-flix.lovable.app`) to use the proxy. However, `lovable.app` itself may also be blocked by Myanmar ISPs — you may need to use a custom domain through Cloudflare.
+- Your Cloudflare Worker currently returns `Access-Control-Allow-Headers: *` (wildcard)
+- Regular browsers accept this wildcard and allow all headers
+- **Android WebView does NOT accept the wildcard** -- it requires each header to be explicitly listed
+- Result: every API call (login, fetch movies, fetch channels) is silently blocked by the WebView
 
-### Issue 2: Storage/Image URLs Still Direct
-Movie posters and slide images stored in Supabase Storage use direct URLs like:
-`https://icnfjixjohbxjxqbnnac.supabase.co/storage/v1/object/public/slide-images/...`
-
-These URLs are stored **in the database**, not in the code. When the browser tries to load these images, they go directly to `supabase.co` which is blocked.
+This is why you see "invalid credentials" and "loading" -- the requests never actually reach the server.
 
 ## Solution
 
-### Step 1: Proxy Storage URLs at Runtime
-Add a utility function that rewrites any `supabase.co` storage URL to go through the Cloudflare proxy. Apply it wherever images are rendered.
+### Step 1: You Update Your Cloudflare Worker (Manual -- Outside Lovable)
 
-**New utility in `src/lib/utils.ts`:**
-```typescript
-export function proxyImageUrl(url: string | null | undefined): string {
-  if (!url) return '/placeholder.svg';
-  return url.replace(
-    'https://icnfjixjohbxjxqbnnac.supabase.co',
-    'https://gentle-star-e538.thewayofthedragg.workers.dev'
-  );
-}
-```
+Go to your Cloudflare dashboard and update the Worker code at `gentle-star-e538.thewayofthedragg.workers.dev` with this:
 
-### Step 2: Apply to Image Components
-Update components that display images from Supabase storage:
-- `MovieCard.tsx` (poster images)
-- `HeroBanner.tsx` (backdrop images)
-- `MovieDetails.tsx` (poster and backdrop)
-- `InfoCarousel.tsx` (slide images)
-- `FootballVideoCard.tsx` (thumbnails)
-- `ContinueWatchingCard.tsx`
-- Any other component rendering `poster_url`, `backdrop_url`, or `image_url`
-
-### Step 3: Fix Auth GoTrue URL
-The Supabase JS client uses the base URL for auth calls (`/auth/v1/token`). Since we already changed `SUPABASE_URL` to the proxy, auth should work. But we should verify the Cloudflare Worker properly proxies POST requests with JSON bodies (for login).
-
-**Update the Cloudflare Worker** to ensure it forwards request bodies correctly:
 ```javascript
-const newRequest = new Request(url.toString(), {
-  method: request.method,
-  headers: newHeaders,
-  body: request.body,  // This must stream the body for POST/PUT
-  redirect: "follow",
-});
+export default {
+  async fetch(request) {
+    const url = new URL(request.url);
+    url.hostname = "icnfjixjohbxjxqbnnac.supabase.co";
+
+    const corsHeaders = {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, accept, accept-profile, prefer, range, x-supabase-api-version",
+      "Access-Control-Expose-Headers": "content-range, x-supabase-api-version",
+      "Access-Control-Max-Age": "86400",
+    };
+
+    // Handle preflight -- MUST return explicit headers for WebView
+    if (request.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: corsHeaders });
+    }
+
+    const newHeaders = new Headers(request.headers);
+    newHeaders.set("Host", "icnfjixjohbxjxqbnnac.supabase.co");
+
+    const newRequest = new Request(url.toString(), {
+      method: request.method,
+      headers: newHeaders,
+      body: request.body,
+      redirect: "follow",
+    });
+
+    const response = await fetch(newRequest);
+    const respHeaders = new Headers(response.headers);
+
+    // Inject CORS headers into every response
+    for (const [key, value] of Object.entries(corsHeaders)) {
+      respHeaders.set(key, value);
+    }
+
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: respHeaders,
+    });
+  }
+};
 ```
 
-Note: The current Worker script uses `request.method !== "GET" && request.method !== "HEAD" ? request.body : null` which should work, but verify it handles `Content-Type: application/json` properly.
+The critical change is replacing `Access-Control-Allow-Headers: *` with the explicit list of headers that Supabase uses. This makes Android WebView happy.
 
-### Step 4: Publish and Test
-After applying changes, publish the app and test from Myanmar without VPN.
+### Step 2: Rewrite Watch.tsx (Code Change by Me)
 
-## Files to Modify
-1. **`src/lib/utils.ts`** -- Add `proxyImageUrl` helper
-2. **`src/components/MovieCard.tsx`** -- Use `proxyImageUrl` for poster
-3. **`src/components/HeroBanner.tsx`** -- Use `proxyImageUrl` for backdrop
-4. **`src/pages/MovieDetails.tsx`** -- Use `proxyImageUrl` for images
-5. **`src/components/InfoCarousel.tsx`** -- Use `proxyImageUrl` for slide images
-6. **`src/components/ContinueWatchingCard.tsx`** -- Use `proxyImageUrl`
-7. **`src/components/FootballVideoCard.tsx`** -- Use `proxyImageUrl`
-8. **`src/components/RelatedMovies.tsx`** -- Use `proxyImageUrl`
-9. **`src/components/MovieQuickPreview.tsx`** -- Use `proxyImageUrl`
+Replace the current redirect-based video player (`window.location.href = url`) with an in-app embedded player:
 
-## Important Note for the User
-Even after these changes, the **published URL** (`shimmer-flix.lovable.app`) may itself be blocked by Myanmar ISPs since `lovable.app` could be blocked. If so, you would need to set up a **custom domain** through Cloudflare for the frontend as well.
+- For streaming server URLs (containing `/watch/`): embed in a full-screen `<iframe>`
+- For direct `.mp4` / `.m3u8` URLs: use `<video>` element with `hls.js` (already installed)
+- Add a floating back button so users can always return to the app
+- Show loading spinner and error states with timeout handling
+
+This prevents the WebView from navigating away from the app entirely when playing videos.
+
+### Step 3: Publish and Rebuild APK
+
+1. After I make the Watch.tsx change, **publish the app**
+2. **Rebuild your WebToApp APK** (it needs to pick up the new published version)
+3. Test without VPN
+
+## What Each Fix Solves
+
+| Problem | Cause | Fix |
+|---------|-------|-----|
+| "Invalid credentials" / can't login | WebView blocks fetch due to CORS wildcard | Explicit CORS headers in Cloudflare Worker |
+| Movies/channels not loading | Same CORS issue blocking all API calls | Same Cloudflare Worker fix |
+| Video player shows dead page | `window.location.href` navigates away | In-app iframe/video player |
+
+## Files to Modify (by me)
+
+- `src/pages/Watch.tsx` -- Rewrite with in-app player
+
+## Your Action Required
+
+- Update the Cloudflare Worker code (copy-paste the code above into your Cloudflare dashboard)
+- After changes, publish the app and rebuild the APK
 
