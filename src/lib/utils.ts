@@ -12,3 +12,10 @@ export function proxyImageUrl(url: string | null | undefined): string {
     'https://proxies-lake.vercel.app'
   );
 }
+
+export function proxyStreamUrl(url: string): string {
+  return url.replace(
+    'https://tw.thewayofthedragg.workers.dev',
+    'https://proxies-lake.vercel.app/stream'
+  );
+}
