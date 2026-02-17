@@ -19,10 +19,10 @@ export default function Watch() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Determine player type - check file extensions FIRST (even with query params)
-  const isHls = url.includes('.m3u8');
-  const isDirectVideo = url.includes('.mp4') || url.includes('.webm') || url.includes('.mkv');
-  const isStreamingServer = url.includes('/watch/') && !isDirectVideo && !isHls;
+  // Determine player type - /watch/ URLs are streaming server pages (HTML player)
+  const isStreamingServer = url.includes('/watch/');
+  const isHls = !isStreamingServer && url.includes('.m3u8');
+  const isDirectVideo = !isStreamingServer && (url.includes('.mp4') || url.includes('.webm') || url.includes('.mkv'));
 
   const goBack = useCallback(() => {
     if (window.history.length > 1) {
