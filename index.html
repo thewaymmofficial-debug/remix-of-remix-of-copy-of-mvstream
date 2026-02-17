@@ -24,6 +24,23 @@
   </head>
 
   <body>
+    <script>
+      // Fix for Android WebView: SVGAnimatedString doesn't have string methods
+      try {
+        if (typeof SVGAnimatedString !== 'undefined') {
+          var proto = SVGAnimatedString.prototype;
+          if (!proto.includes) {
+            proto.includes = function(s) { return this.baseVal.includes(s); };
+          }
+          if (!proto.indexOf) {
+            proto.indexOf = function(s) { return this.baseVal.indexOf(s); };
+          }
+          if (!proto.startsWith) {
+            proto.startsWith = function(s) { return this.baseVal.startsWith(s); };
+          }
+        }
+      } catch(e) {}
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
