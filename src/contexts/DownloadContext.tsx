@@ -108,7 +108,7 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
         return directResponse;
       } catch (directErr) {
         console.log('[Download] Direct fetch failed, trying proxy:', (directErr as Error).message);
-        const proxyUrl = `https://gentle-star-e538.thewayofthedragg.workers.dev/functions/v1/download-proxy?url=${encodeURIComponent(url)}`;
+        const proxyUrl = `https://proxies-lake.vercel.app/functions/v1/download-proxy?url=${encodeURIComponent(url)}`;
         return fetch(proxyUrl, { signal: controller.signal, headers });
       }
     };
@@ -262,7 +262,7 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
       setDownloads(prev => [newEntry, ...prev]);
 
       // Use proxy URL with Content-Disposition header so Android DownloadManager gets the filename
-      const proxyUrl = `https://gentle-star-e538.thewayofthedragg.workers.dev/functions/v1/download-proxy?url=${encodeURIComponent(info.url)}&filename=${encodeURIComponent(filename)}`;
+      const proxyUrl = `https://proxies-lake.vercel.app/functions/v1/download-proxy?url=${encodeURIComponent(info.url)}&filename=${encodeURIComponent(filename)}`;
       // window.location.href triggers Android WebView's onDownloadStart listener
       window.location.href = proxyUrl;
 

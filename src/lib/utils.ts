@@ -9,6 +9,6 @@ export function proxyImageUrl(url: string | null | undefined): string {
   if (!url) return '/placeholder.svg';
   return url.replace(
     'https://icnfjixjohbxjxqbnnac.supabase.co',
-    'https://gentle-star-e538.thewayofthedragg.workers.dev'
+    'https://proxies-lake.vercel.app'
   );
 }
