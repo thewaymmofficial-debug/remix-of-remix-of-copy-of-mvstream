@@ -10,912 +10,238 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
+    PostgrestVersion: "13.0.5"
   }
   public: {
     Tables: {
-      broken_channels: {
+      advertisements: {
         Row: {
-          channel_name: string | null
-          channel_url: string
-          created_at: string
-          id: string
-          reported_by: string | null
-        }
-        Insert: {
-          channel_name?: string | null
-          channel_url: string
-          created_at?: string
-          id?: string
-          reported_by?: string | null
-        }
-        Update: {
-          channel_name?: string | null
-          channel_url?: string
-          created_at?: string
-          id?: string
-          reported_by?: string | null
-        }
-        Relationships: []
-      }
-      cast_members: {
-        Row: {
-          created_at: string
-          id: string
-          name: string
-          photo_url: string | null
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          name: string
-          photo_url?: string | null
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          name?: string
-          photo_url?: string | null
-        }
-        Relationships: []
-      }
-      categories: {
-        Row: {
-          created_at: string
-          display_order: number | null
-          id: string
-          name: string
-        }
-        Insert: {
-          created_at?: string
-          display_order?: number | null
-          id?: string
-          name: string
-        }
-        Update: {
-          created_at?: string
-          display_order?: number | null
-          id?: string
-          name?: string
-        }
-        Relationships: []
-      }
-      episodes: {
-        Row: {
-          air_date: string | null
-          created_at: string
-          description: string | null
-          download_url: string | null
-          duration: string | null
-          episode_number: number
-          id: string
-          mega_url: string | null
-          season_id: string
-          stream_url: string | null
-          telegram_url: string | null
-          thumbnail_url: string | null
-          title: string
-        }
-        Insert: {
-          air_date?: string | null
-          created_at?: string
-          description?: string | null
-          download_url?: string | null
-          duration?: string | null
-          episode_number: number
-          id?: string
-          mega_url?: string | null
-          season_id: string
-          stream_url?: string | null
-          telegram_url?: string | null
-          thumbnail_url?: string | null
-          title: string
-        }
-        Update: {
-          air_date?: string | null
-          created_at?: string
-          description?: string | null
-          download_url?: string | null
-          duration?: string | null
-          episode_number?: number
-          id?: string
-          mega_url?: string | null
-          season_id?: string
-          stream_url?: string | null
-          telegram_url?: string | null
-          thumbnail_url?: string | null
-          title?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "episodes_season_id_fkey"
-            columns: ["season_id"]
-            isOneToOne: false
-            referencedRelation: "seasons"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      favorite_channels: {
-        Row: {
-          channel_group: string | null
-          channel_logo: string | null
-          channel_name: string
-          channel_url: string
-          created_at: string
-          id: string
-          source_category: string | null
-          user_id: string
-        }
-        Insert: {
-          channel_group?: string | null
-          channel_logo?: string | null
-          channel_name: string
-          channel_url: string
-          created_at?: string
-          id?: string
-          source_category?: string | null
-          user_id: string
-        }
-        Update: {
-          channel_group?: string | null
-          channel_logo?: string | null
-          channel_name?: string
-          channel_url?: string
-          created_at?: string
-          id?: string
-          source_category?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
-      football_videos: {
-        Row: {
-          category: string
-          created_at: string
-          download_url: string | null
-          id: string
-          is_live: boolean | null
-          is_premium: boolean | null
-          show_in_highlights: boolean
-          show_in_replay: boolean
-          stream_url: string | null
-          thumbnail_url: string | null
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          category?: string
-          created_at?: string
-          download_url?: string | null
-          id?: string
-          is_live?: boolean | null
-          is_premium?: boolean | null
-          show_in_highlights?: boolean
-          show_in_replay?: boolean
-          stream_url?: string | null
-          thumbnail_url?: string | null
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          category?: string
-          created_at?: string
-          download_url?: string | null
-          id?: string
-          is_live?: boolean | null
-          is_premium?: boolean | null
-          show_in_highlights?: boolean
-          show_in_replay?: boolean
-          stream_url?: string | null
-          thumbnail_url?: string | null
-          title?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      info_slides: {
-        Row: {
-          accent_color: string
-          bg_color: string
+          alt_text: string | null
           created_at: string
           description: string | null
           display_order: number
           id: string
-          image_url: string | null
+          image_url: string
           is_active: boolean
-          redirect_link: string
-          title: string | null
+          media_type: string
+          placement: string
+          target_url: string
+          title: string
           updated_at: string
         }
         Insert: {
-          accent_color?: string
-          bg_color?: string
+          alt_text?: string | null
           created_at?: string
           description?: string | null
           display_order?: number
           id?: string
-          image_url?: string | null
+          image_url: string
           is_active?: boolean
-          redirect_link?: string
-          title?: string | null
+          media_type?: string
+          placement: string
+          target_url: string
+          title: string
           updated_at?: string
         }
         Update: {
-          accent_color?: string
-          bg_color?: string
+          alt_text?: string | null
           created_at?: string
           description?: string | null
           display_order?: number
           id?: string
-          image_url?: string | null
+          image_url?: string
           is_active?: boolean
-          redirect_link?: string
-          title?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      movie_cast: {
-        Row: {
-          cast_member_id: string
-          character_name: string | null
-          created_at: string
-          display_order: number | null
-          id: string
-          movie_id: string
-        }
-        Insert: {
-          cast_member_id: string
-          character_name?: string | null
-          created_at?: string
-          display_order?: number | null
-          id?: string
-          movie_id: string
-        }
-        Update: {
-          cast_member_id?: string
-          character_name?: string | null
-          created_at?: string
-          display_order?: number | null
-          id?: string
-          movie_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "movie_cast_cast_member_id_fkey"
-            columns: ["cast_member_id"]
-            isOneToOne: false
-            referencedRelation: "cast_members"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "movie_cast_movie_id_fkey"
-            columns: ["movie_id"]
-            isOneToOne: false
-            referencedRelation: "movies"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      movie_requests: {
-        Row: {
-          admin_note: string | null
-          content_type: string
-          created_at: string
-          id: string
-          status: string
-          title: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          admin_note?: string | null
-          content_type?: string
-          created_at?: string
-          id?: string
-          status?: string
-          title: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          admin_note?: string | null
-          content_type?: string
-          created_at?: string
-          id?: string
-          status?: string
+          media_type?: string
+          placement?: string
+          target_url?: string
           title?: string
           updated_at?: string
-          user_id?: string
         }
         Relationships: []
       }
-      movie_views: {
+      download_links: {
         Row: {
           created_at: string
           id: string
-          last_viewed_at: string | null
-          movie_id: string
-          view_count: number | null
-          weekly_views: number | null
+          resolution: string
+          resolution_img: string | null
+          server: string
+          size: string
+          url: string
+          video_id: string
         }
         Insert: {
           created_at?: string
           id?: string
-          last_viewed_at?: string | null
-          movie_id: string
-          view_count?: number | null
-          weekly_views?: number | null
+          resolution: string
+          resolution_img?: string | null
+          server: string
+          size: string
+          url: string
+          video_id: string
         }
         Update: {
           created_at?: string
           id?: string
-          last_viewed_at?: string | null
-          movie_id?: string
-          view_count?: number | null
-          weekly_views?: number | null
+          resolution?: string
+          resolution_img?: string | null
+          server?: string
+          size?: string
+          url?: string
+          video_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "movie_views_movie_id_fkey"
-            columns: ["movie_id"]
-            isOneToOne: true
-            referencedRelation: "movies"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      movies: {
-        Row: {
-          actors: string[] | null
-          average_rating: number | null
-          backdrop_url: string | null
-          category: string[] | null
-          content_type: Database["public"]["Enums"]["content_type"] | null
-          created_at: string
-          description: string | null
-          director: string | null
-          download_url: string | null
-          file_size: string | null
-          id: string
-          is_featured: boolean | null
-          is_premium: boolean | null
-          mega_url: string | null
-          poster_url: string | null
-          rating_count: number | null
-          resolution: string | null
-          stream_url: string | null
-          telegram_url: string | null
-          title: string
-          updated_at: string
-          year: number | null
-        }
-        Insert: {
-          actors?: string[] | null
-          average_rating?: number | null
-          backdrop_url?: string | null
-          category?: string[] | null
-          content_type?: Database["public"]["Enums"]["content_type"] | null
-          created_at?: string
-          description?: string | null
-          director?: string | null
-          download_url?: string | null
-          file_size?: string | null
-          id?: string
-          is_featured?: boolean | null
-          is_premium?: boolean | null
-          mega_url?: string | null
-          poster_url?: string | null
-          rating_count?: number | null
-          resolution?: string | null
-          stream_url?: string | null
-          telegram_url?: string | null
-          title: string
-          updated_at?: string
-          year?: number | null
-        }
-        Update: {
-          actors?: string[] | null
-          average_rating?: number | null
-          backdrop_url?: string | null
-          category?: string[] | null
-          content_type?: Database["public"]["Enums"]["content_type"] | null
-          created_at?: string
-          description?: string | null
-          director?: string | null
-          download_url?: string | null
-          file_size?: string | null
-          id?: string
-          is_featured?: boolean | null
-          is_premium?: boolean | null
-          mega_url?: string | null
-          poster_url?: string | null
-          rating_count?: number | null
-          resolution?: string | null
-          stream_url?: string | null
-          telegram_url?: string | null
-          title?: string
-          updated_at?: string
-          year?: number | null
-        }
-        Relationships: []
-      }
-      notifications: {
-        Row: {
-          created_at: string
-          id: string
-          is_read: boolean
-          message: string
-          reference_id: string | null
-          reference_type: string | null
-          title: string
-          type: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          is_read?: boolean
-          message: string
-          reference_id?: string | null
-          reference_type?: string | null
-          title: string
-          type?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          is_read?: boolean
-          message?: string
-          reference_id?: string | null
-          reference_type?: string | null
-          title?: string
-          type?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      payment_methods: {
-        Row: {
-          account_name: string
-          account_number: string
-          created_at: string
-          display_order: number
-          gradient: string
-          id: string
-          is_active: boolean
-          name: string
-          text_color: string
-          updated_at: string
-        }
-        Insert: {
-          account_name: string
-          account_number: string
-          created_at?: string
-          display_order?: number
-          gradient?: string
-          id?: string
-          is_active?: boolean
-          name: string
-          text_color?: string
-          updated_at?: string
-        }
-        Update: {
-          account_name?: string
-          account_number?: string
-          created_at?: string
-          display_order?: number
-          gradient?: string
-          id?: string
-          is_active?: boolean
-          name?: string
-          text_color?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      premium_requests: {
-        Row: {
-          admin_note: string | null
-          created_at: string
-          id: string
-          plan_duration: string
-          plan_id: string | null
-          plan_price: string
-          premium_type: string | null
-          reviewed_at: string | null
-          reviewed_by: string | null
-          screenshot_url: string | null
-          status: string
-          transaction_id: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          admin_note?: string | null
-          created_at?: string
-          id?: string
-          plan_duration: string
-          plan_id?: string | null
-          plan_price: string
-          premium_type?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          screenshot_url?: string | null
-          status?: string
-          transaction_id: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          admin_note?: string | null
-          created_at?: string
-          id?: string
-          plan_duration?: string
-          plan_id?: string | null
-          plan_price?: string
-          premium_type?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          screenshot_url?: string | null
-          status?: string
-          transaction_id?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "premium_requests_plan_id_fkey"
-            columns: ["plan_id"]
+            foreignKeyName: "download_links_video_id_fkey"
+            columns: ["video_id"]
             isOneToOne: false
-            referencedRelation: "pricing_plans"
+            referencedRelation: "videos"
             referencedColumns: ["id"]
           },
         ]
-      }
-      pricing_plans: {
-        Row: {
-          created_at: string
-          display_order: number
-          duration: string
-          duration_days: number
-          id: string
-          is_active: boolean
-          price: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          display_order?: number
-          duration: string
-          duration_days?: number
-          id?: string
-          is_active?: boolean
-          price: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          display_order?: number
-          duration?: string
-          duration_days?: number
-          id?: string
-          is_active?: boolean
-          price?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      profiles: {
-        Row: {
-          avatar_url: string | null
-          created_at: string
-          display_name: string | null
-          email: string | null
-          id: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          avatar_url?: string | null
-          created_at?: string
-          display_name?: string | null
-          email?: string | null
-          id?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          avatar_url?: string | null
-          created_at?: string
-          display_name?: string | null
-          email?: string | null
-          id?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      ratings: {
-        Row: {
-          created_at: string
-          id: string
-          movie_id: string
-          rating: number
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          movie_id: string
-          rating: number
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          movie_id?: string
-          rating?: number
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ratings_movie_id_fkey"
-            columns: ["movie_id"]
-            isOneToOne: false
-            referencedRelation: "movies"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      seasons: {
-        Row: {
-          created_at: string
-          id: string
-          movie_id: string
-          season_number: number
-          title: string | null
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          movie_id: string
-          season_number: number
-          title?: string | null
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          movie_id?: string
-          season_number?: number
-          title?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "seasons_movie_id_fkey"
-            columns: ["movie_id"]
-            isOneToOne: false
-            referencedRelation: "movies"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      site_settings: {
-        Row: {
-          created_at: string
-          id: string
-          key: string
-          updated_at: string
-          value: string | null
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          key: string
-          updated_at?: string
-          value?: string | null
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          key?: string
-          updated_at?: string
-          value?: string | null
-        }
-        Relationships: []
-      }
-      tv_channels: {
-        Row: {
-          category: string
-          created_at: string
-          display_order: number | null
-          id: string
-          is_active: boolean | null
-          name: string
-          stream_url: string | null
-          thumbnail_url: string | null
-          updated_at: string
-        }
-        Insert: {
-          category?: string
-          created_at?: string
-          display_order?: number | null
-          id?: string
-          is_active?: boolean | null
-          name: string
-          stream_url?: string | null
-          thumbnail_url?: string | null
-          updated_at?: string
-        }
-        Update: {
-          category?: string
-          created_at?: string
-          display_order?: number | null
-          id?: string
-          is_active?: boolean | null
-          name?: string
-          stream_url?: string | null
-          thumbnail_url?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      user_devices: {
-        Row: {
-          created_at: string
-          device_id: string
-          device_name: string
-          id: string
-          last_active_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          device_id: string
-          device_name?: string
-          id?: string
-          last_active_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          device_id?: string
-          device_name?: string
-          id?: string
-          last_active_at?: string
-          user_id?: string
-        }
-        Relationships: []
       }
       user_roles: {
         Row: {
           created_at: string
           id: string
-          max_devices: number
-          premium_expires_at: string | null
-          premium_type: string | null
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
-          max_devices?: number
-          premium_expires_at?: string | null
-          premium_type?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
-          max_devices?: number
-          premium_expires_at?: string | null
-          premium_type?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
         Relationships: []
       }
-      watch_history: {
+      video_cast: {
         Row: {
+          character: string
           created_at: string
-          duration: number | null
-          episode_id: string | null
           id: string
-          last_watched_at: string
-          movie_id: string
-          progress: number | null
-          user_id: string
+          image_url: string | null
+          name: string
+          video_id: string
         }
         Insert: {
+          character: string
           created_at?: string
-          duration?: number | null
-          episode_id?: string | null
           id?: string
-          last_watched_at?: string
-          movie_id: string
-          progress?: number | null
-          user_id: string
+          image_url?: string | null
+          name: string
+          video_id: string
         }
         Update: {
+          character?: string
           created_at?: string
-          duration?: number | null
-          episode_id?: string | null
           id?: string
-          last_watched_at?: string
-          movie_id?: string
-          progress?: number | null
-          user_id?: string
+          image_url?: string | null
+          name?: string
+          video_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "watch_history_episode_id_fkey"
-            columns: ["episode_id"]
+            foreignKeyName: "video_cast_video_id_fkey"
+            columns: ["video_id"]
             isOneToOne: false
-            referencedRelation: "episodes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "watch_history_movie_id_fkey"
-            columns: ["movie_id"]
-            isOneToOne: false
-            referencedRelation: "movies"
+            referencedRelation: "videos"
             referencedColumns: ["id"]
           },
         ]
       }
-      watchlist: {
+      videos: {
         Row: {
+          cast: string | null
           created_at: string
+          director: string | null
+          duration: string
+          file_size: string | null
+          format: string | null
+          genre: string
           id: string
-          movie_id: string
-          user_id: string
+          is_series: boolean | null
+          mega_file_size: string | null
+          mega_link: string | null
+          poster_url: string | null
+          "public.episodes": string | null
+          quality: string | null
+          rating: string | null
+          release_date: string | null
+          seasons: number | null
+          subtitle_info: string | null
+          synopsis: string | null
+          telegram_file_size: string | null
+          telegram_link: string | null
+          title: string
+          updated_at: string
+          year: string
         }
         Insert: {
+          cast?: string | null
           created_at?: string
+          director?: string | null
+          duration: string
+          file_size?: string | null
+          format?: string | null
+          genre: string
           id?: string
-          movie_id: string
-          user_id: string
+          is_series?: boolean | null
+          mega_file_size?: string | null
+          mega_link?: string | null
+          poster_url?: string | null
+          "public.episodes"?: string | null
+          quality?: string | null
+          rating?: string | null
+          release_date?: string | null
+          seasons?: number | null
+          subtitle_info?: string | null
+          synopsis?: string | null
+          telegram_file_size?: string | null
+          telegram_link?: string | null
+          title: string
+          updated_at?: string
+          year: string
         }
         Update: {
+          cast?: string | null
           created_at?: string
+          director?: string | null
+          duration?: string
+          file_size?: string | null
+          format?: string | null
+          genre?: string
           id?: string
-          movie_id?: string
-          user_id?: string
+          is_series?: boolean | null
+          mega_file_size?: string | null
+          mega_link?: string | null
+          poster_url?: string | null
+          "public.episodes"?: string | null
+          quality?: string | null
+          rating?: string | null
+          release_date?: string | null
+          seasons?: number | null
+          subtitle_info?: string | null
+          synopsis?: string | null
+          telegram_file_size?: string | null
+          telegram_link?: string | null
+          title?: string
+          updated_at?: string
+          year?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "watchlist_movie_id_fkey"
-            columns: ["movie_id"]
-            isOneToOne: false
-            referencedRelation: "movies"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      approve_premium_request: {
-        Args: { _admin_id: string; _request_id: string }
-        Returns: undefined
-      }
-      deny_premium_request: {
-        Args: { _admin_id: string; _reason?: string; _request_id: string }
-        Returns: undefined
-      }
-      get_user_role: {
-        Args: { _user_id: string }
-        Returns: Database["public"]["Enums"]["app_role"]
-      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -923,11 +249,9 @@ export type Database = {
         }
         Returns: boolean
       }
-      increment_view_count: { Args: { _movie_id: string }; Returns: undefined }
     }
     Enums: {
-      app_role: "admin" | "premium" | "free_user"
-      content_type: "movie" | "series"
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1055,8 +379,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "premium", "free_user"],
-      content_type: ["movie", "series"],
+      app_role: ["admin", "user"],
     },
   },
 } as const

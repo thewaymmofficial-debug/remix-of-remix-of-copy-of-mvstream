@@ -2,8 +2,8 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = "https://proxies-lake.vercel.app";
-const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljbmZqaXhqb2hieGp4cWJubmFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzMTYyNjMsImV4cCI6MjA4NTg5MjI2M30.aiU8qAgb1wicSC17EneEs4qAlLtFZbYeyMnhi4NHI7Y";
+const SUPABASE_URL = "https://mmpfiquvcnybmjthcaml.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1tcGZpcXV2Y255Ym1qdGhjYW1sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk3ODI4NDQsImV4cCI6MjA3NTM1ODg0NH0.6fHJ8qCWsDqrQCIHRSqWxjdURjZsGO7tSixpL8pxP-M";
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
