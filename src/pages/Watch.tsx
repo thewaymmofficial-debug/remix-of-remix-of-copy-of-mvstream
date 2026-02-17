@@ -163,10 +163,10 @@ export default function Watch() {
         <iframe
           src={url}
           className="w-full h-full border-0"
-          allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+          allow="autoplay; fullscreen; encrypted-media; picture-in-picture; accelerometer; gyroscope"
           allowFullScreen
+          referrerPolicy="no-referrer"
           onLoad={() => setLoading(false)}
-          sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
         />
       )}
 
