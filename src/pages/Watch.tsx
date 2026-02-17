@@ -13,16 +13,19 @@ export default function Watch() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const { needsCssRotation } = useFullscreenLandscape(containerRef);
 
-  const url = searchParams.get('url') || '';
+  const rawUrl = searchParams.get('url') || '';
   const title = searchParams.get('title') || 'Video';
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Determine player type - /watch/ URLs are streaming server pages (HTML player)
-  const isStreamingServer = url.includes('/watch/');
-  const isHls = !isStreamingServer && url.includes('.m3u8');
-  const isDirectVideo = !isStreamingServer && (url.includes('.mp4') || url.includes('.webm') || url.includes('.mkv'));
+  // Convert streaming server URLs (/watch/ID/file) to direct file URLs (/ID/file)
+  // The /watch/ path returns an HTML player page; without it we get the raw video file
+  const url = rawUrl.includes('/watch/')
+    ? rawUrl.replace('/watch/', '/')
+    : rawUrl;
+
+  const isHls = url.includes('.m3u8');
 
   const goBack = useCallback(() => {
     if (window.history.length > 1) {
@@ -34,14 +37,14 @@ export default function Watch() {
 
   // Redirect if no URL
   useEffect(() => {
-    if (!url) {
+    if (!rawUrl) {
       navigate('/', { replace: true });
     }
-  }, [url, navigate]);
+  }, [rawUrl, navigate]);
 
   // HLS / direct video setup
   useEffect(() => {
-    if (isStreamingServer || !url) return;
+    if (!url) return;
 
     const video = videoRef.current;
     if (!video) return;
@@ -64,7 +67,6 @@ export default function Watch() {
           }
         });
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        // Native HLS (Safari/iOS)
         video.src = url;
         video.addEventListener('loadedmetadata', () => {
           setLoading(false);
@@ -75,7 +77,7 @@ export default function Watch() {
         setLoading(false);
       }
     } else {
-      // Direct mp4/webm
+      // Direct video (mp4/webm/mkv)
       video.src = url;
       video.addEventListener('loadedmetadata', () => setLoading(false));
       video.addEventListener('error', () => {
@@ -90,20 +92,7 @@ export default function Watch() {
         hls.destroy();
       }
     };
-  }, [url, isStreamingServer, isHls]);
-
-  // Iframe load timeout
-  useEffect(() => {
-    if (!isStreamingServer || !url) return;
-
-    const timeout = setTimeout(() => {
-      if (loading) {
-        setLoading(false); // Just hide spinner, iframe may still be loading
-      }
-    }, 15000);
-
-    return () => clearTimeout(timeout);
-  }, [isStreamingServer, url, loading]);
+  }, [url, isHls]);
 
   if (!url) return null;
 
@@ -145,8 +134,8 @@ export default function Watch() {
       {/* Error state */}
       {error && (
         <div className="absolute inset-0 z-[55] bg-black flex flex-col items-center justify-center gap-4 px-6">
-          <AlertCircle className="w-12 h-12 text-red-500" />
-          <p className="text-white text-center text-lg">{error}</p>
+          <AlertCircle className="w-12 h-12 text-destructive" />
+          <p className="text-foreground text-center text-lg">{error}</p>
           <div className="flex gap-3">
             <Button variant="outline" onClick={goBack}>
               Go Back
@@ -158,19 +147,8 @@ export default function Watch() {
         </div>
       )}
 
-      {/* Player content */}
-      {!error && isStreamingServer && (
-        <iframe
-          src={url}
-          className="w-full h-full border-0"
-          allow="autoplay; fullscreen; encrypted-media; picture-in-picture; accelerometer; gyroscope"
-          allowFullScreen
-          referrerPolicy="no-referrer"
-          onLoad={() => setLoading(false)}
-        />
-      )}
-
-      {!error && !isStreamingServer && (
+      {/* Native video player for all sources */}
+      {!error && (
         <video
           ref={videoRef}
           className="w-full h-full object-contain"
