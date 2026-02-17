@@ -1,46 +1,32 @@
 
 
-# Fix Remaining Broken Features After Proxy Migration
+# Fix Movie Streaming - Wrong Player Type Detection
 
-## Issue 1: TV Channels Not Loading (Critical)
-`src/pages/TvChannels.tsx` line 15 still has the OLD Cloudflare Worker URL hardcoded:
-```
-const SUPABASE_FUNCTIONS_URL = 'https://gentle-star-e538.thewayofthedragg.workers.dev/functions/v1';
-```
-This was missed during the proxy migration. It needs to be updated to:
-```
-const SUPABASE_FUNCTIONS_URL = 'https://proxies-lake.vercel.app/functions/v1';
-```
+## Problem
+The streaming URL (`/stream/watch/468/AV_File_1770874672.mkv?hash=AgAD1h`) contains `/watch/` in the path, so `Watch.tsx` incorrectly treats it as an iframe-based streaming server. But it's actually a direct video file being proxied through Vercel -- it needs the HTML5 `<video>` player, not an iframe.
 
-## Issue 2: Slide Images Not Showing
-The `proxyImageUrl` function in `src/lib/utils.ts` correctly replaces `supabase.co` with `proxies-lake.vercel.app`. However, the Vercel proxy needs to handle `/storage/v1/object/public/...` paths, which it should since it forwards all paths. This should work once the proxy CORS fix (from the previous message) is deployed. No code change needed here -- just confirm the proxy is updated.
+The broken image icon in the screenshot confirms the iframe is receiving raw video bytes instead of an HTML page.
 
-## Issue 3: Movie Streaming Stuck on "Loading Video..."
-Movie stream URLs like `https://tw.thewayofthedragg.workers.dev/watch/463/...` use a DIFFERENT `workers.dev` domain that is also blocked by Myanmar ISPs. This is NOT the Supabase proxy -- it's a separate streaming server.
-
-This cannot be fixed in the Lovable app code alone. The streaming server domain (`tw.thewayofthedragg.workers.dev`) also needs a proxy or custom domain. Options:
-- Add another rewrite in the Vercel proxy for streaming URLs
-- Set up a custom domain on the streaming Cloudflare Worker
-
-Since the streaming server is separate from Supabase, we can add a second Vercel serverless function to proxy it.
+## Solution
+Update the player type detection in `Watch.tsx` to prioritize video file extension checks over the `/watch/` path check. If a URL contains `.mkv`, `.mp4`, or `.webm` anywhere (not just at the end, since query params like `?hash=` come after), treat it as a direct video.
 
 ## Changes
 
-### File 1: `src/pages/TvChannels.tsx`
-- Line 15: Change `SUPABASE_FUNCTIONS_URL` from `https://gentle-star-e538.thewayofthedragg.workers.dev/functions/v1` to `https://proxies-lake.vercel.app/functions/v1`
+### File: `src/pages/Watch.tsx`
 
-### File 2: Vercel proxy update (user action)
-The user needs to update their Vercel `api/proxy.js` to also handle streaming server proxying. Add a new file `api/stream.js` that proxies requests to `tw.thewayofthedragg.workers.dev`.
+**Lines 22-25** - Update detection logic:
 
-### File 3: `src/pages/Watch.tsx`
-- Update streaming server URLs to route through the Vercel streaming proxy instead of directly to `tw.thewayofthedragg.workers.dev`
+```typescript
+// Determine player type - check file extensions FIRST (even with query params)
+const isHls = url.includes('.m3u8');
+const isDirectVideo = url.includes('.mp4') || url.includes('.webm') || url.includes('.mkv');
+const isStreamingServer = url.includes('/watch/') && !isDirectVideo && !isHls;
+```
 
-### File 4: `src/pages/MovieDetails.tsx` (if it constructs stream URLs)
-- May need similar URL replacement for stream links
+This ensures:
+- `.mkv` files routed through `/stream/watch/...` use the native HTML5 video player
+- `.m3u8` streams use the HLS player
+- Only URLs with `/watch/` that are NOT direct video files fall back to the iframe player
 
-## Summary of Required Actions
-1. **Lovable side**: Update hardcoded Cloudflare Worker URL in TvChannels.tsx
-2. **User side**: Ensure the Vercel proxy CORS fix is deployed (from previous message)
-3. **User side**: Add streaming proxy to Vercel (new `api/stream.js`)
-4. **Lovable side**: Route streaming URLs through Vercel streaming proxy
+No other files need changes.
 
