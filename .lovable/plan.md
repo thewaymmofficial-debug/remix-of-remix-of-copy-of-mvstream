@@ -1,60 +1,44 @@
 
 
-# Add Custom Local Bot API Server URL Support
+# Route Video Streaming Through Cloudflare Worker Proxy
 
-## Overview
+## Problem
+Streaming links from `tw.thewayofthedragg.workers.dev` are blocked by ISPs in Myanmar without a VPN. The browser fetches the watch page HTML and video source directly, which fails.
 
-Add a configurable "Telegram Bot API Server URL" setting in the admin panel. When set, the `telegram-stream` edge function will use this custom server instead of the default `https://api.telegram.org`, removing the 20MB file size limit and enabling full movie streaming.
+## Solution
+Use the Cloudflare Worker's `/proxy/` route to relay both the HTML resolution fetch and the actual video stream. Since Cloudflare has no timeout on streaming responses and supports `Range` headers, this works for large files (2-5GB) without cutting off.
+
+## How It Works
+
+1. **HTML resolution** (extracting the real video URL): Instead of fetching `https://tw.thewayofthedragg.workers.dev/watch/544/file.mkv` directly, fetch it through `https://tw.thewayofthedragg.workers.dev/proxy/?url=<encoded_watch_url>`
+
+2. **Video playback**: The resolved video source URL (e.g., `https://tw.thewayofthedragg.workers.dev/544/file.mkv`) is also wrapped: `https://tw.thewayofthedragg.workers.dev/proxy/?url=<encoded_video_url>`
+
+3. **HLS streams**: For `.m3u8` sources, HLS.js will use a custom `xhrSetup` to route segment requests through the proxy as well.
 
 ## Changes
 
-### 1. Database: Insert default setting row
+### `src/pages/Watch.tsx`
 
-Add a new row in `site_settings` with key `telegram_bot_api_url` and an empty/null value. When empty, the system falls back to the default Telegram API.
+- Add a helper function `proxyUrl(url)` that wraps any URL through the Worker's `/proxy/` route
+- In `resolveDirectUrl()`: fetch the watch page HTML through the proxy instead of directly
+- After resolving the video source URL: wrap it through the proxy before setting it as `<video src>`
+- For HLS: configure `xhrSetup` in HLS.js config to rewrite segment URLs through the proxy
 
-### 2. Update `useSiteSettings` hook
+### No other files need changes
+The ServerDrawer already passes URLs to the Watch page, which will handle all proxying internally.
 
-- Add `telegramBotApiUrl` (string) to the returned settings object
-- Export the type so it's accessible elsewhere
-
-### 3. Update `telegram-stream` edge function
-
-- Before constructing the Telegram API URLs, query `site_settings` for the `telegram_bot_api_url` key
-- If a custom URL is set (e.g. `http://your-vps:8081`), use it instead of `https://api.telegram.org`
-- The `getFile` call becomes `{customUrl}/bot{TOKEN}/getFile?file_id=...`
-- The file download becomes `{customUrl}/file/bot{TOKEN}/{filePath}`
-- Falls back to the standard API when no custom URL is configured
-
-### 4. Update `SettingsAdmin.tsx`
-
-Add a new collapsible "Telegram Bot API" section with:
-- An input field for the custom server URL (e.g. `http://your-vps:8081`)
-- Helper text explaining what this is and when to use it
-- A save button
-- A note about the 20MB limit when using the default API
-
-### 5. Update `TelegramFilesAdmin.tsx`
-
-Add a small status indicator showing whether a custom Bot API server is configured (helps the admin know if large file streaming will work).
-
-## Technical Details
-
-### telegram-stream changes
-
-The edge function will read the setting from the database at request time:
+## Technical Detail
 
 ```text
-GET /telegram-stream?file_id=xxx
-  -> Read 'telegram_bot_api_url' from site_settings via Supabase client
-  -> baseUrl = customUrl || 'https://api.telegram.org'
-  -> Call {baseUrl}/bot<TOKEN>/getFile?file_id=xxx
-  -> Stream from {baseUrl}/file/bot<TOKEN>/<file_path>
+Browser --> Cloudflare Worker /proxy/ --> Blocked origin server
+   (not blocked)                          (blocked by ISP)
 ```
 
-### Site Settings admin section
+The proxy URL format:
+```text
+https://tw.thewayofthedragg.workers.dev/proxy/?url=<encodeURIComponent(original_url)>
+```
 
-A new "Telegram" collapsible section in the Settings page with:
-- URL input field
-- Description: "Set a custom Local Bot API Server URL to stream files larger than 20MB. Leave empty to use the default Telegram API (20MB limit)."
-- Save button
+This keeps all traffic flowing through Cloudflare's network (not blocked), with no timeout limits and full `Range` header support for seeking in large files.
 
