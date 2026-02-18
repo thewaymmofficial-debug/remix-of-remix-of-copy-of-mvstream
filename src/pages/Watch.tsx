@@ -6,9 +6,9 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useFullscreenLandscape } from '@/hooks/useFullscreenLandscape';
 import Hls from 'hls.js';
 
-const STREAM_WORKER_ORIGIN = 'https://tw.thewayofthedragg.workers.dev';
+const STREAM_WORKER_ORIGIN = 'https://proxies-lake.vercel.app/stream';
 
-/** Wrap any URL through the Cloudflare Worker /proxy/ route to bypass ISP blocks */
+/** Wrap any URL through the Vercel→CF Worker /proxy/ route to bypass ISP blocks */
 function proxyUrl(url: string): string {
   return `${STREAM_WORKER_ORIGIN}/proxy/?url=${encodeURIComponent(url)}`;
 }
@@ -16,9 +16,6 @@ function proxyUrl(url: string): string {
 /** Fetch the watch page HTML through the proxy and extract the direct video URL */
 async function resolveDirectUrl(watchUrl: string): Promise<string> {
   let originalUrl = watchUrl;
-  if (originalUrl.includes('proxies-lake.vercel.app/stream')) {
-    originalUrl = originalUrl.replace('https://proxies-lake.vercel.app/stream', STREAM_WORKER_ORIGIN);
-  }
 
   console.log('[Watch] Resolving direct URL from:', originalUrl);
 
