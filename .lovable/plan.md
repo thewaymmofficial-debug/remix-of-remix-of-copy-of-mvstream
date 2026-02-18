@@ -1,62 +1,59 @@
 
-# Direct Cloudflare Worker Streaming with Supabase Fallback
 
-## Goal
+# 4-Tier Video Streaming Fallback Chain
 
-Try streaming directly from the Cloudflare worker first (free, no bandwidth limits). Only fall back to the Supabase proxy if the direct connection fails (e.g., ISP blocks it). This saves Supabase edge function bandwidth for users who don't need it.
+## Overview
 
-## How It Works
+Integrate the new Cloudflare Worker relay (`tiny-river-1bfb.thewayofthedragg.workers.dev`) into a 4-tier cascading fallback strategy in the video player.
+
+## Fallback Order
 
 ```text
-User taps Play
-  |
-  v
-Fetch /watch/ HTML page (via Vercel proxy) -> extract real video URL
-  |
-  v
-Attempt 1: Set video.src = real Cloudflare worker URL directly
-  |
-  Wait up to 8 seconds for "loadedmetadata" event
-  |
-  +-- Success? -> Play video (no Supabase bandwidth used)
-  |
-  +-- Fails (timeout or error)? -> ISP likely blocking
-        |
-        v
-      Attempt 2: Set video.src = Supabase proxy URL (current behavior)
-        |
-        +-- Success? -> Play video via Supabase proxy
-        +-- Fails? -> Show error with retry button
+Tier 1: Direct CF Worker (tw.thewayofthedragg.workers.dev) -- free, unlimited
+   |  8s timeout
+   v
+Tier 2: Relay CF Worker (tiny-river-1bfb.thewayofthedragg.workers.dev) -- free, 100k req/day
+   |  8s timeout  (bypasses domain-specific ISP blocks)
+   v
+Tier 3: Vercel Proxy (proxies-lake.vercel.app/stream) -- 100GB/mo free
+   |  8s timeout
+   v
+Tier 4: Supabase Proxy (download-proxy edge function) -- 2-250GB/mo (last resort)
 ```
 
-## Technical Changes
+## Changes to `src/pages/Watch.tsx`
 
-### File: `src/pages/Watch.tsx`
+**1. Add constants**
 
-**1. Update `resolveRealVideoUrl` to return both URLs**
+- Add `CF_RELAY_ORIGIN = 'https://tiny-river-1bfb.thewayofthedragg.workers.dev'`
 
-Instead of returning only the Supabase-proxied URL, the function will return an object with two URLs:
-- `directUrl`: the real Cloudflare worker URL (e.g., `tw.thewayofthedragg.workers.dev/485/Movie.mp4?hash=X`)
-- `proxyUrl`: the Supabase-proxied version (current behavior, `download-proxy?url=...&stream=1`)
+**2. Update `resolveVideoUrls`**
 
-**2. Add a `tryDirectFirst` helper function**
+Return 4 URLs instead of 2:
+- `directUrl` -- original CF worker path
+- `relayUrl` -- same path on the relay worker domain
+- `vercelUrl` -- via `proxies-lake.vercel.app/stream?url=<encoded>`
+- `supabaseUrl` -- via Supabase edge function (current `proxyUrl`)
 
-A new helper that:
-1. Sets `video.src` to the direct Cloudflare URL
-2. Listens for `loadedmetadata` (success) or `error` event
-3. Also sets an 8-second timeout as a safety net (some ISP blocks cause silent hangs rather than errors)
-4. Returns `true` if direct playback started, `false` if it failed
+**3. Update `setupVideo` fallback chain**
 
-**3. Update the `setupVideo` flow**
+For non-HLS `/watch/` URLs, cascade through all 4 tiers using `tryDirectStream` with 8s timeouts. Set `streamSource` to the tier that succeeded.
 
-For `/watch/` URLs:
-1. Resolve both URLs (direct + proxy) from the HTML page
-2. Try the direct URL first using `tryDirectFirst`
-3. If it fails, fall back to the Supabase proxy URL
-4. For non-watch URLs, keep current behavior unchanged
+For HLS (`.m3u8`), skip directly to Supabase proxy (needs CORS headers).
 
-### What This Saves
+**4. Expand the source badge**
 
-- Users without ISP blocks: zero Supabase bandwidth used (streams directly from Cloudflare)
-- Users with ISP blocks: automatic fallback to Supabase proxy (same as current behavior)
-- The fallback adds only ~8 seconds of delay for blocked users on first load
+Update `streamSource` type from `'direct' | 'proxy'` to `'direct' | 'relay' | 'vercel' | 'supabase'` with 4 distinct colors/icons:
+- Direct: green, Wifi icon
+- Relay: blue, Globe icon
+- Vercel: purple, Server icon
+- Supabase: amber, Shield icon
+
+## No other files change
+
+All proxy infrastructure already exists. Only `Watch.tsx` is modified.
+
+## Worst-case latency
+
+If all three initial tiers fail (full ISP block), the user waits ~24 seconds before Supabase kicks in. This only happens on first play -- subsequent videos could cache the working tier in session storage (future enhancement).
+
