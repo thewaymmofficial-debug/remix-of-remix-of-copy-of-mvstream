@@ -1,73 +1,61 @@
 
 
-# Fix 4-Tier Fallback Chain + Add SessionStorage Caching
+# Fix Relay and Vercel Tiers + Add Session Caching
 
-## Root Cause
+## Root Causes Identified
 
-The relay CF Worker (`tiny-river-1bfb.thewayofthedragg.workers.dev`) is on the **same parent domain** as the original worker (`tw.thewayofthedragg.workers.dev`). Myanmar ISPs likely block `*.thewayofthedragg.workers.dev` using a wildcard rule, so the relay gets blocked too. This means the fallback skips Direct, skips Relay, and likely also fails on Vercel before landing on Supabase every time.
+### 1. Relay CF Worker - Broken SSL
+The worker at `second.asdfjkllkfsdfdklfnvbfjcbfjebdw-781.workers.dev` has a broken SSL/TLS certificate, causing all connections to time out. This needs to be fixed in your Cloudflare dashboard -- you need to redeploy the worker or check its SSL settings.
 
-**Important**: For the relay to actually bypass ISP blocks, it needs to be deployed on a completely different domain (not `*.thewayofthedragg.workers.dev`). For example, `stream-relay.some-other-domain.workers.dev`. This is an action you would need to take outside of Lovable by creating a new Cloudflare Workers project under a different account or custom domain.
+**Action needed outside Lovable**: Go to your Cloudflare dashboard for the `second.asdfjkllkfsdfdklfnvbfjcbfjebdw-781` worker and verify:
+- The worker is properly deployed and responding
+- SSL/TLS is correctly configured
+- The worker code properly proxies requests (same code as `tw.thewayofthedragg.workers.dev`)
 
-## Changes to `src/pages/Watch.tsx`
+### 2. Vercel Proxy - Format Error
+The Vercel proxy endpoint (`/stream?url=...`) returns a response the browser can't play (likely an error page or wrong content-type). The URL has double-encoded percent characters (`%255B` instead of `%5B`) which the proxy may not handle. We need to decode the URL before passing it to `encodeURIComponent`, or use the Vercel proxy differently -- passing the path directly instead of as a query parameter.
 
-### 1. Add detailed console logging to `tryDirectStream`
+### 3. Direct CF Worker - ISP Blocked
+This is expected behavior in Myanmar. No code fix needed.
 
-Log the tier name, URL, and the specific reason for failure (error event details, timeout) so you can see in the browser console exactly which tiers fail and why.
+## Code Changes to `src/pages/Watch.tsx`
 
-### 2. Add sessionStorage caching
+### Fix 1: Fix Vercel URL double-encoding
 
-- After a tier succeeds, save it to `sessionStorage` as `preferredStreamTier`
-- On subsequent video loads, try the cached tier first before falling through the full chain
-- If the cached tier fails, clear the cache and do a full cascade
+The `realUrl` from the CF worker already contains percent-encoded characters like `%5B`. When we pass this through `encodeURIComponent`, the `%` gets re-encoded to `%25`, creating `%255B`. The Vercel proxy likely doesn't handle this.
 
-### 3. Improve the fallback cascade logic
-
-- Pass the tier name into `tryDirectStream` for logging
-- Log the actual video error code (`video.error?.code`, `video.error?.message`) when a tier fails
-- Reduce timeout to 6 seconds per tier (18s worst-case instead of 24s for 3 non-supabase tiers)
-
-### 4. Keep relay URL as-is but add a note
-
-The relay URL stays in the code since it may work for some ISPs that only block the exact subdomain (not wildcard). A comment will note that for full bypass, a different root domain is needed.
-
-## Technical Details
-
-### SessionStorage caching flow
-
-```text
-Video Play requested
-  |
-  v
-Check sessionStorage for "preferredStreamTier"
-  |
-  +-- Found "relay"? -> Try relay first
-  |     +-- Success -> Play, keep cache
-  |     +-- Fail -> Clear cache, run full cascade
-  |
-  +-- Not found? -> Run full 4-tier cascade
-        +-- Tier succeeds -> Cache it, play
+**Fix**: Decode the URL first before re-encoding:
+```
+const vercelUrl = `${PROXY_STREAM_ORIGIN}?url=${encodeURIComponent(decodeURIComponent(realUrl))}`;
+const supabaseUrl = `${SUPABASE_PROXY}?url=${encodeURIComponent(decodeURIComponent(realUrl))}&stream=1`;
 ```
 
-### Enhanced logging output (example)
-
-```text
-[Watch] Resolving URLs from: https://tw.../watch/485/...
-[Watch] Resolved direct: https://tw.../485/Movie.mp4?hash=X
-[Watch] Resolved relay: https://tiny-river.../485/Movie.mp4?hash=X
-[Watch] Resolved vercel: https://proxies-lake.vercel.app/stream?url=...
-[Watch] Resolved supabase: https://...supabase.co/functions/v1/download-proxy?url=...
-[Watch] Trying direct: https://tw.../485/Movie.mp4?hash=X
-[Watch] direct FAILED: error code=2 (MEDIA_ERR_NETWORK) after 3200ms
-[Watch] Trying relay: https://tiny-river.../485/Movie.mp4?hash=X
-[Watch] relay FAILED: timed out after 6000ms
-[Watch] Trying vercel: https://proxies-lake.vercel.app/stream?url=...
-[Watch] vercel FAILED: error code=4 (MEDIA_ERR_SRC_NOT_SUPPORTED) after 1500ms
-[Watch] Using supabase proxy (last resort)
+Alternatively, construct the Vercel URL as a path-based proxy (like it's done for the initial watch page fetch) instead of a query parameter, since the Vercel proxy at `proxies-lake.vercel.app/stream` also supports path-based routing:
+```
+const vercelUrl = realUrl.replace(urlObj.origin, PROXY_STREAM_ORIGIN);
 ```
 
-This logging will be visible in the browser DevTools console and will help identify exactly why each tier fails on the APK/WebView.
+### Fix 2: Add a `fetch`-based probe for relay and vercel tiers
 
-## No other files change
+Instead of relying only on `<video>` element to test tiers (which gives vague errors), add a quick HTTP HEAD/GET probe before setting the video source. This will give better error diagnostics and faster failure detection:
+- Send a `fetch()` HEAD request first with a 4-second timeout
+- If it returns a non-2xx status or wrong content-type, skip immediately
+- Only set `video.src` if the fetch probe succeeds
 
-Only `src/pages/Watch.tsx` is modified.
+### Fix 3: Session caching (already mostly implemented)
+
+The caching logic is already in place. Just ensure `clearCachedTier()` is called when the retry button is pressed (already done).
+
+## Summary of Changes
+
+| Change | File | Purpose |
+|--------|------|---------|
+| Fix double-encoding in Vercel/Supabase URLs | Watch.tsx line 47-48 | Fix `MEDIA_ERR_SRC_NOT_SUPPORTED` |
+| Add fetch-based tier probe | Watch.tsx `tryDirectStream` | Faster failure detection, better logs |
+| Log HTTP status codes | Watch.tsx | Diagnose relay SSL issues |
+
+## What You Need to Do (Outside Lovable)
+
+1. **Fix the relay worker SSL**: Go to Cloudflare dashboard and redeploy the `second.asdfjkllkfsdfdklfnvbfjcbfjebdw-781` worker. Make sure it's actually running and accessible via HTTPS.
+2. **Test the relay worker directly**: Open `https://second.asdfjkllkfsdfdklfnvbfjcbfjebdw-781.workers.dev/` in your browser to see if it loads. If it shows an SSL error, the worker needs to be redeployed.
 
