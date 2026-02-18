@@ -7,10 +7,8 @@ import { useFullscreenLandscape } from '@/hooks/useFullscreenLandscape';
 import Hls from 'hls.js';
 
 const STREAM_WORKER_ORIGIN = 'https://tw.thewayofthedragg.workers.dev';
-// NOTE: This relay is on the same parent domain as the direct worker.
-// If Myanmar ISPs block *.thewayofthedragg.workers.dev, this relay won't help.
-// For full bypass, deploy on a completely different domain/account.
-const CF_RELAY_ORIGIN = 'https://tiny-river-1bfb.thewayofthedragg.workers.dev';
+// Relay on a separate CF account/domain to bypass ISP wildcard blocks
+const CF_RELAY_ORIGIN = 'https://second.asdfjkllkfsdfdklfnvbfjcbfjebdw-781.workers.dev';
 const PROXY_STREAM_ORIGIN = 'https://proxies-lake.vercel.app/stream';
 const SUPABASE_PROXY = 'https://icnfjixjohbxjxqbnnac.supabase.co/functions/v1/download-proxy';
 
