@@ -1,59 +1,73 @@
 
 
-# 4-Tier Video Streaming Fallback Chain
+# Fix 4-Tier Fallback Chain + Add SessionStorage Caching
 
-## Overview
+## Root Cause
 
-Integrate the new Cloudflare Worker relay (`tiny-river-1bfb.thewayofthedragg.workers.dev`) into a 4-tier cascading fallback strategy in the video player.
+The relay CF Worker (`tiny-river-1bfb.thewayofthedragg.workers.dev`) is on the **same parent domain** as the original worker (`tw.thewayofthedragg.workers.dev`). Myanmar ISPs likely block `*.thewayofthedragg.workers.dev` using a wildcard rule, so the relay gets blocked too. This means the fallback skips Direct, skips Relay, and likely also fails on Vercel before landing on Supabase every time.
 
-## Fallback Order
-
-```text
-Tier 1: Direct CF Worker (tw.thewayofthedragg.workers.dev) -- free, unlimited
-   |  8s timeout
-   v
-Tier 2: Relay CF Worker (tiny-river-1bfb.thewayofthedragg.workers.dev) -- free, 100k req/day
-   |  8s timeout  (bypasses domain-specific ISP blocks)
-   v
-Tier 3: Vercel Proxy (proxies-lake.vercel.app/stream) -- 100GB/mo free
-   |  8s timeout
-   v
-Tier 4: Supabase Proxy (download-proxy edge function) -- 2-250GB/mo (last resort)
-```
+**Important**: For the relay to actually bypass ISP blocks, it needs to be deployed on a completely different domain (not `*.thewayofthedragg.workers.dev`). For example, `stream-relay.some-other-domain.workers.dev`. This is an action you would need to take outside of Lovable by creating a new Cloudflare Workers project under a different account or custom domain.
 
 ## Changes to `src/pages/Watch.tsx`
 
-**1. Add constants**
+### 1. Add detailed console logging to `tryDirectStream`
 
-- Add `CF_RELAY_ORIGIN = 'https://tiny-river-1bfb.thewayofthedragg.workers.dev'`
+Log the tier name, URL, and the specific reason for failure (error event details, timeout) so you can see in the browser console exactly which tiers fail and why.
 
-**2. Update `resolveVideoUrls`**
+### 2. Add sessionStorage caching
 
-Return 4 URLs instead of 2:
-- `directUrl` -- original CF worker path
-- `relayUrl` -- same path on the relay worker domain
-- `vercelUrl` -- via `proxies-lake.vercel.app/stream?url=<encoded>`
-- `supabaseUrl` -- via Supabase edge function (current `proxyUrl`)
+- After a tier succeeds, save it to `sessionStorage` as `preferredStreamTier`
+- On subsequent video loads, try the cached tier first before falling through the full chain
+- If the cached tier fails, clear the cache and do a full cascade
 
-**3. Update `setupVideo` fallback chain**
+### 3. Improve the fallback cascade logic
 
-For non-HLS `/watch/` URLs, cascade through all 4 tiers using `tryDirectStream` with 8s timeouts. Set `streamSource` to the tier that succeeded.
+- Pass the tier name into `tryDirectStream` for logging
+- Log the actual video error code (`video.error?.code`, `video.error?.message`) when a tier fails
+- Reduce timeout to 6 seconds per tier (18s worst-case instead of 24s for 3 non-supabase tiers)
 
-For HLS (`.m3u8`), skip directly to Supabase proxy (needs CORS headers).
+### 4. Keep relay URL as-is but add a note
 
-**4. Expand the source badge**
+The relay URL stays in the code since it may work for some ISPs that only block the exact subdomain (not wildcard). A comment will note that for full bypass, a different root domain is needed.
 
-Update `streamSource` type from `'direct' | 'proxy'` to `'direct' | 'relay' | 'vercel' | 'supabase'` with 4 distinct colors/icons:
-- Direct: green, Wifi icon
-- Relay: blue, Globe icon
-- Vercel: purple, Server icon
-- Supabase: amber, Shield icon
+## Technical Details
+
+### SessionStorage caching flow
+
+```text
+Video Play requested
+  |
+  v
+Check sessionStorage for "preferredStreamTier"
+  |
+  +-- Found "relay"? -> Try relay first
+  |     +-- Success -> Play, keep cache
+  |     +-- Fail -> Clear cache, run full cascade
+  |
+  +-- Not found? -> Run full 4-tier cascade
+        +-- Tier succeeds -> Cache it, play
+```
+
+### Enhanced logging output (example)
+
+```text
+[Watch] Resolving URLs from: https://tw.../watch/485/...
+[Watch] Resolved direct: https://tw.../485/Movie.mp4?hash=X
+[Watch] Resolved relay: https://tiny-river.../485/Movie.mp4?hash=X
+[Watch] Resolved vercel: https://proxies-lake.vercel.app/stream?url=...
+[Watch] Resolved supabase: https://...supabase.co/functions/v1/download-proxy?url=...
+[Watch] Trying direct: https://tw.../485/Movie.mp4?hash=X
+[Watch] direct FAILED: error code=2 (MEDIA_ERR_NETWORK) after 3200ms
+[Watch] Trying relay: https://tiny-river.../485/Movie.mp4?hash=X
+[Watch] relay FAILED: timed out after 6000ms
+[Watch] Trying vercel: https://proxies-lake.vercel.app/stream?url=...
+[Watch] vercel FAILED: error code=4 (MEDIA_ERR_SRC_NOT_SUPPORTED) after 1500ms
+[Watch] Using supabase proxy (last resort)
+```
+
+This logging will be visible in the browser DevTools console and will help identify exactly why each tier fails on the APK/WebView.
 
 ## No other files change
 
-All proxy infrastructure already exists. Only `Watch.tsx` is modified.
-
-## Worst-case latency
-
-If all three initial tiers fail (full ISP block), the user waits ~24 seconds before Supabase kicks in. This only happens on first play -- subsequent videos could cache the working tier in session storage (future enhancement).
+Only `src/pages/Watch.tsx` is modified.
 
