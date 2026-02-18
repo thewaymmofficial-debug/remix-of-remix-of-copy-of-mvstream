@@ -4,7 +4,43 @@ import { ArrowLeft, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useFullscreenLandscape } from '@/hooks/useFullscreenLandscape';
+import { proxyStreamUrl } from '@/lib/utils';
 import Hls from 'hls.js';
+
+const STREAM_WORKER_ORIGIN = 'https://tw.thewayofthedragg.workers.dev';
+const PROXY_STREAM_ORIGIN = 'https://proxies-lake.vercel.app/stream';
+
+/**
+ * Given a proxied `/watch/` URL, fetch its HTML page and extract the real
+ * `<source src="...">` video URL, then return it proxied through Vercel.
+ */
+async function resolveRealVideoUrl(proxiedWatchUrl: string): Promise<string> {
+  const res = await fetch(proxiedWatchUrl);
+  if (!res.ok) throw new Error(`Failed to fetch watch page: ${res.status}`);
+  const html = await res.text();
+
+  // Extract src from <source src="..."> or <video src="...">
+  const srcMatch = html.match(/<source[^>]+src=["']([^"']+)["']/i)
+    || html.match(/<video[^>]+src=["']([^"']+)["']/i);
+
+  if (!srcMatch?.[1]) {
+    throw new Error('Could not extract video source from watch page');
+  }
+
+  let realUrl = srcMatch[1];
+
+  // The extracted URL might be relative or absolute.
+  // If it points to the worker origin, proxy it.
+  if (realUrl.startsWith('/')) {
+    // Relative URL — prepend proxy origin
+    realUrl = PROXY_STREAM_ORIGIN + realUrl;
+  } else if (realUrl.includes(STREAM_WORKER_ORIGIN.replace('https://', ''))) {
+    // Absolute URL pointing to the worker — rewrite through proxy
+    realUrl = proxyStreamUrl(realUrl);
+  }
+
+  return realUrl;
+}
 
 export default function Watch() {
   const [searchParams] = useSearchParams();
@@ -19,13 +55,14 @@ export default function Watch() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Convert streaming server URLs (/watch/ID/file) to direct file URLs (/ID/file)
-  // The /watch/ path returns an HTML player page; without it we get the raw video file
-  const url = rawUrl.includes('/watch/')
+  const isWatchUrl = rawUrl.includes('/watch/');
+
+  // For non-watch URLs, strip /watch/ as before (backward compat for edge cases)
+  const directUrl = rawUrl.includes('/watch/')
     ? rawUrl.replace('/watch/', '/')
     : rawUrl;
 
-  const isHls = url.includes('.m3u8');
+  const isHls = directUrl.includes('.m3u8');
 
   const goBack = useCallback(() => {
     if (window.history.length > 1) {
@@ -44,57 +81,97 @@ export default function Watch() {
 
   // HLS / direct video setup
   useEffect(() => {
-    if (!url) return;
+    if (!rawUrl) return;
 
     const video = videoRef.current;
     if (!video) return;
 
     let hls: Hls | null = null;
+    let cancelled = false;
 
-    if (isHls) {
-      if (Hls.isSupported()) {
-        hls = new Hls({ enableWorker: true });
-        hls.loadSource(url);
-        hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          setLoading(false);
-          video.play().catch(() => {});
-        });
-        hls.on(Hls.Events.ERROR, (_, data) => {
-          if (data.fatal) {
+    const setupVideo = async () => {
+      try {
+        let videoSrc: string;
+
+        if (isWatchUrl) {
+          // Fetch the /watch/ HTML page to get the real video URL
+          const timeoutPromise = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Timed out resolving video URL')), 15000)
+          );
+          videoSrc = await Promise.race([
+            resolveRealVideoUrl(rawUrl),
+            timeoutPromise,
+          ]);
+        } else {
+          videoSrc = directUrl;
+        }
+
+        if (cancelled) return;
+
+        const srcIsHls = videoSrc.includes('.m3u8');
+
+        if (srcIsHls) {
+          if (Hls.isSupported()) {
+            hls = new Hls({ enableWorker: true });
+            hls.loadSource(videoSrc);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+              if (!cancelled) {
+                setLoading(false);
+                video.play().catch(() => {});
+              }
+            });
+            hls.on(Hls.Events.ERROR, (_, data) => {
+              if (data.fatal && !cancelled) {
+                setLoading(false);
+                setError('Stream failed to load');
+              }
+            });
+          } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = videoSrc;
+            video.addEventListener('loadedmetadata', () => {
+              if (!cancelled) {
+                setLoading(false);
+                video.play().catch(() => {});
+              }
+            });
+          } else {
+            setError('HLS not supported on this device');
             setLoading(false);
-            setError('Stream failed to load');
           }
-        });
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = url;
-        video.addEventListener('loadedmetadata', () => {
+        } else {
+          // Direct video (mp4/webm/mkv)
+          video.src = videoSrc;
+          video.addEventListener('loadedmetadata', () => {
+            if (!cancelled) setLoading(false);
+          });
+          video.addEventListener('error', () => {
+            if (!cancelled) {
+              setLoading(false);
+              setError('Video failed to load');
+            }
+          });
+          video.load();
+        }
+      } catch (err: any) {
+        if (!cancelled) {
           setLoading(false);
-          video.play().catch(() => {});
-        });
-      } else {
-        setError('HLS not supported on this device');
-        setLoading(false);
+          setError(err?.message || 'Failed to load video');
+        }
       }
-    } else {
-      // Direct video (mp4/webm/mkv)
-      video.src = url;
-      video.addEventListener('loadedmetadata', () => setLoading(false));
-      video.addEventListener('error', () => {
-        setLoading(false);
-        setError('Video failed to load');
-      });
-      video.load();
-    }
+    };
+
+    setupVideo();
 
     return () => {
+      cancelled = true;
       if (hls) {
         hls.destroy();
       }
     };
-  }, [url, isHls]);
+  }, [rawUrl, isWatchUrl, directUrl]);
 
-  if (!url) return null;
+  if (!rawUrl) return null;
 
   const rotationStyle = needsCssRotation
     ? {
