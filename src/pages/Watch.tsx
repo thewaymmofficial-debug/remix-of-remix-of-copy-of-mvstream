@@ -7,9 +7,15 @@ import { useFullscreenLandscape } from '@/hooks/useFullscreenLandscape';
 import Hls from 'hls.js';
 
 const STREAM_WORKER_ORIGIN = 'https://tw.thewayofthedragg.workers.dev';
+// NOTE: This relay is on the same parent domain as the direct worker.
+// If Myanmar ISPs block *.thewayofthedragg.workers.dev, this relay won't help.
+// For full bypass, deploy on a completely different domain/account.
 const CF_RELAY_ORIGIN = 'https://tiny-river-1bfb.thewayofthedragg.workers.dev';
 const PROXY_STREAM_ORIGIN = 'https://proxies-lake.vercel.app/stream';
 const SUPABASE_PROXY = 'https://icnfjixjohbxjxqbnnac.supabase.co/functions/v1/download-proxy';
+
+const TIER_TIMEOUT_MS = 6000;
+const CACHE_KEY = 'preferredStreamTier';
 
 type StreamTier = 'direct' | 'relay' | 'vercel' | 'supabase';
 
@@ -21,6 +27,7 @@ interface ResolvedUrls {
 }
 
 async function resolveVideoUrls(proxiedWatchUrl: string): Promise<ResolvedUrls> {
+  console.log('[Watch] Resolving URLs from:', proxiedWatchUrl);
   const res = await fetch(proxiedWatchUrl);
   if (!res.ok) throw new Error(`Failed to fetch watch page: ${res.status}`);
   const html = await res.text();
@@ -37,35 +44,52 @@ async function resolveVideoUrls(proxiedWatchUrl: string): Promise<ResolvedUrls> 
     realUrl = STREAM_WORKER_ORIGIN + realUrl;
   }
 
-  // Build relay URL by swapping origin
   const urlObj = new URL(realUrl);
   const relayUrl = realUrl.replace(urlObj.origin, CF_RELAY_ORIGIN);
+  const vercelUrl = `${PROXY_STREAM_ORIGIN}?url=${encodeURIComponent(realUrl)}`;
+  const supabaseUrl = `${SUPABASE_PROXY}?url=${encodeURIComponent(realUrl)}&stream=1`;
 
-  return {
-    directUrl: realUrl,
-    relayUrl,
-    vercelUrl: `${PROXY_STREAM_ORIGIN}?url=${encodeURIComponent(realUrl)}`,
-    supabaseUrl: `${SUPABASE_PROXY}?url=${encodeURIComponent(realUrl)}&stream=1`,
-  };
+  console.log('[Watch] Resolved direct:', realUrl);
+  console.log('[Watch] Resolved relay:', relayUrl);
+  console.log('[Watch] Resolved vercel:', vercelUrl);
+  console.log('[Watch] Resolved supabase:', supabaseUrl);
+
+  return { directUrl: realUrl, relayUrl, vercelUrl, supabaseUrl };
 }
 
-function tryDirectStream(video: HTMLVideoElement, url: string, timeoutMs = 8000): Promise<boolean> {
+function tryDirectStream(video: HTMLVideoElement, url: string, tierName: string, timeoutMs = TIER_TIMEOUT_MS): Promise<boolean> {
   return new Promise((resolve) => {
     let settled = false;
-    const settle = (result: boolean) => {
+    const startTime = Date.now();
+    const settle = (result: boolean, reason: string) => {
       if (settled) return;
       settled = true;
+      const elapsed = Date.now() - startTime;
       clearTimeout(timer);
       video.removeEventListener('loadedmetadata', onMeta);
       video.removeEventListener('error', onError);
+      if (result) {
+        console.log(`[Watch] ${tierName} OK after ${elapsed}ms`);
+      } else {
+        console.log(`[Watch] ${tierName} FAILED: ${reason} after ${elapsed}ms`);
+      }
       resolve(result);
     };
 
-    const onMeta = () => settle(true);
-    const onError = () => settle(false);
+    const onMeta = () => settle(true, '');
+    const onError = () => {
+      const code = video.error?.code;
+      const msg = video.error?.message || '';
+      const errorNames: Record<number, string> = {
+        1: 'MEDIA_ERR_ABORTED',
+        2: 'MEDIA_ERR_NETWORK',
+        3: 'MEDIA_ERR_DECODE',
+        4: 'MEDIA_ERR_SRC_NOT_SUPPORTED',
+      };
+      settle(false, `error code=${code} (${errorNames[code || 0] || 'UNKNOWN'}) ${msg}`);
+    };
     const timer = setTimeout(() => {
-      console.log('[Watch] Stream timed out after', timeoutMs, 'ms');
-      settle(false);
+      settle(false, `timed out after ${timeoutMs}ms`);
     }, timeoutMs);
 
     video.addEventListener('loadedmetadata', onMeta);
@@ -75,12 +99,40 @@ function tryDirectStream(video: HTMLVideoElement, url: string, timeoutMs = 8000)
   });
 }
 
+function getCachedTier(): StreamTier | null {
+  try {
+    const cached = sessionStorage.getItem(CACHE_KEY) as StreamTier | null;
+    if (cached && ['direct', 'relay', 'vercel', 'supabase'].includes(cached)) {
+      return cached;
+    }
+  } catch {}
+  return null;
+}
+
+function setCachedTier(tier: StreamTier) {
+  try { sessionStorage.setItem(CACHE_KEY, tier); } catch {}
+}
+
+function clearCachedTier() {
+  try { sessionStorage.removeItem(CACHE_KEY); } catch {}
+}
+
 const TIER_CONFIG: Record<StreamTier, { label: string; color: string; icon: typeof Wifi }> = {
   direct:   { label: 'Direct',   color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30', icon: Wifi },
   relay:    { label: 'Relay',    color: 'bg-blue-500/20 text-blue-300 border-blue-500/30',          icon: Globe },
   vercel:   { label: 'Vercel',   color: 'bg-purple-500/20 text-purple-300 border-purple-500/30',    icon: Server },
   supabase: { label: 'Proxy',    color: 'bg-amber-500/20 text-amber-300 border-amber-500/30',       icon: Shield },
 };
+
+function getTierUrl(tier: StreamTier, urls: ResolvedUrls): string {
+  const map: Record<StreamTier, string> = {
+    direct: urls.directUrl,
+    relay: urls.relayUrl,
+    vercel: urls.vercelUrl,
+    supabase: urls.supabaseUrl,
+  };
+  return map[tier];
+}
 
 export default function Watch() {
   const [searchParams] = useSearchParams();
@@ -119,10 +171,47 @@ export default function Watch() {
     let hls: Hls | null = null;
     let cancelled = false;
 
+    const playAndFinish = (tier: StreamTier) => {
+      if (cancelled) return;
+      console.log(`[Watch] Playing via ${tier}`);
+      setCachedTier(tier);
+      setStreamSource(tier);
+      setShowSourceBadge(true);
+      setLoading(false);
+      video.play().catch(() => {});
+    };
+
+    const runCascade = async (urls: ResolvedUrls, skipTiers: StreamTier[] = []): Promise<boolean> => {
+      const allTiers: StreamTier[] = ['direct', 'relay', 'vercel', 'supabase'];
+      for (const tier of allTiers) {
+        if (cancelled) return false;
+        if (skipTiers.includes(tier)) continue;
+
+        const url = getTierUrl(tier, urls);
+
+        if (tier === 'supabase') {
+          // Last resort — don't test, just use it
+          console.log('[Watch] Using supabase proxy (last resort)');
+          video.src = url;
+          video.load();
+          playAndFinish('supabase');
+          return true;
+        }
+
+        console.log(`[Watch] Trying ${tier}:`, url);
+        const ok = await tryDirectStream(video, url, tier);
+        if (cancelled) return false;
+        if (ok) {
+          playAndFinish(tier);
+          return true;
+        }
+      }
+      return false;
+    };
+
     const setupVideo = async () => {
       try {
-        let videoSrc: string;
-        let resolvedTier: StreamTier = 'supabase';
+        let videoSrc: string | undefined;
 
         if (isWatchUrl) {
           const timeoutPromise = new Promise<never>((_, reject) =>
@@ -134,56 +223,45 @@ export default function Watch() {
           const srcIsHls = urls.directUrl.includes('.m3u8');
 
           if (!srcIsHls) {
-            // 4-tier fallback cascade
-            const tiers: { tier: StreamTier; url: string }[] = [
-              { tier: 'direct',  url: urls.directUrl },
-              { tier: 'relay',   url: urls.relayUrl },
-              { tier: 'vercel',  url: urls.vercelUrl },
-              { tier: 'supabase', url: urls.supabaseUrl },
-            ];
-
-            for (const { tier, url } of tiers) {
-              if (cancelled) return;
-              // Last tier doesn't need tryDirectStream — just use it
-              if (tier === 'supabase') {
-                console.log('[Watch] Using Supabase proxy (last resort)');
-                videoSrc = url;
-                resolvedTier = 'supabase';
-                break;
-              }
-              console.log(`[Watch] Trying ${tier}:`, url);
-              const ok = await tryDirectStream(video, url);
+            // Check sessionStorage for a cached working tier
+            const cachedTier = getCachedTier();
+            if (cachedTier && cachedTier !== 'supabase') {
+              const cachedUrl = getTierUrl(cachedTier, urls);
+              console.log(`[Watch] Trying cached tier "${cachedTier}":`, cachedUrl);
+              const ok = await tryDirectStream(video, cachedUrl, `cached:${cachedTier}`);
               if (cancelled) return;
               if (ok) {
-                console.log(`[Watch] ${tier} succeeded`);
-                resolvedTier = tier;
-                setStreamSource(tier);
-                setShowSourceBadge(true);
-                setLoading(false);
-                video.play().catch(() => {});
+                playAndFinish(cachedTier);
                 return;
               }
+              console.log('[Watch] Cached tier failed, clearing cache and running full cascade');
+              clearCachedTier();
             }
 
-            // If we fell through to supabase
+            const success = await runCascade(urls);
+            if (!success && !cancelled) {
+              setLoading(false);
+              setError('All streaming sources failed');
+            }
+            return;
+          } else {
+            // HLS — go straight to supabase proxy
+            videoSrc = urls.supabaseUrl;
             setStreamSource('supabase');
             setShowSourceBadge(true);
-          } else {
-            videoSrc = urls.supabaseUrl;
-            resolvedTier = 'supabase';
           }
         } else {
           videoSrc = directUrl;
         }
 
-        if (cancelled) return;
+        if (cancelled || !videoSrc) return;
 
-        const srcIsHls = videoSrc!.includes('.m3u8');
+        const srcIsHls = videoSrc.includes('.m3u8');
 
         if (srcIsHls) {
           if (Hls.isSupported()) {
             hls = new Hls({ enableWorker: true });
-            hls.loadSource(videoSrc!);
+            hls.loadSource(videoSrc);
             hls.attachMedia(video);
             hls.on(Hls.Events.MANIFEST_PARSED, () => {
               if (!cancelled) { setLoading(false); video.play().catch(() => {}); }
@@ -192,7 +270,7 @@ export default function Watch() {
               if (data.fatal && !cancelled) { setLoading(false); setError('Stream failed to load'); }
             });
           } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            video.src = videoSrc!;
+            video.src = videoSrc;
             video.addEventListener('loadedmetadata', () => {
               if (!cancelled) { setLoading(false); video.play().catch(() => {}); }
             });
@@ -201,7 +279,7 @@ export default function Watch() {
             setLoading(false);
           }
         } else {
-          video.src = videoSrc!;
+          video.src = videoSrc;
           video.addEventListener('loadedmetadata', () => { if (!cancelled) setLoading(false); });
           video.addEventListener('error', () => {
             if (!cancelled) { setLoading(false); setError('Video failed to load'); }
@@ -274,7 +352,7 @@ export default function Watch() {
           <p className="text-foreground text-center text-lg">{error}</p>
           <div className="flex gap-3">
             <Button variant="outline" onClick={goBack}>Go Back</Button>
-            <Button onClick={() => { setError(null); setLoading(true); window.location.reload(); }}>
+            <Button onClick={() => { clearCachedTier(); setError(null); setLoading(true); window.location.reload(); }}>
               <RefreshCw className="w-4 h-4 mr-2" /> Retry
             </Button>
           </div>
