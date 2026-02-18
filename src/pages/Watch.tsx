@@ -44,8 +44,9 @@ async function resolveVideoUrls(proxiedWatchUrl: string): Promise<ResolvedUrls> 
 
   const urlObj = new URL(realUrl);
   const relayUrl = realUrl.replace(urlObj.origin, CF_RELAY_ORIGIN);
-  const vercelUrl = `${PROXY_STREAM_ORIGIN}?url=${encodeURIComponent(realUrl)}`;
-  const supabaseUrl = `${SUPABASE_PROXY}?url=${encodeURIComponent(realUrl)}&stream=1`;
+  const decodedUrl = decodeURIComponent(realUrl);
+  const vercelUrl = `${PROXY_STREAM_ORIGIN}?url=${encodeURIComponent(decodedUrl)}`;
+  const supabaseUrl = `${SUPABASE_PROXY}?url=${encodeURIComponent(decodedUrl)}&stream=1`;
 
   console.log('[Watch] Resolved direct:', realUrl);
   console.log('[Watch] Resolved relay:', relayUrl);
@@ -55,8 +56,34 @@ async function resolveVideoUrls(proxiedWatchUrl: string): Promise<ResolvedUrls> 
   return { directUrl: realUrl, relayUrl, vercelUrl, supabaseUrl };
 }
 
+async function probeUrl(url: string, tierName: string, timeoutMs: number): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const res = await fetch(url, { method: 'HEAD', mode: 'cors', signal: controller.signal });
+    clearTimeout(timer);
+    const ct = res.headers.get('content-type') || '';
+    console.log(`[Watch] ${tierName} probe: status=${res.status} content-type=${ct}`);
+    if (!res.ok) return false;
+    // Accept video/*, application/octet-stream, or HLS
+    if (ct.startsWith('video/') || ct.includes('octet-stream') || ct.includes('mpegurl')) return true;
+    // Some proxies don't set content-type on HEAD — allow if 2xx
+    return true;
+  } catch (err: any) {
+    console.log(`[Watch] ${tierName} probe FAILED: ${err?.message || err}`);
+    return false;
+  }
+}
+
 function tryDirectStream(video: HTMLVideoElement, url: string, tierName: string, timeoutMs = TIER_TIMEOUT_MS): Promise<boolean> {
-  return new Promise((resolve) => {
+  return new Promise(async (resolve) => {
+    // Fast HTTP probe first
+    const probeOk = await probeUrl(url, tierName, Math.min(timeoutMs, 4000));
+    if (!probeOk) {
+      resolve(false);
+      return;
+    }
+
     let settled = false;
     const startTime = Date.now();
     const settle = (result: boolean, reason: string) => {
