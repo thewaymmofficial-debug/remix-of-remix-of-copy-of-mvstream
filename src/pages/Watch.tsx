@@ -100,10 +100,7 @@ async function probeUrl(url: string, tierName: string, timeoutMs: number): Promi
 }
 
 function tryDirectStream(video: HTMLVideoElement, url: string, tierName: string, timeoutMs = TIER_TIMEOUT_MS): Promise<boolean> {
-  return new Promise(async (resolve) => {
-    const probeOk = await probeUrl(url, tierName, Math.min(timeoutMs, 4000));
-    if (!probeOk) { resolve(false); return; }
-
+  return new Promise((resolve) => {
     let settled = false;
     const startTime = Date.now();
     const settle = (result: boolean, reason: string) => {
