@@ -1,6 +1,6 @@
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { ArrowLeft, AlertCircle, RefreshCw, Wifi, Globe, Server, Shield } from 'lucide-react';
+import { ArrowLeft, AlertCircle, RefreshCw, Wifi, Server, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useFullscreenLandscape } from '@/hooks/useFullscreenLandscape';
@@ -8,18 +8,17 @@ import Hls from 'hls.js';
 
 const STREAM_WORKER_ORIGIN = 'https://tw.thewayofthedragg.workers.dev';
 // Relay on a separate CF account/domain to bypass ISP wildcard blocks
-const CF_RELAY_ORIGIN = 'https://second.asdfjkllkfsdfdklfnvbfjcbfjebdw-781.workers.dev';
+
 const PROXY_STREAM_ORIGIN = 'https://proxies-lake.vercel.app/stream';
 const SUPABASE_PROXY = 'https://icnfjixjohbxjxqbnnac.supabase.co/functions/v1/download-proxy';
 
 const TIER_TIMEOUT_MS = 6000;
 const CACHE_KEY = 'preferredStreamTier';
 
-type StreamTier = 'direct' | 'relay' | 'vercel' | 'supabase';
+type StreamTier = 'direct' | 'vercel' | 'supabase';
 
 interface ResolvedUrls {
   directUrl: string;
-  relayUrl: string;
   vercelUrl: string;
   supabaseUrl: string;
 }
@@ -42,18 +41,15 @@ async function resolveVideoUrls(proxiedWatchUrl: string): Promise<ResolvedUrls> 
     realUrl = STREAM_WORKER_ORIGIN + realUrl;
   }
 
-  const urlObj = new URL(realUrl);
-  const relayUrl = realUrl.replace(urlObj.origin, CF_RELAY_ORIGIN);
   const decodedUrl = decodeURIComponent(realUrl);
   const vercelUrl = `${PROXY_STREAM_ORIGIN}?url=${encodeURIComponent(decodedUrl)}`;
   const supabaseUrl = `${SUPABASE_PROXY}?url=${encodeURIComponent(decodedUrl)}&stream=1`;
 
   console.log('[Watch] Resolved direct:', realUrl);
-  console.log('[Watch] Resolved relay:', relayUrl);
   console.log('[Watch] Resolved vercel:', vercelUrl);
   console.log('[Watch] Resolved supabase:', supabaseUrl);
 
-  return { directUrl: realUrl, relayUrl, vercelUrl, supabaseUrl };
+  return { directUrl: realUrl, vercelUrl, supabaseUrl };
 }
 
 async function probeUrl(url: string, tierName: string, timeoutMs: number): Promise<boolean> {
@@ -127,7 +123,7 @@ function tryDirectStream(video: HTMLVideoElement, url: string, tierName: string,
 function getCachedTier(): StreamTier | null {
   try {
     const cached = sessionStorage.getItem(CACHE_KEY) as StreamTier | null;
-    if (cached && ['direct', 'relay', 'vercel', 'supabase'].includes(cached)) {
+    if (cached && ['direct', 'vercel', 'supabase'].includes(cached)) {
       return cached;
     }
   } catch {}
@@ -144,7 +140,6 @@ function clearCachedTier() {
 
 const TIER_CONFIG: Record<StreamTier, { label: string; color: string; icon: typeof Wifi }> = {
   direct:   { label: 'Direct',   color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30', icon: Wifi },
-  relay:    { label: 'Relay',    color: 'bg-blue-500/20 text-blue-300 border-blue-500/30',          icon: Globe },
   vercel:   { label: 'Vercel',   color: 'bg-purple-500/20 text-purple-300 border-purple-500/30',    icon: Server },
   supabase: { label: 'Proxy',    color: 'bg-amber-500/20 text-amber-300 border-amber-500/30',       icon: Shield },
 };
@@ -152,7 +147,6 @@ const TIER_CONFIG: Record<StreamTier, { label: string; color: string; icon: type
 function getTierUrl(tier: StreamTier, urls: ResolvedUrls): string {
   const map: Record<StreamTier, string> = {
     direct: urls.directUrl,
-    relay: urls.relayUrl,
     vercel: urls.vercelUrl,
     supabase: urls.supabaseUrl,
   };
@@ -207,7 +201,7 @@ export default function Watch() {
     };
 
     const runCascade = async (urls: ResolvedUrls, skipTiers: StreamTier[] = []): Promise<boolean> => {
-      const allTiers: StreamTier[] = ['direct', 'relay', 'vercel', 'supabase'];
+      const allTiers: StreamTier[] = ['direct', 'vercel', 'supabase'];
       for (const tier of allTiers) {
         if (cancelled) return false;
         if (skipTiers.includes(tier)) continue;
