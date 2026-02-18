@@ -1,44 +1,53 @@
 
 
-# Route Video Streaming Through Cloudflare Worker Proxy
+# Fix: Route Video Through Unblocked Vercel Proxy
 
-## Problem
-Streaming links from `tw.thewayofthedragg.workers.dev` are blocked by ISPs in Myanmar without a VPN. The browser fetches the watch page HTML and video source directly, which fails.
+## Root Cause
+The CF Worker domain `tw.thewayofthedragg.workers.dev` is completely blocked by Myanmar ISPs. Putting a `/proxy/` route on the same blocked domain doesn't help because the browser can't reach the domain at all.
 
 ## Solution
-Use the Cloudflare Worker's `/proxy/` route to relay both the HTML resolution fetch and the actual video stream. Since Cloudflare has no timeout on streaming responses and supports `Range` headers, this works for large files (2-5GB) without cutting off.
+Route video proxy requests through `proxies-lake.vercel.app` (which is NOT blocked) instead of directly to the CF Worker. The Vercel proxy already forwards `/stream` requests to the CF Worker.
 
-## How It Works
-
-1. **HTML resolution** (extracting the real video URL): Instead of fetching `https://tw.thewayofthedragg.workers.dev/watch/544/file.mkv` directly, fetch it through `https://tw.thewayofthedragg.workers.dev/proxy/?url=<encoded_watch_url>`
-
-2. **Video playback**: The resolved video source URL (e.g., `https://tw.thewayofthedragg.workers.dev/544/file.mkv`) is also wrapped: `https://tw.thewayofthedragg.workers.dev/proxy/?url=<encoded_video_url>`
-
-3. **HLS streams**: For `.m3u8` sources, HLS.js will use a custom `xhrSetup` to route segment requests through the proxy as well.
+The flow becomes:
+```text
+Browser --> proxies-lake.vercel.app/stream/proxy/ --> tw.thewayofthedragg.workers.dev/proxy/ --> backend
+  (not blocked)                                        (server-to-server, no ISP block)
+```
 
 ## Changes
 
-### `src/pages/Watch.tsx`
+### 1. Vercel Proxy Config (user action)
+Make sure your `proxies-lake.vercel.app` Vercel project has a rewrite rule that forwards `/stream/*` to `https://tw.thewayofthedragg.workers.dev/*`. This likely already exists since the code references it. If not, add to your Vercel project's `vercel.json`:
 
-- Add a helper function `proxyUrl(url)` that wraps any URL through the Worker's `/proxy/` route
-- In `resolveDirectUrl()`: fetch the watch page HTML through the proxy instead of directly
-- After resolving the video source URL: wrap it through the proxy before setting it as `<video src>`
-- For HLS: configure `xhrSetup` in HLS.js config to rewrite segment URLs through the proxy
-
-### No other files need changes
-The ServerDrawer already passes URLs to the Watch page, which will handle all proxying internally.
-
-## Technical Detail
-
-```text
-Browser --> Cloudflare Worker /proxy/ --> Blocked origin server
-   (not blocked)                          (blocked by ISP)
+```json
+{
+  "rewrites": [
+    { "source": "/stream/:path*", "destination": "https://tw.thewayofthedragg.workers.dev/:path*" }
+  ]
+}
 ```
 
-The proxy URL format:
-```text
-https://tw.thewayofthedragg.workers.dev/proxy/?url=<encodeURIComponent(original_url)>
+### 2. `src/pages/Watch.tsx` - Use Vercel proxy as the origin
+
+Change `STREAM_WORKER_ORIGIN` from the blocked CF Worker domain to the unblocked Vercel proxy:
+
+```typescript
+const STREAM_WORKER_ORIGIN = 'https://proxies-lake.vercel.app/stream';
 ```
 
-This keeps all traffic flowing through Cloudflare's network (not blocked), with no timeout limits and full `Range` header support for seeking in large files.
+Remove the line that strips the Vercel proxy prefix (lines 19-21), since we now WANT to use the Vercel proxy.
+
+Also in `resolveDirectUrl`, when the extracted video src is a relative path like `/544/file.mkv`, prepend the Vercel proxy origin instead of the CF Worker origin.
+
+### 3. No other file changes needed
+ServerDrawer passes raw URLs to the Watch page. Watch.tsx handles all proxying internally.
+
+## Why This Works
+- `proxies-lake.vercel.app` is not blocked by Myanmar ISPs (already proven working for Supabase)
+- Vercel rewrites stream responses without timeout limits (they're edge-level, not serverless functions)
+- The CF Worker's `/proxy/` route handles Range headers for seeking in large files
+- Server-to-server communication (Vercel to CF Worker) is never blocked by ISPs
+
+## Optional: Better Long-Term Fix
+Add a **custom domain** to your Cloudflare Worker (e.g., `stream.yourdomain.com`). ISPs typically don't block custom domains. This removes the Vercel hop and gives better performance. You can do this in Cloudflare Dashboard > Workers > your worker > Settings > Domains & Routes.
 
