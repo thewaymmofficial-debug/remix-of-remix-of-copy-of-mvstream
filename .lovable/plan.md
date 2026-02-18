@@ -1,61 +1,49 @@
 
 
-# Implement 3-Tier Streaming Cascade in Watch.tsx
+# Fix: Direct and CF Proxy Tiers Always Failing
 
-## What's Changing
+## Root Cause
 
-Now that the Cloudflare Worker `/proxy/` route is deployed, we update the video player to use a 3-tier fallback:
+The `tryDirectStream()` function performs a `fetch()` HEAD probe with `mode: 'cors'` before attempting video playback. This fails because:
+
+1. **Direct tier**: The backend server (`fi5.bot-hosting.net`) does not return CORS headers, so the browser blocks the `fetch()` HEAD request
+2. **CF Proxy tier**: The HEAD request is forwarded to the upstream which may not support HEAD for video files, causing timeouts
+
+Since both probes fail, the cascade always falls through to Supabase (the last-resort tier that skips probing).
+
+**Key insight**: The HTML `<video>` element does NOT require CORS headers to play cross-origin media. Only `fetch()`/`XMLHttpRequest` requires CORS. So the HEAD probe is unnecessary and actively harmful.
+
+## Fix (Single File: `src/pages/Watch.tsx`)
+
+### 1. Remove HEAD probe from `tryDirectStream()`
+
+Replace the probe-then-play logic with direct `video.src` assignment + `loadedmetadata`/`error` event listening. No `fetch()` call at all.
 
 ```text
-Tier 1: Direct (free, fastest)
-Tier 2: CF Worker Proxy (free, safe fallback)
-Tier 3: Supabase Proxy (emergency only, 2GB/month limit)
+Before:
+  tryDirectStream() -> probeUrl(HEAD, cors) -> if ok -> video.src -> wait loadedmetadata
+  Result: probe fails (no CORS) -> skip tier
+
+After:
+  tryDirectStream() -> video.src -> wait loadedmetadata or error
+  Result: video element loads directly (no CORS needed) -> tier works
 ```
 
-## Changes (Single File: `src/pages/Watch.tsx`)
+### 2. Keep the timeout
 
-### 1. Add `Cloud` icon import from lucide-react
+Still use the 6-second timeout per tier. If `loadedmetadata` doesn't fire within 6 seconds, move to the next tier.
 
-### 2. Update types
-- `StreamTier` becomes `'direct' | 'cfproxy' | 'supabase'`
-- `ResolvedUrls` gets a new `cfProxyUrl: string` field
+### 3. No other changes needed
 
-### 3. Update `resolveVideoUrls()`
-After extracting the real video URL, construct the CF proxy URL:
-```
-const cfProxyUrl = `${STREAM_WORKER_ORIGIN}/proxy/?url=${encodeURIComponent(decodedUrl)}`;
-```
-Return all three URLs: `{ directUrl, cfProxyUrl, supabaseUrl }`
-
-### 4. Add `cfproxy` to `TIER_CONFIG`
-- Label: "CF Proxy"
-- Color: blue badge (`bg-blue-500/20 text-blue-300 border-blue-500/30`)
-- Icon: `Cloud`
-
-### 5. Update `getTierUrl()` to handle `'cfproxy'`
-
-### 6. Update `getCachedTier()` to accept `'cfproxy'` as valid
-
-### 7. Update `runCascade()` -- 3-tier sequence
-- `['direct', 'cfproxy', 'supabase']`
-- Direct and cfproxy use probe + loadedmetadata test (6s timeout each)
-- Supabase remains last-resort with no probe
-
-### 8. HLS fix (critical)
-For `.m3u8` streams, skip `HEAD` probe entirely (HLS manifests often block HEAD/return 403). Instead:
-- Try direct playback with HLS.js immediately
-- On fatal error, try cfproxy with HLS.js
-- On fatal error, fall to supabase with HLS.js
-
-### No other files change.
+The HLS cascade already skips HEAD probes (it uses HLS.js directly), so it's unaffected.
 
 ## Technical Details
 
-| Aspect | Value |
-|--------|-------|
-| CF Worker free tier | 100k req/day, no bandwidth cap |
-| Streaming method | `Response(upstream.body)` -- no buffering |
-| Supabase usage after change | Emergency only (~0% of traffic) |
-| Badge colors | Direct=green, CF Proxy=blue, Supabase=amber |
-| Timeout per tier | 6 seconds (unchanged) |
+| Aspect | Detail |
+|--------|--------|
+| File changed | `src/pages/Watch.tsx` |
+| Function modified | `tryDirectStream()` -- remove `probeUrl()` call |
+| Why it works | `<video>` element ignores CORS for media loading |
+| Risk | None -- removing an unnecessary check that was blocking playback |
+| Expected result | Direct (green badge) should work when VPN is on; CF Proxy (blue) as fallback |
 
