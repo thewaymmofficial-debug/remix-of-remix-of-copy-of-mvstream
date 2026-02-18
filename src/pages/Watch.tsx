@@ -1,6 +1,6 @@
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { ArrowLeft, AlertCircle, RefreshCw } from 'lucide-react';
+import { ArrowLeft, AlertCircle, RefreshCw, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useFullscreenLandscape } from '@/hooks/useFullscreenLandscape';
@@ -56,6 +56,8 @@ export default function Watch() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [bufferPercent, setBufferPercent] = useState(0);
+  const [muted, setMuted] = useState(false);
+  const [showUnmute, setShowUnmute] = useState(false);
 
   const isWatchUrl = rawUrl.includes('/watch/');
   const directUrl = rawUrl.includes('/watch/') ? rawUrl.replace('/watch/', '/') : rawUrl;
@@ -76,6 +78,21 @@ export default function Watch() {
 
     let hls: Hls | null = null;
     let cancelled = false;
+
+    const tryPlay = async (v: HTMLVideoElement) => {
+      v.muted = false;
+      try {
+        await v.play();
+        setMuted(false);
+        setShowUnmute(false);
+      } catch {
+        // Autoplay with audio blocked — mute and retry
+        v.muted = true;
+        setMuted(true);
+        setShowUnmute(true);
+        try { await v.play(); } catch { /* will show error via event */ }
+      }
+    };
 
     const setupVideo = async () => {
       try {
@@ -99,7 +116,7 @@ export default function Watch() {
             hls.loadSource(videoSrc);
             hls.attachMedia(video);
             hls.on(Hls.Events.MANIFEST_PARSED, () => {
-              if (!cancelled) { setLoading(false); video.play().catch(() => {}); }
+              if (!cancelled) { setLoading(false); tryPlay(video); }
             });
             hls.on(Hls.Events.ERROR, (_, data) => {
               if (data.fatal && !cancelled) { setLoading(false); setError('Stream failed to load'); }
@@ -107,7 +124,7 @@ export default function Watch() {
           } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
             video.src = videoSrc;
             video.addEventListener('loadedmetadata', () => {
-              if (!cancelled) { setLoading(false); video.play().catch(() => {}); }
+              if (!cancelled) { setLoading(false); tryPlay(video); }
             });
             video.addEventListener('error', () => {
               if (!cancelled) { setLoading(false); setError('Stream failed to load'); }
@@ -118,7 +135,9 @@ export default function Watch() {
           }
         } else {
           video.src = videoSrc;
-          video.addEventListener('loadedmetadata', () => { if (!cancelled) setLoading(false); });
+          video.addEventListener('loadedmetadata', () => {
+            if (!cancelled) { setLoading(false); tryPlay(video); }
+          });
           video.addEventListener('error', () => {
             if (!cancelled) { setLoading(false); setError('Video failed to load'); }
           });
@@ -186,8 +205,21 @@ export default function Watch() {
         </div>
       )}
 
+      {showUnmute && (
+        <button
+          onClick={() => {
+            const video = videoRef.current;
+            if (video) { video.muted = false; setMuted(false); setShowUnmute(false); }
+          }}
+          className="absolute bottom-20 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-2 bg-primary text-primary-foreground px-5 py-3 rounded-full shadow-lg animate-pulse"
+        >
+          <VolumeX className="w-5 h-5" />
+          <span className="text-sm font-medium">Tap to unmute</span>
+        </button>
+      )}
+
       {!error && (
-        <video ref={videoRef} className="w-full h-full object-contain" controls autoPlay playsInline controlsList="nodownload" />
+        <video ref={videoRef} className="w-full h-full object-contain" controls playsInline controlsList="nodownload" />
       )}
     </div>
   );
