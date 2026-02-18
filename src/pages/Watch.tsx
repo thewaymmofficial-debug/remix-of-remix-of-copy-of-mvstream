@@ -7,48 +7,25 @@ import { useFullscreenLandscape } from '@/hooks/useFullscreenLandscape';
 import Hls from 'hls.js';
 
 const STREAM_WORKER_ORIGIN = 'https://tw.thewayofthedragg.workers.dev';
-const SUPABASE_PROXY = 'https://icnfjixjohbxjxqbnnac.supabase.co/functions/v1/download-proxy';
-
-/** Reverse any proxy rewriting to get the original CF worker URL */
-function getOriginalWorkerUrl(url: string): string {
-  if (url.includes('proxies-lake.vercel.app/stream')) {
-    return url.replace('https://proxies-lake.vercel.app/stream', STREAM_WORKER_ORIGIN);
-  }
-  return url;
-}
 
 /** Fetch the watch page HTML and extract the direct video URL */
-async function resolveDirectUrl(proxiedWatchUrl: string): Promise<string> {
-  const originalUrl = getOriginalWorkerUrl(proxiedWatchUrl);
+async function resolveDirectUrl(watchUrl: string): Promise<string> {
+  // Strip any legacy Vercel proxy prefix
+  let originalUrl = watchUrl;
+  if (originalUrl.includes('proxies-lake.vercel.app/stream')) {
+    originalUrl = originalUrl.replace('https://proxies-lake.vercel.app/stream', STREAM_WORKER_ORIGIN);
+  }
+
   console.log('[Watch] Resolving direct URL from:', originalUrl);
 
-  const fetchSources = [
-    { name: 'supabase', url: `${SUPABASE_PROXY}?url=${encodeURIComponent(originalUrl)}` },
-    { name: 'direct', url: originalUrl },
-  ];
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  const res = await fetch(originalUrl, { signal: controller.signal });
+  clearTimeout(timer);
 
-  let html: string | null = null;
-  for (const source of fetchSources) {
-    try {
-      console.log(`[Watch] Fetching HTML via ${source.name}`);
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 8000);
-      const res = await fetch(source.url, { signal: controller.signal });
-      clearTimeout(timer);
-      if (res.ok) {
-        html = await res.text();
-        console.log(`[Watch] Got HTML via ${source.name}`);
-        break;
-      }
-      console.log(`[Watch] ${source.name} returned ${res.status}`);
-    } catch (err: any) {
-      console.log(`[Watch] ${source.name} fetch failed: ${err?.message || err}`);
-    }
-  }
+  if (!res.ok) throw new Error('Could not fetch watch page');
 
-  if (!html) {
-    throw new Error('Could not fetch watch page from any source');
-  }
+  const html = await res.text();
 
   const srcMatch = html.match(/<source[^>]+src=["']([^"']+)["']/i)
     || html.match(/<video[^>]+src=["']([^"']+)["']/i);
