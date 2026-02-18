@@ -729,6 +729,53 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_files: {
+        Row: {
+          channel_id: string | null
+          created_at: string
+          file_id: string
+          file_name: string | null
+          file_size: number | null
+          file_unique_id: string
+          id: string
+          message_id: number | null
+          mime_type: string | null
+          movie_id: string | null
+        }
+        Insert: {
+          channel_id?: string | null
+          created_at?: string
+          file_id: string
+          file_name?: string | null
+          file_size?: number | null
+          file_unique_id: string
+          id?: string
+          message_id?: number | null
+          mime_type?: string | null
+          movie_id?: string | null
+        }
+        Update: {
+          channel_id?: string | null
+          created_at?: string
+          file_id?: string
+          file_name?: string | null
+          file_size?: number | null
+          file_unique_id?: string
+          id?: string
+          message_id?: number | null
+          mime_type?: string | null
+          movie_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_files_movie_id_fkey"
+            columns: ["movie_id"]
+            isOneToOne: false
+            referencedRelation: "movies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tv_channels: {
         Row: {
           category: string
