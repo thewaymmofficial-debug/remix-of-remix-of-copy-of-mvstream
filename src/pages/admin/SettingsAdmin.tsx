@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { Settings, Save, Loader2, Megaphone, ChevronDown, CreditCard, Phone, Tv, Plus, Trash2, Globe } from 'lucide-react';
+import { Settings, Save, Loader2, Megaphone, ChevronDown, CreditCard, Phone, Tv, Plus, Trash2, Globe, Bot } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -46,12 +46,16 @@ export default function SettingsAdmin() {
   const [liveTvSources, setLiveTvSources] = useState<LiveTvSource[]>([]);
   const [newSourceUrl, setNewSourceUrl] = useState('');
 
+  // Telegram Bot API URL state
+  const [telegramBotApiUrl, setTelegramBotApiUrl] = useState('');
+
   // Collapsible states for mobile
   const [openSections, setOpenSections] = useState({
     announcement: true,
     contacts: false,
     prices: false,
     liveTv: true,
+    telegram: false,
   });
 
   const initialLoadDone = useRef(false);
@@ -72,6 +76,9 @@ export default function SettingsAdmin() {
     if (settings.liveTvSources) {
       const sources = settings.liveTvSources;
       setLiveTvSources(Array.isArray(sources) ? sources : []);
+    }
+    if (settings.telegramBotApiUrl !== undefined) {
+      setTelegramBotApiUrl(settings.telegramBotApiUrl);
     }
   }, [settings]);
 
@@ -139,6 +146,10 @@ export default function SettingsAdmin() {
 
   const handleSaveLiveTvSources = () => {
     updateSettings.mutate({ key: 'live_tv_sources', value: liveTvSources });
+  };
+
+  const handleSaveTelegramBotApiUrl = () => {
+    updateSettings.mutate({ key: 'telegram_bot_api_url', value: telegramBotApiUrl.trim() });
   };
 
   if (isLoading) {
@@ -671,6 +682,62 @@ export default function SettingsAdmin() {
                     <Save className="w-4 h-4 mr-2" />
                   )}
                   Save Sources
+                </Button>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
+
+        {/* Telegram Bot API - Collapsible */}
+        <Collapsible 
+          open={openSections.telegram} 
+          onOpenChange={(open) => setOpenSections(prev => ({ ...prev, telegram: open }))}
+          className="w-full"
+        >
+          <Card className="glass w-full box-border">
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors px-3 py-3 sm:px-6 sm:py-4">
+                <CardTitle className="flex items-center justify-between text-base sm:text-lg">
+                  <div className="flex items-center gap-2">
+                    <Bot className="w-5 h-5" />
+                    Telegram Bot API
+                  </div>
+                  <ChevronDown className={`w-5 h-5 transition-transform ${openSections.telegram ? 'rotate-180' : ''}`} />
+                </CardTitle>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="space-y-4 pt-0 px-3 sm:px-6">
+                <div className="space-y-2">
+                  <Label htmlFor="telegram-bot-api-url" className="text-sm">Custom Local Bot API Server URL</Label>
+                  <Input
+                    id="telegram-bot-api-url"
+                    value={telegramBotApiUrl}
+                    onChange={(e) => setTelegramBotApiUrl(e.target.value)}
+                    placeholder="http://your-vps:8081"
+                    className="text-sm"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Set a custom Local Bot API Server URL to stream files larger than 20MB. Leave empty to use the default Telegram API (20MB limit).
+                  </p>
+                </div>
+
+                <Badge variant={telegramBotApiUrl.trim() ? 'default' : 'secondary'} className="text-xs">
+                  {telegramBotApiUrl.trim() ? '✅ Custom server configured' : '⚠️ Using default API (20MB limit)'}
+                </Badge>
+
+                <Button
+                  onClick={handleSaveTelegramBotApiUrl}
+                  disabled={updateSettings.isPending}
+                  className="w-full"
+                  size="sm"
+                >
+                  {updateSettings.isPending ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-2" />
+                  )}
+                  Save Telegram API URL
                 </Button>
               </CardContent>
             </CollapsibleContent>

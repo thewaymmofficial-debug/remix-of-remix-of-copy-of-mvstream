@@ -59,6 +59,7 @@ export function useSiteSettings() {
         subscriptionPrices: settings['subscription_prices'] as SubscriptionPrices | undefined,
         announcement: settings['announcement'] as AnnouncementSettings | undefined,
         liveTvSources: (Array.isArray(settings['live_tv_sources']) ? settings['live_tv_sources'] : []) as LiveTvSource[],
+        telegramBotApiUrl: (settings['telegram_bot_api_url'] as string) || '',
       };
     },
   });

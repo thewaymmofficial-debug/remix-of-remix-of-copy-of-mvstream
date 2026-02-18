@@ -1,3 +1,5 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -23,9 +25,30 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Read custom Bot API URL from site_settings
+    let baseUrl = "https://api.telegram.org";
+    try {
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!
+      );
+      const { data } = await supabase
+        .from("site_settings")
+        .select("value")
+        .eq("key", "telegram_bot_api_url")
+        .single();
+      if (data?.value) {
+        const parsed = typeof data.value === "string" ? data.value : "";
+        const trimmed = parsed.replace(/\/+$/, "").trim();
+        if (trimmed) baseUrl = trimmed;
+      }
+    } catch {
+      // fallback to default
+    }
+
     // Get the file path from Telegram
     const getFileRes = await fetch(
-      `https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${fileId}`
+      `${baseUrl}/bot${BOT_TOKEN}/getFile?file_id=${fileId}`
     );
     const getFileData = await getFileRes.json();
 
@@ -41,7 +64,7 @@ Deno.serve(async (req) => {
 
     const filePath = getFileData.result.file_path;
     const fileSize = getFileData.result.file_size || 0;
-    const telegramFileUrl = `https://api.telegram.org/file/bot${BOT_TOKEN}/${filePath}`;
+    const telegramFileUrl = `${baseUrl}/file/bot${BOT_TOKEN}/${filePath}`;
 
     // Determine content type from file path
     let contentType = "video/mp4";
