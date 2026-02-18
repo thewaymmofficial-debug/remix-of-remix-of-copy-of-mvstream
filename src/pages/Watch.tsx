@@ -1,21 +1,26 @@
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { ArrowLeft, AlertCircle, RefreshCw, Wifi, Shield } from 'lucide-react';
+import { ArrowLeft, AlertCircle, RefreshCw, Wifi, Globe, Server, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useFullscreenLandscape } from '@/hooks/useFullscreenLandscape';
 import Hls from 'hls.js';
 
 const STREAM_WORKER_ORIGIN = 'https://tw.thewayofthedragg.workers.dev';
+const CF_RELAY_ORIGIN = 'https://tiny-river-1bfb.thewayofthedragg.workers.dev';
 const PROXY_STREAM_ORIGIN = 'https://proxies-lake.vercel.app/stream';
 const SUPABASE_PROXY = 'https://icnfjixjohbxjxqbnnac.supabase.co/functions/v1/download-proxy';
 
-/**
- * Given a proxied `/watch/` URL, fetch its HTML page and extract the real
- * video URL. Returns both the direct Cloudflare worker URL and a Supabase
- * proxy fallback URL.
- */
-async function resolveVideoUrls(proxiedWatchUrl: string): Promise<{ directUrl: string; proxyUrl: string }> {
+type StreamTier = 'direct' | 'relay' | 'vercel' | 'supabase';
+
+interface ResolvedUrls {
+  directUrl: string;
+  relayUrl: string;
+  vercelUrl: string;
+  supabaseUrl: string;
+}
+
+async function resolveVideoUrls(proxiedWatchUrl: string): Promise<ResolvedUrls> {
   const res = await fetch(proxiedWatchUrl);
   if (!res.ok) throw new Error(`Failed to fetch watch page: ${res.status}`);
   const html = await res.text();
@@ -32,16 +37,18 @@ async function resolveVideoUrls(proxiedWatchUrl: string): Promise<{ directUrl: s
     realUrl = STREAM_WORKER_ORIGIN + realUrl;
   }
 
+  // Build relay URL by swapping origin
+  const urlObj = new URL(realUrl);
+  const relayUrl = realUrl.replace(urlObj.origin, CF_RELAY_ORIGIN);
+
   return {
     directUrl: realUrl,
-    proxyUrl: `${SUPABASE_PROXY}?url=${encodeURIComponent(realUrl)}&stream=1`,
+    relayUrl,
+    vercelUrl: `${PROXY_STREAM_ORIGIN}?url=${encodeURIComponent(realUrl)}`,
+    supabaseUrl: `${SUPABASE_PROXY}?url=${encodeURIComponent(realUrl)}&stream=1`,
   };
 }
 
-/**
- * Try loading a video source directly. Returns true if loadedmetadata
- * fires within the timeout, false on error or timeout.
- */
 function tryDirectStream(video: HTMLVideoElement, url: string, timeoutMs = 8000): Promise<boolean> {
   return new Promise((resolve) => {
     let settled = false;
@@ -57,7 +64,7 @@ function tryDirectStream(video: HTMLVideoElement, url: string, timeoutMs = 8000)
     const onMeta = () => settle(true);
     const onError = () => settle(false);
     const timer = setTimeout(() => {
-      console.log('[Watch] Direct stream timed out after', timeoutMs, 'ms');
+      console.log('[Watch] Stream timed out after', timeoutMs, 'ms');
       settle(false);
     }, timeoutMs);
 
@@ -67,6 +74,13 @@ function tryDirectStream(video: HTMLVideoElement, url: string, timeoutMs = 8000)
     video.load();
   });
 }
+
+const TIER_CONFIG: Record<StreamTier, { label: string; color: string; icon: typeof Wifi }> = {
+  direct:   { label: 'Direct',   color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30', icon: Wifi },
+  relay:    { label: 'Relay',    color: 'bg-blue-500/20 text-blue-300 border-blue-500/30',          icon: Globe },
+  vercel:   { label: 'Vercel',   color: 'bg-purple-500/20 text-purple-300 border-purple-500/30',    icon: Server },
+  supabase: { label: 'Proxy',    color: 'bg-amber-500/20 text-amber-300 border-amber-500/30',       icon: Shield },
+};
 
 export default function Watch() {
   const [searchParams] = useSearchParams();
@@ -81,38 +95,24 @@ export default function Watch() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [bufferPercent, setBufferPercent] = useState(0);
-  const [streamSource, setStreamSource] = useState<'direct' | 'proxy' | null>(null);
+  const [streamSource, setStreamSource] = useState<StreamTier | null>(null);
   const [showSourceBadge, setShowSourceBadge] = useState(false);
   const sourceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isWatchUrl = rawUrl.includes('/watch/');
-
-  // For non-watch URLs, strip /watch/ as before (backward compat for edge cases)
-  const directUrl = rawUrl.includes('/watch/')
-    ? rawUrl.replace('/watch/', '/')
-    : rawUrl;
-
-  const isHls = directUrl.includes('.m3u8');
+  const directUrl = rawUrl.includes('/watch/') ? rawUrl.replace('/watch/', '/') : rawUrl;
 
   const goBack = useCallback(() => {
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate('/');
-    }
+    if (window.history.length > 1) navigate(-1);
+    else navigate('/');
   }, [navigate]);
 
-  // Redirect if no URL
   useEffect(() => {
-    if (!rawUrl) {
-      navigate('/', { replace: true });
-    }
+    if (!rawUrl) navigate('/', { replace: true });
   }, [rawUrl, navigate]);
 
-  // HLS / direct video setup
   useEffect(() => {
     if (!rawUrl) return;
-
     const video = videoRef.current;
     if (!video) return;
 
@@ -122,44 +122,55 @@ export default function Watch() {
     const setupVideo = async () => {
       try {
         let videoSrc: string;
+        let resolvedTier: StreamTier = 'supabase';
 
         if (isWatchUrl) {
-          // Resolve both direct + proxy URLs from the watch page
           const timeoutPromise = new Promise<never>((_, reject) =>
             setTimeout(() => reject(new Error('Timed out resolving video URL')), 15000)
           );
-          const urls = await Promise.race([
-            resolveVideoUrls(rawUrl),
-            timeoutPromise,
-          ]);
-
+          const urls = await Promise.race([resolveVideoUrls(rawUrl), timeoutPromise]);
           if (cancelled) return;
 
           const srcIsHls = urls.directUrl.includes('.m3u8');
 
           if (!srcIsHls) {
-            // Try direct Cloudflare stream first (saves Supabase bandwidth)
-            console.log('[Watch] Trying direct stream:', urls.directUrl);
-            const ok = await tryDirectStream(video, urls.directUrl);
-            if (cancelled) return;
+            // 4-tier fallback cascade
+            const tiers: { tier: StreamTier; url: string }[] = [
+              { tier: 'direct',  url: urls.directUrl },
+              { tier: 'relay',   url: urls.relayUrl },
+              { tier: 'vercel',  url: urls.vercelUrl },
+              { tier: 'supabase', url: urls.supabaseUrl },
+            ];
 
-            if (ok) {
-              console.log('[Watch] Direct stream succeeded');
-              setStreamSource('direct');
-              setShowSourceBadge(true);
-              setLoading(false);
-              video.play().catch(() => {});
-              return;
+            for (const { tier, url } of tiers) {
+              if (cancelled) return;
+              // Last tier doesn't need tryDirectStream — just use it
+              if (tier === 'supabase') {
+                console.log('[Watch] Using Supabase proxy (last resort)');
+                videoSrc = url;
+                resolvedTier = 'supabase';
+                break;
+              }
+              console.log(`[Watch] Trying ${tier}:`, url);
+              const ok = await tryDirectStream(video, url);
+              if (cancelled) return;
+              if (ok) {
+                console.log(`[Watch] ${tier} succeeded`);
+                resolvedTier = tier;
+                setStreamSource(tier);
+                setShowSourceBadge(true);
+                setLoading(false);
+                video.play().catch(() => {});
+                return;
+              }
             }
 
-            // Fallback to Supabase proxy
-            console.log('[Watch] Falling back to Supabase proxy');
-            setStreamSource('proxy');
+            // If we fell through to supabase
+            setStreamSource('supabase');
             setShowSourceBadge(true);
-            videoSrc = urls.proxyUrl;
           } else {
-            // For HLS, use proxy (needs CORS headers)
-            videoSrc = urls.proxyUrl;
+            videoSrc = urls.supabaseUrl;
+            resolvedTier = 'supabase';
           }
         } else {
           videoSrc = directUrl;
@@ -167,62 +178,43 @@ export default function Watch() {
 
         if (cancelled) return;
 
-        const srcIsHls = videoSrc.includes('.m3u8');
+        const srcIsHls = videoSrc!.includes('.m3u8');
 
         if (srcIsHls) {
           if (Hls.isSupported()) {
             hls = new Hls({ enableWorker: true });
-            hls.loadSource(videoSrc);
+            hls.loadSource(videoSrc!);
             hls.attachMedia(video);
             hls.on(Hls.Events.MANIFEST_PARSED, () => {
-              if (!cancelled) {
-                setLoading(false);
-                video.play().catch(() => {});
-              }
+              if (!cancelled) { setLoading(false); video.play().catch(() => {}); }
             });
             hls.on(Hls.Events.ERROR, (_, data) => {
-              if (data.fatal && !cancelled) {
-                setLoading(false);
-                setError('Stream failed to load');
-              }
+              if (data.fatal && !cancelled) { setLoading(false); setError('Stream failed to load'); }
             });
           } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            video.src = videoSrc;
+            video.src = videoSrc!;
             video.addEventListener('loadedmetadata', () => {
-              if (!cancelled) {
-                setLoading(false);
-                video.play().catch(() => {});
-              }
+              if (!cancelled) { setLoading(false); video.play().catch(() => {}); }
             });
           } else {
             setError('HLS not supported on this device');
             setLoading(false);
           }
         } else {
-          // Direct video (mp4/webm/mkv)
-          video.src = videoSrc;
-          video.addEventListener('loadedmetadata', () => {
-            if (!cancelled) setLoading(false);
-          });
+          video.src = videoSrc!;
+          video.addEventListener('loadedmetadata', () => { if (!cancelled) setLoading(false); });
           video.addEventListener('error', () => {
-            if (!cancelled) {
-              setLoading(false);
-              setError('Video failed to load');
-            }
+            if (!cancelled) { setLoading(false); setError('Video failed to load'); }
           });
           video.load();
         }
       } catch (err: any) {
-        if (!cancelled) {
-          setLoading(false);
-          setError(err?.message || 'Failed to load video');
-        }
+        if (!cancelled) { setLoading(false); setError(err?.message || 'Failed to load video'); }
       }
     };
 
     setupVideo();
 
-    // Buffer progress listener
     const handleProgress = () => {
       if (!video || !video.duration) return;
       const len = video.buffered.length;
@@ -233,15 +225,12 @@ export default function Watch() {
     };
     video.addEventListener('progress', handleProgress);
 
-    // Auto-hide source badge after 5 seconds
     sourceTimerRef.current = setTimeout(() => setShowSourceBadge(false), 5000);
 
     return () => {
       cancelled = true;
       video.removeEventListener('progress', handleProgress);
-      if (hls) {
-        hls.destroy();
-      }
+      if (hls) hls.destroy();
       if (sourceTimerRef.current) clearTimeout(sourceTimerRef.current);
     };
   }, [rawUrl, isWatchUrl, directUrl]);
@@ -249,77 +238,42 @@ export default function Watch() {
   if (!rawUrl) return null;
 
   const rotationStyle = needsCssRotation
-    ? {
-        position: 'fixed' as const,
-        top: 0, left: 0,
-        width: '100vh',
-        height: '100vw',
-        transform: 'rotate(90deg)',
-        transformOrigin: 'top left',
-        marginLeft: '100vw',
-        zIndex: 9999,
-      }
+    ? { position: 'fixed' as const, top: 0, left: 0, width: '100vh', height: '100vw', transform: 'rotate(90deg)', transformOrigin: 'top left', marginLeft: '100vw', zIndex: 9999 }
     : undefined;
 
+  const tierInfo = streamSource ? TIER_CONFIG[streamSource] : null;
+
   return (
-    <div
-      ref={containerRef}
-      className="fixed inset-0 z-50 bg-black flex flex-col"
-      style={rotationStyle}
-    >
-      {/* Back button */}
-      <button
-        onClick={goBack}
-        className="absolute top-4 left-4 z-[60] bg-black/60 hover:bg-black/80 text-white rounded-full p-2 backdrop-blur-sm transition-colors"
-        aria-label="Go back"
-      >
+    <div ref={containerRef} className="fixed inset-0 z-50 bg-black flex flex-col" style={rotationStyle}>
+      <button onClick={goBack} className="absolute top-4 left-4 z-[60] bg-black/60 hover:bg-black/80 text-white rounded-full p-2 backdrop-blur-sm transition-colors" aria-label="Go back">
         <ArrowLeft className="w-6 h-6" />
       </button>
 
-      {/* Buffer progress bar */}
       {!loading && !error && bufferPercent > 0 && bufferPercent < 100 && (
         <div className="absolute top-0 left-0 right-0 z-[60] h-[3px] bg-white/10">
-          <div
-            className="h-full bg-primary transition-all duration-500 ease-out"
-            style={{ width: `${bufferPercent}%` }}
-          />
-          <span className="absolute right-2 top-1 text-[10px] text-white/60 font-mono">
-            {bufferPercent}%
-          </span>
+          <div className="h-full bg-primary transition-all duration-500 ease-out" style={{ width: `${bufferPercent}%` }} />
+          <span className="absolute right-2 top-1 text-[10px] text-white/60 font-mono">{bufferPercent}%</span>
         </div>
       )}
 
-      {/* Stream source badge */}
-      {showSourceBadge && streamSource && !loading && !error && (
-        <div className={`absolute top-4 right-4 z-[60] flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium backdrop-blur-md transition-opacity duration-700 ${
-          streamSource === 'direct'
-            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-            : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-        }`}>
-          {streamSource === 'direct' ? (
-            <><Wifi className="w-3 h-3" /> Direct</>
-          ) : (
-            <><Shield className="w-3 h-3" /> Proxy</>
-          )}
+      {showSourceBadge && tierInfo && !loading && !error && (
+        <div className={`absolute top-4 right-4 z-[60] flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium backdrop-blur-md transition-opacity duration-700 border ${tierInfo.color}`}>
+          <tierInfo.icon className="w-3 h-3" /> {tierInfo.label}
         </div>
       )}
 
-      {/* Loading overlay */}
       {loading && (
         <div className="absolute inset-0 z-[55] bg-black flex items-center justify-center">
           <LoadingSpinner message={`Loading ${title}...`} />
         </div>
       )}
 
-      {/* Error state */}
       {error && (
         <div className="absolute inset-0 z-[55] bg-black flex flex-col items-center justify-center gap-4 px-6">
           <AlertCircle className="w-12 h-12 text-destructive" />
           <p className="text-foreground text-center text-lg">{error}</p>
           <div className="flex gap-3">
-            <Button variant="outline" onClick={goBack}>
-              Go Back
-            </Button>
+            <Button variant="outline" onClick={goBack}>Go Back</Button>
             <Button onClick={() => { setError(null); setLoading(true); window.location.reload(); }}>
               <RefreshCw className="w-4 h-4 mr-2" /> Retry
             </Button>
@@ -327,16 +281,8 @@ export default function Watch() {
         </div>
       )}
 
-      {/* Native video player for all sources */}
       {!error && (
-        <video
-          ref={videoRef}
-          className="w-full h-full object-contain"
-          controls
-          autoPlay
-          playsInline
-          controlsList="nodownload"
-        />
+        <video ref={videoRef} className="w-full h-full object-contain" controls autoPlay playsInline controlsList="nodownload" />
       )}
     </div>
   );
