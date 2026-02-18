@@ -12,15 +12,14 @@ const SUPABASE_PROXY = 'https://icnfjixjohbxjxqbnnac.supabase.co/functions/v1/do
 
 /**
  * Given a proxied `/watch/` URL, fetch its HTML page and extract the real
- * video URL, then return it routed through the Supabase download-proxy
- * edge function for unlimited streaming with Range request support.
+ * video URL. Returns both the direct Cloudflare worker URL and a Supabase
+ * proxy fallback URL.
  */
-async function resolveRealVideoUrl(proxiedWatchUrl: string): Promise<string> {
+async function resolveVideoUrls(proxiedWatchUrl: string): Promise<{ directUrl: string; proxyUrl: string }> {
   const res = await fetch(proxiedWatchUrl);
   if (!res.ok) throw new Error(`Failed to fetch watch page: ${res.status}`);
   const html = await res.text();
 
-  // Extract src from <source src="..."> or <video src="...">
   const srcMatch = html.match(/<source[^>]+src=["']([^"']+)["']/i)
     || html.match(/<video[^>]+src=["']([^"']+)["']/i);
 
@@ -29,14 +28,44 @@ async function resolveRealVideoUrl(proxiedWatchUrl: string): Promise<string> {
   }
 
   let realUrl = srcMatch[1];
-
-  // Make relative URLs absolute using the worker origin
   if (realUrl.startsWith('/')) {
     realUrl = STREAM_WORKER_ORIGIN + realUrl;
   }
 
-  // Route through Supabase edge function for unlimited streaming
-  return `${SUPABASE_PROXY}?url=${encodeURIComponent(realUrl)}&stream=1`;
+  return {
+    directUrl: realUrl,
+    proxyUrl: `${SUPABASE_PROXY}?url=${encodeURIComponent(realUrl)}&stream=1`,
+  };
+}
+
+/**
+ * Try loading a video source directly. Returns true if loadedmetadata
+ * fires within the timeout, false on error or timeout.
+ */
+function tryDirectStream(video: HTMLVideoElement, url: string, timeoutMs = 8000): Promise<boolean> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const settle = (result: boolean) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      video.removeEventListener('loadedmetadata', onMeta);
+      video.removeEventListener('error', onError);
+      resolve(result);
+    };
+
+    const onMeta = () => settle(true);
+    const onError = () => settle(false);
+    const timer = setTimeout(() => {
+      console.log('[Watch] Direct stream timed out after', timeoutMs, 'ms');
+      settle(false);
+    }, timeoutMs);
+
+    video.addEventListener('loadedmetadata', onMeta);
+    video.addEventListener('error', onError);
+    video.src = url;
+    video.load();
+  });
 }
 
 export default function Watch() {
@@ -91,14 +120,39 @@ export default function Watch() {
         let videoSrc: string;
 
         if (isWatchUrl) {
-          // Fetch the /watch/ HTML page to get the real video URL
+          // Resolve both direct + proxy URLs from the watch page
           const timeoutPromise = new Promise<never>((_, reject) =>
             setTimeout(() => reject(new Error('Timed out resolving video URL')), 15000)
           );
-          videoSrc = await Promise.race([
-            resolveRealVideoUrl(rawUrl),
+          const urls = await Promise.race([
+            resolveVideoUrls(rawUrl),
             timeoutPromise,
           ]);
+
+          if (cancelled) return;
+
+          const srcIsHls = urls.directUrl.includes('.m3u8');
+
+          if (!srcIsHls) {
+            // Try direct Cloudflare stream first (saves Supabase bandwidth)
+            console.log('[Watch] Trying direct stream:', urls.directUrl);
+            const ok = await tryDirectStream(video, urls.directUrl);
+            if (cancelled) return;
+
+            if (ok) {
+              console.log('[Watch] Direct stream succeeded');
+              setLoading(false);
+              video.play().catch(() => {});
+              return; // done — no Supabase bandwidth used
+            }
+
+            // Fallback to Supabase proxy
+            console.log('[Watch] Falling back to Supabase proxy');
+            videoSrc = urls.proxyUrl;
+          } else {
+            // For HLS, use proxy (needs CORS headers)
+            videoSrc = urls.proxyUrl;
+          }
         } else {
           videoSrc = directUrl;
         }
