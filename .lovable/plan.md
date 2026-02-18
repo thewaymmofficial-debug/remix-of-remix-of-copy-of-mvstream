@@ -1,64 +1,62 @@
 
+# Direct Cloudflare Worker Streaming with Supabase Fallback
 
-# Fix: Large File (2.5GB+) Streaming via Supabase Edge Function Proxy
+## Goal
 
-## Problem
+Try streaming directly from the Cloudflare worker first (free, no bandwidth limits). Only fall back to the Supabase proxy if the direct connection fails (e.g., ISP blocks it). This saves Supabase edge function bandwidth for users who don't need it.
 
-The Vercel proxy (`proxies-lake.vercel.app`) cannot stream large video files. It times out because Vercel serverless functions have response size and execution time limits. Small files (music videos, short clips) work because they finish before the timeout. A 2.5GB movie never finishes, so it shows "Loading Video..." forever.
-
-The original server (your Cloudflare worker) plays the same file perfectly because it supports streaming natively with no size limits.
-
-## Solution
-
-Your project already has a `download-proxy` Supabase Edge Function that supports:
-- Range request forwarding (essential for progressive video playback)
-- Response body streaming (no size limit)
-- Proper CORS headers
-
-The fix is to route the actual video data through this edge function instead of the Vercel proxy. The edge function runs on Deno Deploy infrastructure which can stream unlimited response sizes.
+## How It Works
 
 ```text
-Current flow (fails for large files):
-  Fetch /watch/ HTML via Vercel proxy (OK, small)
-    -> Extract real video URL
-    -> Proxy video through Vercel (FAILS - timeout/size limit)
-
-New flow:
-  Fetch /watch/ HTML via Vercel proxy (OK, small)  
-    -> Extract real video URL
-    -> Proxy video through Supabase download-proxy edge function (streams with Range support)
-    -> Browser plays video progressively
+User taps Play
+  |
+  v
+Fetch /watch/ HTML page (via Vercel proxy) -> extract real video URL
+  |
+  v
+Attempt 1: Set video.src = real Cloudflare worker URL directly
+  |
+  Wait up to 8 seconds for "loadedmetadata" event
+  |
+  +-- Success? -> Play video (no Supabase bandwidth used)
+  |
+  +-- Fails (timeout or error)? -> ISP likely blocking
+        |
+        v
+      Attempt 2: Set video.src = Supabase proxy URL (current behavior)
+        |
+        +-- Success? -> Play video via Supabase proxy
+        +-- Fails? -> Show error with retry button
 ```
 
 ## Technical Changes
 
-### 1. File: `supabase/functions/download-proxy/index.ts`
+### File: `src/pages/Watch.tsx`
 
-Currently the edge function always sets `Content-Disposition: attachment`, which forces the browser to download instead of play inline. Add a `stream` query parameter that skips this header so the browser plays the video in the native `<video>` element.
+**1. Update `resolveRealVideoUrl` to return both URLs**
 
-- When `stream=1` is in the query: skip `Content-Disposition` header entirely, allowing inline playback
-- When `stream` is absent: keep current behavior (download mode)
+Instead of returning only the Supabase-proxied URL, the function will return an object with two URLs:
+- `directUrl`: the real Cloudflare worker URL (e.g., `tw.thewayofthedragg.workers.dev/485/Movie.mp4?hash=X`)
+- `proxyUrl`: the Supabase-proxied version (current behavior, `download-proxy?url=...&stream=1`)
 
-### 2. File: `src/pages/Watch.tsx`
+**2. Add a `tryDirectFirst` helper function**
 
-Modify the `resolveRealVideoUrl` function so that after extracting the real video URL from the HTML page, instead of routing it through the Vercel proxy, it builds a URL pointing to the Supabase `download-proxy` edge function with `stream=1`.
+A new helper that:
+1. Sets `video.src` to the direct Cloudflare URL
+2. Listens for `loadedmetadata` (success) or `error` event
+3. Also sets an 8-second timeout as a safety net (some ISP blocks cause silent hangs rather than errors)
+4. Returns `true` if direct playback started, `false` if it failed
 
-The resolved URL will look like:
-`https://icnfjixjohbxjxqbnnac.supabase.co/functions/v1/download-proxy?url=<encoded-real-video-url>&stream=1`
+**3. Update the `setupVideo` flow**
 
-This keeps the initial HTML page fetch going through the Vercel proxy (which works fine for small HTML pages), but routes the actual 2.5GB video data through the Supabase edge function which can handle it.
+For `/watch/` URLs:
+1. Resolve both URLs (direct + proxy) from the HTML page
+2. Try the direct URL first using `tryDirectFirst`
+3. If it fails, fall back to the Supabase proxy URL
+4. For non-watch URLs, keep current behavior unchanged
 
-### What This Fixes
+### What This Saves
 
-- 2.5GB+ movies play correctly because the edge function streams with Range request support
-- Small files continue to work (they also go through the edge function now)
-- Works without VPN because the edge function fetches from the Cloudflare worker server-side (no ISP blocking)
-- Progressive playback with seeking support (Range requests forwarded properly)
-
-### No Changes Needed To
-
-- Cloudflare worker
-- Vercel proxy (still used for initial HTML page fetch)
-- ServerDrawer component
-- WebToApp settings
-
+- Users without ISP blocks: zero Supabase bandwidth used (streams directly from Cloudflare)
+- Users with ISP blocks: automatic fallback to Supabase proxy (same as current behavior)
+- The fallback adds only ~8 seconds of delay for blocked users on first load
