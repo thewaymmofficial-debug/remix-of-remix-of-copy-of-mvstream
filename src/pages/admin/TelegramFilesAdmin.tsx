@@ -13,6 +13,8 @@ import {
 import { Search, Link2, Unlink, Trash2, FileVideo, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { useMovies } from '@/hooks/useMovies';
+import { useSiteSettings } from '@/hooks/useSiteSettings';
+import { Badge } from '@/components/ui/badge';
 
 interface TelegramFile {
   id: string;
@@ -42,6 +44,8 @@ export default function TelegramFilesAdmin() {
   const [movieSearch, setMovieSearch] = useState('');
 
   const { data: movies } = useMovies();
+  const { data: siteSettings } = useSiteSettings();
+  const hasCustomBotApi = !!(siteSettings?.telegramBotApiUrl?.trim());
 
   const { data: files, isLoading } = useQuery({
     queryKey: ['telegram-files'],
@@ -135,6 +139,9 @@ export default function TelegramFilesAdmin() {
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold">Telegram Files</h1>
+        <Badge variant={hasCustomBotApi ? 'default' : 'secondary'} className="text-xs w-fit">
+          {hasCustomBotApi ? '✅ Custom Bot API Server' : '⚠️ Default API (20MB limit)'}
+        </Badge>
       </div>
 
       {/* Webhook URL info */}
