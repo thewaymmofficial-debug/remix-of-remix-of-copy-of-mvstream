@@ -1,68 +1,92 @@
 
 
-# Fix: Movie Streaming Without VPN in WebToApp APK
+# Fix: Large File (2.5GB) Streaming Not Playing
 
-## Problem
+## Root Cause
 
-The previous fix (removing `sandbox`) didn't fully solve the issue. The real root cause is deeper:
+When a user taps Play, the current code strips `/watch/` from the stream URL and sets it directly as the native video source. This fails for large files because:
 
-1. When you tap Play, the stream URL (e.g., `tw.thewayofthedragg.workers.dev/watch/463/file.mkv`) gets proxied through your Vercel proxy (`proxies-lake.vercel.app/stream/watch/463/file.mkv`)
-2. The `/watch/` path on your Cloudflare worker returns an **HTML page** containing a built-in video player
-3. That HTML page's video element tries to load the actual video file **directly from the Cloudflare worker domain** -- not through the proxy
-4. Without VPN, Myanmar ISPs block the Cloudflare worker domain, so the video inside the iframe never loads
+1. The `/watch/` endpoint on your backend resolves the **real video URL** (with correct filename and MP4 format). Without `/watch/`, the raw "AV_File" URL may not serve the file correctly for all sizes.
+2. The Vercel proxy may struggle with initial buffering of very large files when the browser doesn't know the content type.
+3. The browser sees a `.mkv` extension and may not attempt progressive MP4 playback optimizations.
 
-The Vercel proxy only proxies the initial HTML page -- it cannot rewrite the internal video URLs inside that HTML.
+**How the backend works** (verified by fetching the actual `/watch/` page):
+- `/watch/485/AV_File.mkv?hash=X` returns an HTML page containing the **real** video URL
+- The real URL has the correct filename and `.mp4` extension
+- Example: `tw.thewayofthedragg.workers.dev/485/The.Housemaid.2025.1080p.mp4?hash=X`
 
 ## Solution
 
-Stop using the Cloudflare worker's HTML player entirely. Instead, extract the **direct file URL** from the stream URL and play it with the native HTML5 video player, routed through the Vercel proxy.
+Instead of stripping `/watch/` and hoping the raw URL works, **fetch the `/watch/` HTML page first, extract the real video source URL, then play that through the proxy with the native video player**.
 
-URL transformation:
-- Stream URL: `/watch/463/AV_File.mkv?hash=X` (returns HTML page)
-- Direct URL: `/463/AV_File.mkv?hash=X` (returns raw video file)
-
-The only difference is removing the `/watch` prefix.
+This gives us:
+- The correct file URL that the backend resolves (proper filename + MP4 format)
+- End-to-end proxying through Vercel (bypasses ISP blocking)
+- Browser-native Range request support for progressive loading (essential for 2.5GB files)
+- Proper content-type detection (MP4, not MKV)
 
 ## Technical Changes
 
 ### File: `src/pages/Watch.tsx`
 
-**Change 1: Add a function to convert streaming server URLs to direct file URLs**
+**Change 1: Add a function to resolve the real video URL**
 
-Add a helper that strips `/watch` from the path, converting the HTML player URL into a direct video file URL that can be played natively.
+Add an async function that:
+1. Fetches the `/watch/` HTML page (small request, just a few KB) through the proxy
+2. Parses the HTML response to extract the `<source src="...">` URL
+3. Rewrites that URL to go through the Vercel proxy
+4. Returns the proxied real video URL
 
-**Change 2: Remove the iframe path entirely**
+```text
+Flow:
+  User taps Play
+    |
+    v
+  Stream URL: proxies-lake.vercel.app/stream/watch/485/file.mkv?hash=X
+    |
+    v
+  Fetch HTML page (small ~1KB request)
+    |
+    v
+  Extract real source: tw.thewayofthedragg.workers.dev/485/RealMovie.mp4?hash=X
+    |
+    v
+  Proxy it: proxies-lake.vercel.app/stream/485/RealMovie.mp4?hash=X
+    |
+    v
+  Set as <video> src (native player with Range request support)
+    |
+    v
+  Browser progressively loads & plays (works for 2.5GB+)
+```
 
-Instead of the current logic:
-- `/watch/` URL -> iframe (loads Cloudflare HTML player)
-- Direct URL -> native video player
+**Change 2: Update the video setup effect**
 
-Change to:
-- `/watch/` URL -> strip `/watch`, proxy the direct file URL -> native video player
-- Direct URL -> native video player
+Modify the useEffect to:
+1. Check if the raw URL contains `/watch/` (streaming server URL)
+2. If yes: fetch the HTML page, extract the real video URL, proxy it, then set as video source
+3. If no: use the URL directly as before (for non-streaming-server URLs like direct MP4 links)
+4. Add a timeout (15 seconds) so if the HTML fetch fails, show an error instead of infinite loading
 
-This means the `isStreamingServer` flag and the iframe code block are no longer needed. All videos play through the native `<video>` element.
+**Change 3: Add error handling for the HTML fetch**
 
-**Change 3: Update the video setup effect**
-
-The effect that sets up HLS / direct video playback will now also handle the converted streaming URLs (which are just direct .mkv files after transformation).
+If the fetch fails (network error, proxy down), show a user-friendly error with a retry button. Also add a `stale` event listener on the video element to detect when playback stalls.
 
 ### File: `src/lib/utils.ts`
 
-**No changes needed.** The existing `proxyStreamUrl()` function already rewrites the domain to go through the Vercel proxy. After stripping `/watch`, the URL flows through the same proxy path.
+No changes needed. The existing `proxyStreamUrl()` function will be used to proxy the extracted real video URL.
 
 ### What This Fixes
 
-- Videos play through the Vercel proxy end-to-end (no direct connections to blocked domains)
-- No iframe means no nested cross-origin issues
-- Native video controls work properly in Android WebView
-- The `android-webview-video-poster` CORS error disappears (it was caused by the iframe)
-- Works without VPN because all traffic goes through `proxies-lake.vercel.app`
+- 2.5GB+ movies play correctly because the browser gets the real MP4 URL with proper Range request support
+- Works without VPN because all traffic (both the HTML fetch and video streaming) goes through the Vercel proxy
+- Small music videos continue to work as before
+- Proper content-type handling (browser sees `.mp4` not `.mkv`)
 
-### No Changes Needed To
+### What Stays The Same
 
-- Cloudflare worker (it already serves direct files on non-`/watch/` paths)
-- Vercel proxy configuration
-- WebToApp settings
-- ServerDrawer component (it already proxies URLs before passing to Watch)
+- No changes to Cloudflare worker
+- No changes to Vercel proxy
+- No changes to ServerDrawer (it already proxies URLs before passing to Watch)
+- Download functionality unchanged
 
