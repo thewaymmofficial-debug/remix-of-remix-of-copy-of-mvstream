@@ -1,37 +1,56 @@
 
 
-# Simplify Watch.tsx: Direct-Only Playback
+# Fix: Remove All Proxies from Watch.tsx
 
 ## Problem
-CF Proxy and Supabase tiers cause audio issues (disappearing audio, delays). Direct playback works perfectly.
+The `resolveDirectUrl()` function (line 25-28) still prioritizes the Supabase proxy when resolving `/watch/` URLs. The `SUPABASE_PROXY` constant and the Vercel proxy rewriting in `getOriginalWorkerUrl()` are still present.
 
-## What Changes
+## Changes to `src/pages/Watch.tsx`
 
-Strip all multi-tier cascade logic from `src/pages/Watch.tsx` and use the direct URL only.
+### 1. Remove `SUPABASE_PROXY` constant (line 10)
+Delete the Supabase proxy URL entirely.
 
-### Remove
-- `StreamTier` type, `ResolvedUrls` interface
-- `SUPABASE_PROXY`, `TIER_TIMEOUT_MS`, `CACHE_KEY` constants
-- `probeUrl()`, `tryDirectStream()`, `tryHlsStream()`, `getCachedTier()`, `setCachedTier()`, `clearCachedTier()`, `getTierUrl()` functions
-- `runCascade()`, `runHlsCascade()` logic inside `setupVideo()`
-- `TIER_CONFIG` object, `streamSource` / `showSourceBadge` state, source badge UI
-- Unused imports: `Shield`, `Cloud`, `Wifi`
+### 2. Remove Vercel proxy rewriting from `getOriginalWorkerUrl()` (lines 13-18)
+The Vercel `proxies-lake.vercel.app` rewrite is no longer needed. Simplify to just return the URL as-is, or remove the function if not used elsewhere.
 
-### Keep
-- `STREAM_WORKER_ORIGIN` and `getOriginalWorkerUrl()` (still needed to normalize URLs)
-- `resolveVideoUrls()` but simplified: only extracts and returns the direct URL (single string, no proxy URLs)
-- HLS.js support for `.m3u8` files (using direct URL only)
-- Native Safari HLS fallback (using direct URL only)
-- Non-HLS `<video>` playback (using direct URL only)
-- Buffer progress bar, back button, error/retry UI, fullscreen rotation
+### 3. Simplify `resolveDirectUrl()` (lines 21-67)
+Remove the `fetchSources` array that tries Supabase first. Only fetch directly from the original URL:
 
-### Simplified Flow
+```
+async function resolveDirectUrl(watchUrl: string): Promise<string> {
+  // Strip any Vercel proxy prefix to get the real URL
+  let originalUrl = watchUrl;
+  if (originalUrl.includes('proxies-lake.vercel.app/stream')) {
+    originalUrl = originalUrl.replace('https://proxies-lake.vercel.app/stream', STREAM_WORKER_ORIGIN);
+  }
 
-```text
-1. If /watch/ URL -> resolve HTML page to extract direct video URL
-2. If .m3u8 -> use HLS.js (or Safari native) with direct URL
-3. If regular video -> set video.src = direct URL
-4. On error -> show retry button
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  const res = await fetch(originalUrl, { signal: controller.signal });
+  clearTimeout(timer);
+
+  if (!res.ok) throw new Error('Could not fetch watch page');
+
+  const html = await res.text();
+  // ... extract <source> or <video> src as before ...
+}
 ```
 
-No cascade, no probes, no tier badges, no session caching.
+No Supabase proxy, no Vercel proxy, no Cloudflare proxy -- just the direct fetch to the worker origin.
+
+### 4. Everything else stays the same
+- HLS.js playback for `.m3u8` files (direct URL)
+- Native Safari HLS fallback (direct URL)
+- Non-HLS `<video>` playback (direct URL)
+- Buffer bar, back button, error/retry UI, fullscreen rotation
+
+## Summary of removals
+| Item | Status |
+|------|--------|
+| `SUPABASE_PROXY` constant | Remove |
+| Vercel `proxies-lake.vercel.app` rewrite | Remove |
+| Supabase-first fetch in `resolveDirectUrl` | Remove |
+| Direct fetch to worker origin | Keep (only source) |
+| HLS.js / native playback | Keep |
+| UI (buffer bar, error, back) | Keep |
+
