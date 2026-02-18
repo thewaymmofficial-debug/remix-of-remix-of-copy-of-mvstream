@@ -8,9 +8,13 @@ import Hls from 'hls.js';
 
 const STREAM_WORKER_ORIGIN = 'https://tw.thewayofthedragg.workers.dev';
 
-/** Fetch the watch page HTML and extract the direct video URL */
+/** Wrap any URL through the Cloudflare Worker /proxy/ route to bypass ISP blocks */
+function proxyUrl(url: string): string {
+  return `${STREAM_WORKER_ORIGIN}/proxy/?url=${encodeURIComponent(url)}`;
+}
+
+/** Fetch the watch page HTML through the proxy and extract the direct video URL */
 async function resolveDirectUrl(watchUrl: string): Promise<string> {
-  // Strip any legacy Vercel proxy prefix
   let originalUrl = watchUrl;
   if (originalUrl.includes('proxies-lake.vercel.app/stream')) {
     originalUrl = originalUrl.replace('https://proxies-lake.vercel.app/stream', STREAM_WORKER_ORIGIN);
@@ -20,7 +24,8 @@ async function resolveDirectUrl(watchUrl: string): Promise<string> {
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
-  const res = await fetch(originalUrl, { signal: controller.signal });
+  // Fetch through proxy to bypass ISP blocks
+  const res = await fetch(proxyUrl(originalUrl), { signal: controller.signal });
   clearTimeout(timer);
 
   if (!res.ok) throw new Error('Could not fetch watch page');
@@ -39,8 +44,10 @@ async function resolveDirectUrl(watchUrl: string): Promise<string> {
     realUrl = STREAM_WORKER_ORIGIN + realUrl;
   }
 
-  console.log('[Watch] Resolved direct URL:', realUrl);
-  return realUrl;
+  // Wrap the resolved video URL through the proxy too
+  const proxied = proxyUrl(realUrl);
+  console.log('[Watch] Resolved direct URL:', realUrl, '-> proxied:', proxied);
+  return proxied;
 }
 
 export default function Watch() {
@@ -105,14 +112,22 @@ export default function Watch() {
           videoSrc = await Promise.race([resolveDirectUrl(rawUrl), timeoutPromise]);
           if (cancelled) return;
         } else {
-          videoSrc = directUrl;
+          // Non-watch URLs also go through proxy
+          videoSrc = proxyUrl(directUrl);
         }
 
         const srcIsHls = videoSrc.includes('.m3u8');
 
         if (srcIsHls) {
           if (Hls.isSupported()) {
-            hls = new Hls({ enableWorker: true });
+            hls = new Hls({
+              enableWorker: true,
+              xhrSetup: (xhr, url) => {
+                // Route HLS segment/playlist requests through the proxy
+                const proxied = proxyUrl(url);
+                xhr.open('GET', proxied, true);
+              },
+            });
             hls.loadSource(videoSrc);
             hls.attachMedia(video);
             hls.on(Hls.Events.MANIFEST_PARSED, () => {
