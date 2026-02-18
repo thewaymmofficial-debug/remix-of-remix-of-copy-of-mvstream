@@ -1,49 +1,37 @@
 
 
-# Fix: Direct and CF Proxy Tiers Always Failing
+# Simplify Watch.tsx: Direct-Only Playback
 
-## Root Cause
+## Problem
+CF Proxy and Supabase tiers cause audio issues (disappearing audio, delays). Direct playback works perfectly.
 
-The `tryDirectStream()` function performs a `fetch()` HEAD probe with `mode: 'cors'` before attempting video playback. This fails because:
+## What Changes
 
-1. **Direct tier**: The backend server (`fi5.bot-hosting.net`) does not return CORS headers, so the browser blocks the `fetch()` HEAD request
-2. **CF Proxy tier**: The HEAD request is forwarded to the upstream which may not support HEAD for video files, causing timeouts
+Strip all multi-tier cascade logic from `src/pages/Watch.tsx` and use the direct URL only.
 
-Since both probes fail, the cascade always falls through to Supabase (the last-resort tier that skips probing).
+### Remove
+- `StreamTier` type, `ResolvedUrls` interface
+- `SUPABASE_PROXY`, `TIER_TIMEOUT_MS`, `CACHE_KEY` constants
+- `probeUrl()`, `tryDirectStream()`, `tryHlsStream()`, `getCachedTier()`, `setCachedTier()`, `clearCachedTier()`, `getTierUrl()` functions
+- `runCascade()`, `runHlsCascade()` logic inside `setupVideo()`
+- `TIER_CONFIG` object, `streamSource` / `showSourceBadge` state, source badge UI
+- Unused imports: `Shield`, `Cloud`, `Wifi`
 
-**Key insight**: The HTML `<video>` element does NOT require CORS headers to play cross-origin media. Only `fetch()`/`XMLHttpRequest` requires CORS. So the HEAD probe is unnecessary and actively harmful.
+### Keep
+- `STREAM_WORKER_ORIGIN` and `getOriginalWorkerUrl()` (still needed to normalize URLs)
+- `resolveVideoUrls()` but simplified: only extracts and returns the direct URL (single string, no proxy URLs)
+- HLS.js support for `.m3u8` files (using direct URL only)
+- Native Safari HLS fallback (using direct URL only)
+- Non-HLS `<video>` playback (using direct URL only)
+- Buffer progress bar, back button, error/retry UI, fullscreen rotation
 
-## Fix (Single File: `src/pages/Watch.tsx`)
-
-### 1. Remove HEAD probe from `tryDirectStream()`
-
-Replace the probe-then-play logic with direct `video.src` assignment + `loadedmetadata`/`error` event listening. No `fetch()` call at all.
+### Simplified Flow
 
 ```text
-Before:
-  tryDirectStream() -> probeUrl(HEAD, cors) -> if ok -> video.src -> wait loadedmetadata
-  Result: probe fails (no CORS) -> skip tier
-
-After:
-  tryDirectStream() -> video.src -> wait loadedmetadata or error
-  Result: video element loads directly (no CORS needed) -> tier works
+1. If /watch/ URL -> resolve HTML page to extract direct video URL
+2. If .m3u8 -> use HLS.js (or Safari native) with direct URL
+3. If regular video -> set video.src = direct URL
+4. On error -> show retry button
 ```
 
-### 2. Keep the timeout
-
-Still use the 6-second timeout per tier. If `loadedmetadata` doesn't fire within 6 seconds, move to the next tier.
-
-### 3. No other changes needed
-
-The HLS cascade already skips HEAD probes (it uses HLS.js directly), so it's unaffected.
-
-## Technical Details
-
-| Aspect | Detail |
-|--------|--------|
-| File changed | `src/pages/Watch.tsx` |
-| Function modified | `tryDirectStream()` -- remove `probeUrl()` call |
-| Why it works | `<video>` element ignores CORS for media loading |
-| Risk | None -- removing an unnecessary check that was blocking playback |
-| Expected result | Direct (green badge) should work when VPN is on; CF Proxy (blue) as fallback |
-
+No cascade, no probes, no tier badges, no session caching.
