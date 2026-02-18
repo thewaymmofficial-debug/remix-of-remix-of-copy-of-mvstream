@@ -1,6 +1,6 @@
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { ArrowLeft, AlertCircle, RefreshCw } from 'lucide-react';
+import { ArrowLeft, AlertCircle, RefreshCw, Wifi, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useFullscreenLandscape } from '@/hooks/useFullscreenLandscape';
@@ -80,6 +80,10 @@ export default function Watch() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [bufferPercent, setBufferPercent] = useState(0);
+  const [streamSource, setStreamSource] = useState<'direct' | 'proxy' | null>(null);
+  const [showSourceBadge, setShowSourceBadge] = useState(false);
+  const sourceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isWatchUrl = rawUrl.includes('/watch/');
 
@@ -141,13 +145,17 @@ export default function Watch() {
 
             if (ok) {
               console.log('[Watch] Direct stream succeeded');
+              setStreamSource('direct');
+              setShowSourceBadge(true);
               setLoading(false);
               video.play().catch(() => {});
-              return; // done — no Supabase bandwidth used
+              return;
             }
 
             // Fallback to Supabase proxy
             console.log('[Watch] Falling back to Supabase proxy');
+            setStreamSource('proxy');
+            setShowSourceBadge(true);
             videoSrc = urls.proxyUrl;
           } else {
             // For HLS, use proxy (needs CORS headers)
@@ -214,11 +222,27 @@ export default function Watch() {
 
     setupVideo();
 
+    // Buffer progress listener
+    const handleProgress = () => {
+      if (!video || !video.duration) return;
+      const len = video.buffered.length;
+      if (len > 0) {
+        const end = video.buffered.end(len - 1);
+        setBufferPercent(Math.round((end / video.duration) * 100));
+      }
+    };
+    video.addEventListener('progress', handleProgress);
+
+    // Auto-hide source badge after 5 seconds
+    sourceTimerRef.current = setTimeout(() => setShowSourceBadge(false), 5000);
+
     return () => {
       cancelled = true;
+      video.removeEventListener('progress', handleProgress);
       if (hls) {
         hls.destroy();
       }
+      if (sourceTimerRef.current) clearTimeout(sourceTimerRef.current);
     };
   }, [rawUrl, isWatchUrl, directUrl]);
 
@@ -251,6 +275,34 @@ export default function Watch() {
       >
         <ArrowLeft className="w-6 h-6" />
       </button>
+
+      {/* Buffer progress bar */}
+      {!loading && !error && bufferPercent > 0 && bufferPercent < 100 && (
+        <div className="absolute top-0 left-0 right-0 z-[60] h-[3px] bg-white/10">
+          <div
+            className="h-full bg-primary transition-all duration-500 ease-out"
+            style={{ width: `${bufferPercent}%` }}
+          />
+          <span className="absolute right-2 top-1 text-[10px] text-white/60 font-mono">
+            {bufferPercent}%
+          </span>
+        </div>
+      )}
+
+      {/* Stream source badge */}
+      {showSourceBadge && streamSource && !loading && !error && (
+        <div className={`absolute top-4 right-4 z-[60] flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium backdrop-blur-md transition-opacity duration-700 ${
+          streamSource === 'direct'
+            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+            : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+        }`}>
+          {streamSource === 'direct' ? (
+            <><Wifi className="w-3 h-3" /> Direct</>
+          ) : (
+            <><Shield className="w-3 h-3" /> Proxy</>
+          )}
+        </div>
+      )}
 
       {/* Loading overlay */}
       {loading && (
