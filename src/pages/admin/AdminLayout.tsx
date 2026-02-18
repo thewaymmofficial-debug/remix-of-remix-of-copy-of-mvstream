@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Outlet, Link, useLocation } from 'react-router-dom';
-import { Film, Users, LayoutDashboard, ArrowLeft, Tags, Settings, BarChart3, Menu, ChevronRight, Image, CreditCard, Shield, MessageSquare, Tv, Trophy, WifiOff, Link2 } from 'lucide-react';
+import { Film, Users, LayoutDashboard, ArrowLeft, Tags, Settings, BarChart3, Menu, ChevronRight, Image, CreditCard, Shield, MessageSquare, Tv, Trophy, WifiOff, Link2, Send } from 'lucide-react';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Button } from '@/components/ui/button';
 import { Navbar } from '@/components/Navbar';
@@ -57,6 +57,7 @@ export default function AdminLayout() {
     { path: '/admin/football', label: 'Football', icon: Trophy },
     { path: '/admin/direct-channels', label: 'Direct Ch.', icon: Link2 },
     { path: '/admin/broken-channels', label: 'Broken Ch.', icon: WifiOff },
+    { path: '/admin/telegram-files', label: 'Telegram', icon: Send },
     { path: '/admin/settings', label: 'Settings', icon: Settings },
   ];
 
