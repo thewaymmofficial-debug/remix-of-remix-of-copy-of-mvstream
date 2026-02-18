@@ -1,123 +1,60 @@
 
 
-# Telegram Bot File Hosting for Movie Streaming
+# Add Custom Local Bot API Server URL Support
 
 ## Overview
 
-Build a self-hosted file hosting system using a Telegram bot. You send/forward movies to the bot via Telegram, the bot stores them in a Telegram channel, and the app generates streaming links -- bypassing Myanmar ISP blocks and eliminating audio issues caused by proxies.
+Add a configurable "Telegram Bot API Server URL" setting in the admin panel. When set, the `telegram-stream` edge function will use this custom server instead of the default `https://api.telegram.org`, removing the 20MB file size limit and enabling full movie streaming.
 
-## How It Works
+## Changes
 
-1. You create a Telegram bot via @BotFather
-2. You send movie files to the bot in Telegram
-3. The bot automatically forwards the file to your admin channel and saves the file metadata (file_id, file size, etc.) to the database
-4. In the admin panel, you can link a Telegram file to any movie
-5. When users press "Play", the app streams the video directly from Telegram's servers through a lightweight edge function proxy
+### 1. Database: Insert default setting row
 
-## Important Limitation
+Add a new row in `site_settings` with key `telegram_bot_api_url` and an empty/null value. When empty, the system falls back to the default Telegram API.
 
-Telegram's Bot API only allows downloading files up to **20MB** via `getFile`. For full-size movies (hundreds of MB to several GB), we have two options:
+### 2. Update `useSiteSettings` hook
 
-- **Option A (Recommended)**: Run a [Local Bot API Server](https://core.telegram.org/bots/api#using-a-local-bot-api-server) on a cheap VPS -- this removes the 20MB limit entirely and gives you unlimited file streaming
-- **Option B**: Use a third-party Telegram file proxy/CDN worker (like your existing Cloudflare Worker) to stream large files
+- Add `telegramBotApiUrl` (string) to the returned settings object
+- Export the type so it's accessible elsewhere
 
-For now, the plan builds the full bot + database + admin UI + streaming infrastructure. You can start testing with small files and later plug in a Local Bot API server URL as a simple config change.
+### 3. Update `telegram-stream` edge function
 
-## What Gets Built
+- Before constructing the Telegram API URLs, query `site_settings` for the `telegram_bot_api_url` key
+- If a custom URL is set (e.g. `http://your-vps:8081`), use it instead of `https://api.telegram.org`
+- The `getFile` call becomes `{customUrl}/bot{TOKEN}/getFile?file_id=...`
+- The file download becomes `{customUrl}/file/bot{TOKEN}/{filePath}`
+- Falls back to the standard API when no custom URL is configured
 
-### 1. Database: `telegram_files` table
+### 4. Update `SettingsAdmin.tsx`
 
-Stores metadata for every file the bot receives:
+Add a new collapsible "Telegram Bot API" section with:
+- An input field for the custom server URL (e.g. `http://your-vps:8081`)
+- Helper text explaining what this is and when to use it
+- A save button
+- A note about the 20MB limit when using the default API
 
-| Column | Type | Purpose |
-|--------|------|---------|
-| id | uuid | Primary key |
-| file_id | text | Telegram's file identifier (used to download) |
-| file_unique_id | text | Unique file identifier (for deduplication) |
-| file_name | text | Original filename |
-| file_size | bigint | File size in bytes |
-| mime_type | text | e.g. video/mp4 |
-| message_id | integer | Message ID in the channel |
-| channel_id | text | Channel where file is stored |
-| movie_id | uuid (nullable) | Link to a movie in the movies table |
-| created_at | timestamp | When uploaded |
+### 5. Update `TelegramFilesAdmin.tsx`
 
-### 2. Edge Function: `telegram-bot` (webhook)
-
-Receives Telegram webhook updates when you send a file to the bot:
-
-- Validates the update contains a video/document
-- Forwards the file to your admin channel (for backup/organization)
-- Extracts file_id, file_size, mime_type, file_name
-- Saves to `telegram_files` table
-- Replies to you in Telegram with a confirmation message
-
-### 3. Edge Function: `telegram-stream`
-
-Serves as the streaming endpoint for the app:
-
-- Accepts a `file_id` parameter
-- Calls Telegram's `getFile` API to get the temporary file path
-- Proxies/redirects the file to the client with proper headers (Content-Type, Range support for seeking)
-- Supports `Range` headers so users can seek in the video
-
-### 4. Add `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHANNEL_ID` secrets
-
-You'll need to:
-- Create a bot via @BotFather and get the token
-- Create a channel, add the bot as admin, and note the channel ID
-
-### 5. Admin Panel: Link Telegram files to movies
-
-Add a section in the Movies Admin page where you can:
-- See a list of uploaded Telegram files (with filename, size, date)
-- Click to assign a Telegram file to a movie
-- The movie's `stream_url` gets set to the `telegram-stream` endpoint URL
-
-### 6. Update `ServerDrawer` and `Watch.tsx`
-
-- Add "Telegram Server" as a play option when a movie has a linked Telegram file
-- Watch.tsx already handles direct video URLs, so it will work as-is once the stream URL points to the `telegram-stream` edge function
-
-## Setup Steps (for you)
-
-1. Open Telegram, message @BotFather, create a new bot, save the token
-2. Create a Telegram channel (can be private), add the bot as admin
-3. Get the channel ID (forward a message from the channel to @userinfobot or similar)
-4. Add the bot token and channel ID as secrets in the project
-5. After deployment, set the bot's webhook URL to the `telegram-bot` edge function URL
+Add a small status indicator showing whether a custom Bot API server is configured (helps the admin know if large file streaming will work).
 
 ## Technical Details
 
-### telegram-bot edge function (webhook handler)
+### telegram-stream changes
 
-```text
-POST /telegram-bot
-  -> Validate update has video or document
-  -> Forward message to admin channel via Bot API
-  -> Extract file_id, file_name, file_size, mime_type
-  -> INSERT into telegram_files table
-  -> Reply to sender with confirmation
-```
-
-### telegram-stream edge function (streaming proxy)
+The edge function will read the setting from the database at request time:
 
 ```text
 GET /telegram-stream?file_id=xxx
-  -> Call getFile API with file_id
-  -> Get file_path from response
-  -> Fetch https://api.telegram.org/file/bot<TOKEN>/<file_path>
-  -> Stream response body to client with Range support
+  -> Read 'telegram_bot_api_url' from site_settings via Supabase client
+  -> baseUrl = customUrl || 'https://api.telegram.org'
+  -> Call {baseUrl}/bot<TOKEN>/getFile?file_id=xxx
+  -> Stream from {baseUrl}/file/bot<TOKEN>/<file_path>
 ```
 
-### Database migration
+### Site Settings admin section
 
-- Create `telegram_files` table with RLS (admin-only insert/update/delete, public select)
-- Add foreign key to `movies` table (nullable movie_id)
-
-### Movies Admin changes
-
-- Add a "Telegram Files" tab or section
-- Show unlinked files with a "Link to Movie" button
-- When linked, auto-set the movie's stream_url to the telegram-stream endpoint
+A new "Telegram" collapsible section in the Settings page with:
+- URL input field
+- Description: "Set a custom Local Bot API Server URL to stream files larger than 20MB. Leave empty to use the default Telegram API (20MB limit)."
+- Save button
 
