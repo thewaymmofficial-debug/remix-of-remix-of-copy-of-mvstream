@@ -4,15 +4,16 @@ import { ArrowLeft, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useFullscreenLandscape } from '@/hooks/useFullscreenLandscape';
-import { proxyStreamUrl } from '@/lib/utils';
 import Hls from 'hls.js';
 
 const STREAM_WORKER_ORIGIN = 'https://tw.thewayofthedragg.workers.dev';
 const PROXY_STREAM_ORIGIN = 'https://proxies-lake.vercel.app/stream';
+const SUPABASE_PROXY = 'https://icnfjixjohbxjxqbnnac.supabase.co/functions/v1/download-proxy';
 
 /**
  * Given a proxied `/watch/` URL, fetch its HTML page and extract the real
- * `<source src="...">` video URL, then return it proxied through Vercel.
+ * video URL, then return it routed through the Supabase download-proxy
+ * edge function for unlimited streaming with Range request support.
  */
 async function resolveRealVideoUrl(proxiedWatchUrl: string): Promise<string> {
   const res = await fetch(proxiedWatchUrl);
@@ -29,17 +30,13 @@ async function resolveRealVideoUrl(proxiedWatchUrl: string): Promise<string> {
 
   let realUrl = srcMatch[1];
 
-  // The extracted URL might be relative or absolute.
-  // If it points to the worker origin, proxy it.
+  // Make relative URLs absolute using the worker origin
   if (realUrl.startsWith('/')) {
-    // Relative URL — prepend proxy origin
-    realUrl = PROXY_STREAM_ORIGIN + realUrl;
-  } else if (realUrl.includes(STREAM_WORKER_ORIGIN.replace('https://', ''))) {
-    // Absolute URL pointing to the worker — rewrite through proxy
-    realUrl = proxyStreamUrl(realUrl);
+    realUrl = STREAM_WORKER_ORIGIN + realUrl;
   }
 
-  return realUrl;
+  // Route through Supabase edge function for unlimited streaming
+  return `${SUPABASE_PROXY}?url=${encodeURIComponent(realUrl)}&stream=1`;
 }
 
 export default function Watch() {

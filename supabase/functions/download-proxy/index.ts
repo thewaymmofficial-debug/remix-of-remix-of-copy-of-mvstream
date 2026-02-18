@@ -61,11 +61,15 @@ serve(async (req) => {
     const acceptRanges = response.headers.get("Accept-Ranges");
     if (acceptRanges) responseHeaders["Accept-Ranges"] = acceptRanges;
 
-    // Add Content-Disposition so Android DownloadManager knows the filename
-    if (filenameParam) {
-      responseHeaders["Content-Disposition"] = `attachment; filename="${filenameParam}"`;
-    } else {
-      responseHeaders["Content-Disposition"] = "attachment";
+    // When stream=1 is set, skip Content-Disposition so browser plays inline
+    const isStream = url.searchParams.get("stream") === "1";
+    if (!isStream) {
+      // Add Content-Disposition so Android DownloadManager knows the filename
+      if (filenameParam) {
+        responseHeaders["Content-Disposition"] = `attachment; filename="${filenameParam}"`;
+      } else {
+        responseHeaders["Content-Disposition"] = "attachment";
+      }
     }
 
     // Stream the response body directly
