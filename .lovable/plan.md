@@ -1,23 +1,23 @@
 
-## Add Skeleton Placeholder for InfoCarousel During Loading
+
+## Fix Dark Mode Flash on Initial Load
 
 ### Problem
-When the page first loads, the InfoCarousel returns `null` while slide data is being fetched from Supabase. This causes the page to render without the carousel area, then suddenly shift everything down when slides appear -- creating a jarring layout jump on mobile.
+The `index.html` file has `class="dark"` hardcoded on the `<html>` tag. This means regardless of the user's saved theme preference, the page always renders in dark mode first, then flips to light mode once JavaScript loads and `next-themes` applies the correct theme -- causing a visible flash/blink.
 
 ### Solution
-Show a shimmer/skeleton placeholder that matches the carousel's exact dimensions while data is loading. Once slides are loaded, smoothly transition to the real carousel content.
+Add an inline script in `<head>` that reads the user's saved theme preference from `localStorage` **before** any rendering happens, and sets the correct class immediately. This eliminates the flash entirely.
 
 ### Technical Details
 
-**File: `src/components/InfoCarousel.tsx`**
+**File: `index.html`**
 
-1. Destructure `isLoading` from the `useInfoSlides()` hook (TanStack Query already provides this)
-2. Replace the early `return null` with a loading check:
-   - If `isLoading` is true, render a skeleton placeholder with the same dimensions (`min-h-[220px]`, `rounded-2xl`) and a shimmer animation
-   - If loading is done but no slides exist, then return `null`
-3. The skeleton will be a simple rounded rectangle with `animate-pulse` and `bg-muted` styling, matching the existing skeleton patterns used in `SkeletonCard`
+1. Remove `class="dark"` from the `<html>` tag (change to just `<html lang="en">`)
+2. Add a small inline `<script>` block in the `<head>` (before any CSS loads) that:
+   - Reads the `next-themes` stored value from `localStorage` (key: `theme`)
+   - If `"dark"`, adds `class="dark"` to `<html>`
+   - If `"light"`, ensures no `dark` class
+   - If `"system"` or missing, checks `window.matchMedia('(prefers-color-scheme: dark)')` and sets accordingly
 
-**Changes summary:**
-- Only `src/components/InfoCarousel.tsx` needs to be modified
-- No new files or dependencies required
-- Uses existing Tailwind `animate-pulse` and `bg-muted` classes already used elsewhere in the project
+This is a single-file, 8-line fix. No other files need to change.
+
