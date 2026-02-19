@@ -6,11 +6,11 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useFullscreenLandscape } from '@/hooks/useFullscreenLandscape';
 import Hls from 'hls.js';
 
-const STREAM_WORKER_ORIGIN = 'https://proxies-lake.vercel.app/stream';
+const VERCEL_PROXY = 'https://proxies-lake.vercel.app/api/stream';
 
-/** Wrap any URL through the Vercel→CF Worker /proxy/ route to bypass ISP blocks */
+/** Wrap any URL through the Vercel Edge proxy to bypass ISP blocks */
 function proxyUrl(url: string): string {
-  return `${STREAM_WORKER_ORIGIN}/proxy/?url=${encodeURIComponent(url)}`;
+  return `${VERCEL_PROXY}?url=${encodeURIComponent(url)}`;
 }
 
 /** Fetch the watch page HTML through the proxy and extract the direct video URL */
@@ -38,7 +38,8 @@ async function resolveDirectUrl(watchUrl: string): Promise<string> {
 
   let realUrl = srcMatch[1];
   if (realUrl.startsWith('/')) {
-    realUrl = STREAM_WORKER_ORIGIN + realUrl;
+    // Relative path from CF worker — build full CF worker URL for proxying
+    realUrl = 'https://tw.thewayofthedragg.workers.dev' + realUrl;
   }
 
   // Wrap the resolved video URL through the proxy too
