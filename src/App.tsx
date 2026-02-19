@@ -11,6 +11,7 @@ import { DownloadProvider } from "@/contexts/DownloadContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { DevicePresenceMonitor } from "@/components/DevicePresenceMonitor";
+import { RealtimeSyncProvider } from "@/components/RealtimeSyncProvider";
 import { useNetworkRefresh } from "@/hooks/useNetworkRefresh";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -82,6 +83,7 @@ const App = () => (
             <DownloadProvider>
             <NetworkRefreshMonitor />
             <DevicePresenceMonitor />
+            <RealtimeSyncProvider />
             <TooltipProvider>
               <Toaster />
               <Sonner />
