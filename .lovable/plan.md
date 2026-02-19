@@ -1,30 +1,44 @@
 
 
-## Fix Theme Toggle and Language Toggle Visibility
+## Fix Payment Method Selection, Screenshot Display, and Transaction ID Placeholder
 
-### Root Cause
-Both toggles use the `ghost` button variant, which applies `hover:text-accent-foreground` on hover. In light mode, `accent-foreground` is a dark brown color (`hsl(30 10% 15%)`). Since the navbar is always `bg-black/95`, the icon/text becomes invisible against the black background when hovered or clicked.
+### What Changes
 
-Additionally, the theme toggle only shows a visual "active" ring in dark mode (`theme-toggle-ring` class), giving no click feedback in light mode.
+**1. Auto-select payment method when user copies account number**
+When a user taps the copy icon on a payment card (e.g., KBZ Pay), that card gets visually selected with a highlight border/ring. This selection is stored and submitted along with the premium request so the admin knows which payment method was used.
 
-### Changes
+**2. Store payment method name with the request**
+Add a `payment_method` column to the `premium_requests` table to record which payment method the user selected (e.g., "KBZ Pay"). This will also be displayed in the admin detail view.
 
-**File: `src/components/Navbar.tsx`**
+**3. Fix screenshot not showing for admin**
+The screenshot upload and URL storage logic looks correct in code, but the admin detail dialog already displays it if `screenshot_url` is present. The issue may be that the upload is failing silently or the `payment-screenshots` bucket RLS policies block the upload. We will add an RLS policy to allow authenticated users to upload to the `payment-screenshots` bucket.
 
-1. **Theme toggle button**: Replace the current classes with ones that ensure white text/icon stays white on hover and has clear visual feedback in both modes:
-   - Add `hover:text-white` to force white icon on hover
-   - Replace the dark-mode-only `theme-toggle-ring` with a subtle always-visible active indicator (e.g., a semi-transparent white background `bg-white/10` when in light mode, ring when in dark mode)
+**4. Fix Transaction ID placeholder text**
+Change the placeholder from `ငွေလွှဲပြေစာမှ Transaction ID ကို...` to `ငွေလွှဲပြေစာမှ Transaction ID နံပါတ်`
 
-2. **Language toggle**: Same fix — add `hover:text-white` to the className prop passed from Navbar to ensure the label stays visible on hover
+---
 
-**File: `src/components/LanguageToggle.tsx`**
+### Technical Details
 
-3. Improve the toggle styling:
-   - Add a subtle background highlight for the active state so users can clearly see it's a tappable element
-   - Ensure `hover:text-white` is not overridden by the ghost variant's hover styles by using `!` (important) modifier or restructuring classes
+**New Migration: Add `payment_method` column to `premium_requests`**
+- `ALTER TABLE premium_requests ADD COLUMN payment_method text;`
+- Add storage RLS policies for `payment-screenshots` bucket to allow authenticated users to upload files.
 
-### Summary
-- Two files changed: `Navbar.tsx` and `LanguageToggle.tsx`
-- No new dependencies
-- Fix ensures both toggles remain clearly visible and give proper tap/click feedback on the always-black navbar in both light and dark themes
+**File: `src/pages/PremiumRenewal.tsx`**
+- Add `selectedPaymentMethod` state (stores the payment method name string)
+- When user clicks copy icon on a payment card, set `selectedPaymentMethod` to that method's name (and `id`)
+- Add a visual selection indicator on the payment card: a ring/border highlight + checkmark when selected
+- Include `payment_method` in the `submitRequest.mutateAsync()` call
+- Update Transaction ID input placeholder to `ငွေလွှဲပြေစာမှ Transaction ID နံပါတ်`
+- Show the uploaded screenshot as a thumbnail preview (instead of just the file name)
+
+**File: `src/hooks/usePremiumRequests.tsx`**
+- Add `payment_method` to the `PremiumRequest` interface
+- Add `payment_method` to the mutation function parameter type
+
+**File: `src/pages/admin/PremiumRequestsAdmin.tsx`**
+- Display the `payment_method` field in the request card and detail dialog so admins can see which payment method was used
+
+**File: `src/integrations/supabase/types.ts`**
+- Update the `premium_requests` type to include the new `payment_method` column
 
