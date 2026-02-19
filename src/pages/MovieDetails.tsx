@@ -3,7 +3,6 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import {
   Play,
   Crown,
-  Star,
   Eye,
   Download,
   ArrowLeft,
@@ -23,6 +22,8 @@ import { CastSection } from '@/components/CastSection';
 import { useAuth } from '@/hooks/useAuth';
 import { useMovie, useIsInWatchlist, useAddToWatchlist, useRemoveFromWatchlist } from '@/hooks/useMovies';
 import { useUpdateProgress } from '@/hooks/useWatchHistory';
+import { useMovieViews, useIncrementView } from '@/hooks/useMovieViews';
+import { StarRating } from '@/components/StarRating';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useState, useEffect } from 'react';
@@ -37,6 +38,8 @@ export default function MovieDetails() {
   const addToWatchlist = useAddToWatchlist();
   const removeFromWatchlist = useRemoveFromWatchlist();
   const updateProgress = useUpdateProgress();
+  const { data: viewCount } = useMovieViews(id || '');
+  const incrementView = useIncrementView();
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [showPlayDrawer, setShowPlayDrawer] = useState(false);
   const [showDownloadDrawer, setShowDownloadDrawer] = useState(false);
@@ -87,6 +90,7 @@ export default function MovieDetails() {
     if (!isPremium) {
       setShowPremiumModal(true);
     } else {
+      if (id) incrementView.mutate(id);
       setShowPlayDrawer(true);
     }
   };
@@ -194,18 +198,20 @@ export default function MovieDetails() {
             )}
 
             {/* Rating */}
-            <div className="flex items-center gap-2 mb-2">
-              <Star className="w-4 h-4 fill-cg-gold text-cg-gold" />
-              <span className="font-semibold text-foreground text-sm">
-                {movie.average_rating > 0 ? `${movie.average_rating.toFixed(1)} / 10` : 'N/A'}
-              </span>
+            <div className="mb-2">
+              <StarRating
+                movieId={movie.id}
+                averageRating={movie.average_rating}
+                ratingCount={movie.rating_count}
+                size="md"
+              />
             </div>
 
             {/* Stats row: views, downloads, file size */}
             <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2 flex-wrap">
               <div className="flex items-center gap-1">
                 <Eye className="w-3.5 h-3.5" />
-                <span>{movie.rating_count || 0}</span>
+                <span>{viewCount ?? 0}</span>
               </div>
               {movie.file_size && (
                 <div className="flex items-center gap-1">
