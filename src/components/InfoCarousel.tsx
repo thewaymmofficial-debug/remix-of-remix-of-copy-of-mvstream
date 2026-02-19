@@ -5,7 +5,7 @@ import { proxyImageUrl } from '@/lib/utils';
 
 export function InfoCarousel() {
   const [current, setCurrent] = useState(0);
-  const { data: dbSlides } = useInfoSlides();
+  const { data: dbSlides, isLoading } = useInfoSlides();
   const navigate = useNavigate();
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
@@ -30,6 +30,20 @@ export function InfoCarousel() {
     const timer = setInterval(next, 4000);
     return () => clearInterval(timer);
   }, [next, slides.length]);
+
+  if (isLoading) {
+    return (
+      <section className="px-4 md:px-8 pt-20 md:pt-24 pb-4">
+        <div className="relative overflow-hidden rounded-2xl min-h-[220px] md:min-h-[300px] lg:min-h-[360px] bg-muted animate-pulse">
+          <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+          <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10 space-y-3">
+            <div className="h-6 md:h-8 bg-muted-foreground/20 rounded w-3/5" />
+            <div className="h-4 md:h-5 bg-muted-foreground/20 rounded w-2/5" />
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   if (slides.length === 0) return null;
 
