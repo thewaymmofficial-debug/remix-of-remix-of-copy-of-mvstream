@@ -1,53 +1,42 @@
 
 
-# Fix: Route Video Through Unblocked Vercel Proxy
+## Fix Video Seeking (Skip/Timeline) Through Proxy
 
-## Root Cause
-The CF Worker domain `tw.thewayofthedragg.workers.dev` is completely blocked by Myanmar ISPs. Putting a `/proxy/` route on the same blocked domain doesn't help because the browser can't reach the domain at all.
+### Problem
+When you skip forward or use the timeline scrubber, the video jumps back to the start. This happens because:
+1. The Vercel proxy doesn't explicitly advertise `Accept-Ranges: bytes` on the initial response
+2. The browser doesn't know the video is seekable, so seeking fails and resets to 0
 
-## Solution
-Route video proxy requests through `proxies-lake.vercel.app` (which is NOT blocked) instead of directly to the CF Worker. The Vercel proxy already forwards `/stream` requests to the CF Worker.
+### Solution
+Two changes are needed:
 
-The flow becomes:
-```text
-Browser --> proxies-lake.vercel.app/stream/proxy/ --> tw.thewayofthedragg.workers.dev/proxy/ --> backend
-  (not blocked)                                        (server-to-server, no ISP block)
+#### 1. Update your Vercel `api/stream.js` (in your proxies-lake repo)
+The proxy needs to **always** include `Accept-Ranges: bytes` in responses so the browser knows it can seek. Update the response headers section:
+
+```javascript
+// Add this line in the responseHeaders building section:
+responseHeaders['Accept-Ranges'] = 'bytes';
 ```
 
-## Changes
+Also ensure the initial (non-Range) request returns `Content-Length` so the browser knows the total file size for the seek bar. Your code already does this, but we should make sure it's not being stripped.
 
-### 1. Vercel Proxy Config (user action)
-Make sure your `proxies-lake.vercel.app` Vercel project has a rewrite rule that forwards `/stream/*` to `https://tw.thewayofthedragg.workers.dev/*`. This likely already exists since the code references it. If not, add to your Vercel project's `vercel.json`:
+#### 2. Update `Watch.tsx` in this project
+For non-HLS (MP4) videos, add `preload="metadata"` to the video element so the browser fetches file size/duration info upfront, which is required for seeking to work. Currently the video element has no preload attribute.
 
-```json
-{
-  "rewrites": [
-    { "source": "/stream/:path*", "destination": "https://tw.thewayofthedragg.workers.dev/:path*" }
-  ]
-}
+### Technical Details
+
+**File: `api/stream.js` (Vercel proxies-lake repo)**
+Update the response headers block to always include:
+```javascript
+responseHeaders['Accept-Ranges'] = 'bytes';
 ```
 
-### 2. `src/pages/Watch.tsx` - Use Vercel proxy as the origin
+**File: `src/pages/Watch.tsx`**
+- Add `preload="auto"` to the `<video>` element so the browser can determine the full file length and enable seeking
+- This tells the browser the resource supports byte-range requests
 
-Change `STREAM_WORKER_ORIGIN` from the blocked CF Worker domain to the unblocked Vercel proxy:
-
-```typescript
-const STREAM_WORKER_ORIGIN = 'https://proxies-lake.vercel.app/stream';
-```
-
-Remove the line that strips the Vercel proxy prefix (lines 19-21), since we now WANT to use the Vercel proxy.
-
-Also in `resolveDirectUrl`, when the extracted video src is a relative path like `/544/file.mkv`, prepend the Vercel proxy origin instead of the CF Worker origin.
-
-### 3. No other file changes needed
-ServerDrawer passes raw URLs to the Watch page. Watch.tsx handles all proxying internally.
-
-## Why This Works
-- `proxies-lake.vercel.app` is not blocked by Myanmar ISPs (already proven working for Supabase)
-- Vercel rewrites stream responses without timeout limits (they're edge-level, not serverless functions)
-- The CF Worker's `/proxy/` route handles Range headers for seeking in large files
-- Server-to-server communication (Vercel to CF Worker) is never blocked by ISPs
-
-## Optional: Better Long-Term Fix
-Add a **custom domain** to your Cloudflare Worker (e.g., `stream.yourdomain.com`). ISPs typically don't block custom domains. This removes the Vercel hop and gives better performance. You can do this in Cloudflare Dashboard > Workers > your worker > Settings > Domains & Routes.
+### What This Fixes
+- Timeline scrubbing will jump to the correct position instead of resetting
+- The "skip 10 seconds" forward/back buttons will work correctly
+- The seek bar will show accurate buffered ranges
 
