@@ -4,6 +4,7 @@ import { ArrowLeft, AlertCircle, RefreshCw, Volume2, VolumeX } from 'lucide-reac
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useFullscreenLandscape } from '@/hooks/useFullscreenLandscape';
+import { VideoDoubleTapOverlay } from '@/components/VideoDoubleTapOverlay';
 import Hls from 'hls.js';
 
 const VERCEL_PROXY = 'https://proxies-lake.vercel.app/api/stream';
@@ -232,7 +233,10 @@ export default function Watch() {
       )}
 
       {!error && (
-        <video ref={videoRef} className="w-full h-full object-contain" controls playsInline preload="auto" controlsList="nodownload" />
+        <>
+          <VideoDoubleTapOverlay videoRef={videoRef} />
+          <video ref={videoRef} className="w-full h-full object-contain" controls playsInline preload="auto" controlsList="nodownload" />
+        </>
       )}
     </div>
   );
