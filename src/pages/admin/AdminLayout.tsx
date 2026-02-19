@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Outlet, Link, useLocation } from 'react-router-dom';
 import { Film, Users, LayoutDashboard, ArrowLeft, Tags, Settings, BarChart3, Menu, ChevronRight, Image, CreditCard, Shield, MessageSquare, Tv, Trophy, WifiOff, Link2, Send } from 'lucide-react';
+import { usePendingRequestCount } from '@/hooks/usePendingRequests';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Button } from '@/components/ui/button';
 import { Navbar } from '@/components/Navbar';
@@ -25,6 +26,7 @@ export default function AdminLayout() {
   const location = useLocation();
   const { user, isAdmin, isLoading } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const pendingRequestCount = usePendingRequestCount();
 
   // Redirect if not admin
   if (!isLoading && (!user || !isAdmin)) {
@@ -92,7 +94,10 @@ export default function AdminLayout() {
                 }`}
               >
                 <item.icon className="w-5 h-5" />
-                {item.label}
+                <span className="flex-1">{item.label}</span>
+                {item.path === '/admin/premium-requests' && pendingRequestCount > 0 && (
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+                )}
               </Link>
             ))}
           </nav>
@@ -129,7 +134,10 @@ export default function AdminLayout() {
                     }`}
                   >
                     <item.icon className="w-4 h-4" />
-                    {item.label}
+                    <span className="flex-1">{item.label}</span>
+                    {item.path === '/admin/premium-requests' && pendingRequestCount > 0 && (
+                      <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                    )}
                   </DropdownMenuItem>
                 ))}
                 <DropdownMenuSeparator />
@@ -164,7 +172,10 @@ export default function AdminLayout() {
                       }`}
                     >
                       <item.icon className="w-5 h-5" />
-                      <span className="font-medium">{item.label}</span>
+                      <span className="font-medium flex-1">{item.label}</span>
+                      {item.path === '/admin/premium-requests' && pendingRequestCount > 0 && (
+                        <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+                      )}
                     </Link>
                   ))}
                 </nav>

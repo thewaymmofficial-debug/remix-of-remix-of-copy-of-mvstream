@@ -241,7 +241,7 @@ export default function Auth() {
         {/* Animated logo */}
         <CineverseLogo />
         
-        <LanguageToggle className="text-foreground border-border" />
+        <LanguageToggle className="!text-foreground !border-foreground/30 hover:!bg-foreground/10" />
       </div>
 
       {/* Main content */}
