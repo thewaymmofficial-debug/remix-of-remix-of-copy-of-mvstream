@@ -112,17 +112,14 @@ export function Navbar({ children, categories = [], years = [] }: NavbarProps) {
           {/* Right side */}
           <div className="flex items-center gap-1.5">
             {/* Language toggle */}
-            <LanguageToggle className="text-white border-white/20 hover:bg-white/10" />
+            <LanguageToggle className="!text-white border-white/20 !hover:text-white hover:bg-white/10" />
 
             {/* Theme toggle */}
             <Button
               variant="ghost"
               size="icon"
               onClick={toggleTheme}
-              className={cn(
-                "text-white hover:bg-white/10 h-9 w-9",
-                theme === 'dark' && "theme-toggle-ring"
-              )}
+              className="!text-white hover:!text-white hover:bg-white/15 active:bg-white/25 h-9 w-9 transition-colors"
             >
               {theme === 'dark' ? (
                 <Sun className="w-4 h-4" />
