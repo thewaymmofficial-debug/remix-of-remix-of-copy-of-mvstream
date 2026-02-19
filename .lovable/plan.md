@@ -1,42 +1,44 @@
 
 
-## Fix Video Seeking (Skip/Timeline) Through Proxy
+## Fix Video Seeking: Switch to Supabase Download Proxy
 
-### Problem
-When you skip forward or use the timeline scrubber, the video jumps back to the start. This happens because:
-1. The Vercel proxy doesn't explicitly advertise `Accept-Ranges: bytes` on the initial response
-2. The browser doesn't know the video is seekable, so seeking fails and resets to 0
+### Root Cause
+The Vercel Edge Function proxy (`proxies-lake.vercel.app/api/stream`) is breaking HTTP Range request handling, causing the video to reset to 0:00 when seeking or skipping. Despite multiple fix attempts, Vercel's edge runtime appears to strip or mangle the `Content-Length`, `Content-Range`, and `Accept-Ranges` headers needed for partial content (206) responses.
 
 ### Solution
-Two changes are needed:
+Your Supabase `download-proxy` edge function **already handles Range headers correctly** -- it forwards `Range` from the request, preserves the upstream `206` status code, and passes through `Content-Length`, `Content-Range`, and `Accept-Ranges` headers. We just need to use it for video streaming instead of the Vercel proxy.
 
-#### 1. Update your Vercel `api/stream.js` (in your proxies-lake repo)
-The proxy needs to **always** include `Accept-Ranges: bytes` in responses so the browser knows it can seek. Update the response headers section:
+### Changes
 
-```javascript
-// Add this line in the responseHeaders building section:
-responseHeaders['Accept-Ranges'] = 'bytes';
-```
+#### 1. Update `Watch.tsx` -- Switch video streaming to Supabase download-proxy
 
-Also ensure the initial (non-Range) request returns `Content-Length` so the browser knows the total file size for the seek bar. Your code already does this, but we should make sure it's not being stripped.
+- Keep the Vercel proxy **only** for the initial HTML page fetch (resolving `/watch/` URLs to get the real video URL)
+- Route the actual video stream through the Supabase `download-proxy` with `stream=1` parameter (which skips the `Content-Disposition: attachment` header so the browser plays inline)
+- The proxy URL becomes: `https://icnfjixjohbxjxqbnnac.supabase.co/functions/v1/download-proxy?stream=1&url=ENCODED_URL`
 
-#### 2. Update `Watch.tsx` in this project
-For non-HLS (MP4) videos, add `preload="metadata"` to the video element so the browser fetches file size/duration info upfront, which is required for seeking to work. Currently the video element has no preload attribute.
+#### 2. Update `download-proxy` edge function -- Always advertise Range support
+
+- Add `Accept-Ranges: bytes` to the response even if upstream doesn't include it (the CF worker supports it, as confirmed by user testing)
+- Add `HEAD` method support to CORS and request handling so the browser can probe file size
+
+#### 3. Double-tap skip overlay -- Already working
+
+The `VideoDoubleTapOverlay` component is already implemented and uses `video.currentTime` programmatically. Once the proxy correctly supports Range requests, both double-tap skip AND timeline dragging will work.
+
+### No Vercel changes needed
+This approach completely bypasses the broken Vercel proxy for video streaming, so you don't need to change or delete any Vercel files. The Vercel proxy is still used only for the one-time HTML page fetch to resolve watch URLs.
 
 ### Technical Details
 
-**File: `api/stream.js` (Vercel proxies-lake repo)**
-Update the response headers block to always include:
-```javascript
-responseHeaders['Accept-Ranges'] = 'bytes';
-```
-
 **File: `src/pages/Watch.tsx`**
-- Add `preload="auto"` to the `<video>` element so the browser can determine the full file length and enable seeking
-- This tells the browser the resource supports byte-range requests
+- Add a new `streamProxyUrl()` function that routes through Supabase download-proxy
+- Keep `proxyUrl()` for HTML fetching only
+- Update `setupVideo()` to use `streamProxyUrl()` for the video source
+- Update HLS `xhrSetup` to also use the Supabase proxy for segment requests
 
-### What This Fixes
-- Timeline scrubbing will jump to the correct position instead of resetting
-- The "skip 10 seconds" forward/back buttons will work correctly
-- The seek bar will show accurate buffered ranges
+**File: `supabase/functions/download-proxy/index.ts`**
+- Add `HEAD` to allowed methods in CORS headers
+- Handle `HEAD` requests by forwarding them upstream
+- Always set `Accept-Ranges: bytes` in responses
+- Add `Range` to `Access-Control-Allow-Headers` (already present)
 
