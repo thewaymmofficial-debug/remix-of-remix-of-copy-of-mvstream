@@ -232,7 +232,7 @@ export default function Watch() {
       )}
 
       {!error && (
-        <video ref={videoRef} className="w-full h-full object-contain" controls playsInline controlsList="nodownload" />
+        <video ref={videoRef} className="w-full h-full object-contain" controls playsInline preload="auto" controlsList="nodownload" />
       )}
     </div>
   );
