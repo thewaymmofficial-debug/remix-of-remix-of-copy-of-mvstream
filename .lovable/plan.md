@@ -1,70 +1,33 @@
 
-## Live Data Sync: Real-time Updates Without Refresh
+## Fix: Live TV Stream Buffering on Network Interruption
 
 ### Problem
-Currently, when an admin makes changes (adds movies, updates settings, changes categories, etc.), users need to manually refresh or wait up to 5 minutes (the staleTime) to see updates. In an APK version, this is especially problematic since users can't easily clear cache.
+When network drops during live TV streaming, the HLS player treats the network error as fatal -- it stops playback and shows an error. When the network returns, the stream jumps to the latest live position instead of continuing from where it buffered.
+
+### Root Cause
+In the current `LiveTvPlayer.tsx`, a fatal `NETWORK_ERROR` immediately sets an error state and stops playback. HLS.js has a built-in recovery mechanism (`hls.startLoad()`) that can retry loading segments, but it is not being used.
 
 ### Solution
-Create a centralized **Realtime Listener** component that subscribes to Supabase Postgres Changes on key tables and automatically invalidates the relevant React Query caches when data changes. This means users will see admin changes within seconds -- no refresh needed.
+Configure HLS.js to be resilient to network interruptions by:
 
-### How It Works
+1. **Auto-recovering from network errors** instead of showing an error immediately
+2. **Showing a "buffering" spinner** during network loss (not an error screen)
+3. **Only showing an error after multiple retry failures** (e.g., 3 retries)
+4. **Keeping `lowLatencyMode: false`** so the player does not skip ahead to the live edge when segments resume
 
-```text
-Admin makes a change (e.g., adds a movie)
-        |
-        v
-Supabase Database updated
-        |
-        v
-Supabase Realtime broadcasts change event
-        |
-        v
-User's app receives event via WebSocket
-        |
-        v
-React Query cache invalidated for that table
-        |
-        v
-UI auto-refetches and re-renders with new data
-```
+### Technical Changes
 
-### Changes
+**File: `src/components/LiveTvPlayer.tsx`**
 
-**1. New file: `src/hooks/useRealtimeSync.tsx`**
-A single hook that subscribes to Postgres changes on these key tables:
-- `movies` -- invalidates `['movies']`, `['movie']`, `['trending-movies']`, `['most-viewed-movies']`, `['related-movies']`, `['featured-all']`
-- `site_settings` -- invalidates `['site-settings']`
-- `categories` -- invalidates `['categories']`
-- `tv_channels` -- invalidates `['channels']`, `['broken-channels']`
-- `direct_channels` -- invalidates `['direct-channels']`, `['direct-channels-active']`
-- `football_videos` -- invalidates `['football-videos']`, `['football-categories']`
-- `info_slides` -- invalidates `['info-slides']`
-- `pricing_plans` -- invalidates `['pricing-plans']`
-- `payment_methods` -- invalidates `['payment-methods']`
-
-Each table subscription uses a single Supabase channel that listens for INSERT, UPDATE, and DELETE events. On any change, the corresponding React Query keys are invalidated, triggering a background refetch.
-
-**2. New file: `src/components/RealtimeSyncProvider.tsx`**
-A component that wraps the hook and is placed in `App.tsx`. It calls `useRealtimeSync()` to activate all subscriptions when the app loads.
-
-**3. Update: `src/App.tsx`**
-Add `<RealtimeSyncProvider />` inside the QueryClientProvider so it has access to the query client.
-
-**4. App Version Check (for code deployments)**
-Add a simple version check using `site_settings`:
-- Store an `app_version` key in `site_settings` (admin can bump it when deploying)
-- The Realtime subscription on `site_settings` will detect the version change
-- If the version doesn't match what the app loaded with, show a toast/banner: "New update available" with a "Refresh" button
-- This handles code changes (new JS bundles) that can't be hot-swapped
+- Add a `buffering` state to show the loading spinner when the player is waiting for data
+- Listen to video `waiting` and `playing` events to toggle the buffering overlay
+- On fatal `NETWORK_ERROR`: instead of setting error state, call `hls.startLoad()` to retry. Track retry count with a ref
+- Only show the error screen after 3+ consecutive failed recovery attempts
+- Set `lowLatencyMode: false` to prevent HLS.js from jumping to the live edge after recovery
+- Add `liveSyncDurationCount` and `liveMaxLatencyDurationCount` HLS config to allow larger buffer windows, keeping playback closer to where it paused
+- Add `video.addEventListener('waiting', ...)` and `video.addEventListener('playing', ...)` to show/hide the buffering spinner during network stalls
 
 ### What Users Will Experience
-- Movie added by admin? Appears on home page within seconds
-- Settings changed? Announcement banner, prices, contacts update live
-- New TV channel added? Shows up immediately
-- App code updated? Users get a gentle "Update available" prompt
-
-### Technical Notes
-- Uses a single Supabase Realtime connection with multiple channel subscriptions (efficient)
-- Only invalidates cache (doesn't force re-render if user isn't viewing that data)
-- No impact on performance -- WebSocket is lightweight and already used for notifications
-- The `staleTime` of 5 minutes still applies for initial loads, but Realtime events override it when changes happen
+- Network drops: buffering spinner appears (not an error screen)
+- Network returns: stream resumes from the buffered position and continues playing
+- Only after 3 consecutive failures: error message is shown with option to close
