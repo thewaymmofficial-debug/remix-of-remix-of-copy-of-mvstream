@@ -1,27 +1,33 @@
 
 
-## Add Initial Loading Screen with Cineverse Logo Animation
+## Make Initial Loading Screen Match App's Loading Animation
 
 ### Problem
-When the app first loads, users see a blank white/dark screen while React, Supabase, and other JavaScript bundles download and initialize. This is especially noticeable on slower networks or APK versions.
+Two issues with the current `index.html` loading screen:
+1. **Animation plays once and stops** -- uses `forwards` fill mode instead of looping, so if the app takes longer to load, the animation freezes
+2. **Different visual style** -- the `index.html` loader uses blueish colors (`hsl(222 47% 6%)` background, `hsl(222 47% 11%)` text) while the actual app uses pure black/white (`hsl(0 0% 4%)` dark bg, `hsl(0 0% 96%)` text). This creates a visual mismatch/flash when React takes over
 
 ### Solution
-Add an inline loading screen directly in `index.html` (inside the `#root` div) that displays the animated "CINEVERSE" logo text with the lamp effect -- identical to the existing `LoadingSpinner` component. Since it's pure HTML/CSS embedded in the HTML file, it renders instantly before any JavaScript loads. React will automatically replace it when it mounts.
+Update `index.html` inline styles to:
+1. Use the same **looping keyframes** already defined in `index.css` for the `LoadingSpinner` component (`logo-fade-up-loop`, `logo-squish-loop`, `logo-lamp-loop` -- all 2s infinite)
+2. Match the **exact colors** from the app's CSS variables (dark: `hsl(0 0% 4%)` bg, `hsl(0 0% 96%)` text; light: `hsl(40 20% 94%)` bg, `hsl(30 10% 15%)` text)
 
 ### Changes
 
-**1. Update `index.html`**
-- Add inline CSS for the CINEVERSE letter animation (fade-up + lamp drop) inside a `<style>` tag in the `<head>`
-- Add the animated logo HTML inside `<div id="root">...</div>` so it shows immediately
-- The markup will be a centered container with 9 letter spans ("C","I","N","E","V","E","R","S","E") using the same looping animation keyframes from the existing `LoadingSpinner`
-- Include the lamp SVG positioned over the "I" letter
-- Add a "Loading..." text with pulse animation below
-- React's `createRoot` will replace this content automatically when the app hydrates
+**File: `index.html`** (only file changed)
 
-**2. No other files need changes**
-The loading screen is purely in `index.html` -- no React component changes needed. Once React mounts, it replaces the `#root` innerHTML with the actual app.
+Replace the inline `<style>` block keyframes and styles:
+
+- **Background colors**: Light mode `hsl(40 20% 94%)`, dark mode `hsl(0 0% 4%)` (matching `--background`)
+- **Text colors**: Light mode `hsl(30 10% 15%)`, dark mode `hsl(0 0% 96%)` (matching `--foreground`)
+- **Loading text colors**: Light mode `hsl(30 10% 40%)`, dark mode `hsl(0 0% 60%)` (matching `--muted-foreground`)
+- **Replace `il-fade` keyframe** with the looping version from `index.css`:
+  - Letters fade up, hold, then fade out and repeat (2s infinite, staggered delays)
+- **Replace `il-drop` keyframe** with the looping lamp version
+- **Add squish animation** on the "I" letter (2nd span) to match the `LoadingSpinner`
+- Remove `forwards` fill mode, use `infinite` on all letter/lamp animations
 
 ### What Users Will Experience
-- App opened: Instantly see the animated CINEVERSE logo with letters fading in one by one and the lamp dropping onto the "I"
-- After JS loads (1-3 seconds): App seamlessly takes over, no flash or jump
-- Works in both light and dark mode (uses the theme detection script already in the HTML)
+- Initial load shows the same continuously looping CINEVERSE animation as the in-app loading spinner
+- Colors match perfectly -- no visual flash when React takes over
+- Animation keeps running indefinitely until the app loads, even on very slow networks
