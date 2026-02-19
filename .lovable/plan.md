@@ -1,25 +1,29 @@
 
 
-## Fix: Single Back Press to Exit Video Player
+## Fix: Unified Video Controls
 
 ### Problem
-On mobile, when you press the browser's back button while watching a video in fullscreen, two things happen sequentially:
-1. First back press: The browser exits fullscreen mode (browser's native behavior consumes this press)
-2. Second back press: Actually navigates back to the movie details page
-
-You want a single back press to exit both fullscreen AND navigate back.
+The custom overlay (rewind/play-pause/forward buttons) and the native browser video controls (timeline bar, volume, fullscreen) operate independently. Sometimes both appear together, sometimes only one shows -- creating an inconsistent experience.
 
 ### Solution
-Listen for the `fullscreenchange` event in `Watch.tsx`. When fullscreen exits (which happens on the first back press), immediately trigger navigation back. This way, the browser's native fullscreen exit automatically chains into a page navigation -- making it feel like one action.
+Sync the native `controls` attribute with the custom overlay visibility:
+- When the custom overlay is **showing**: hide native controls (`video.controls = false`) so only the clean custom UI is visible
+- When the custom overlay **hides**: restore native controls (`video.controls = true`) so users can still use the timeline/seekbar
+
+This ensures a single, consistent control layer is visible at any time.
 
 ### Technical Details
 
-**File: `src/pages/Watch.tsx`**
-- Add a `useEffect` that listens for `fullscreenchange` on the document
-- When `document.fullscreenElement` becomes `null` (fullscreen exited), call `goBack()` to navigate away
-- Use a small flag/ref to distinguish between "user exited fullscreen via back button" vs "component unmounting cleanup" to avoid double-navigation
-- The existing back arrow button (`goBack`) will also exit fullscreen first (via the hook cleanup) and navigate, so it continues to work as-is
+**File: `src/components/VideoDoubleTapOverlay.tsx`**
 
-**File: `src/hooks/useFullscreenLandscape.tsx`**
-- Remove the automatic `document.exitFullscreen()` call from the cleanup function, since `Watch.tsx` will now handle the navigation on fullscreen exit -- having the hook also exit fullscreen during unmount could cause conflicts
+1. Add a `useEffect` that toggles `videoRef.current.controls` based on `showControls` state:
+   - `showControls === true` -> `video.controls = false` (hide native bar)
+   - `showControls === false` -> `video.controls = true` (restore native bar)
+
+2. Remove the bottom 56px exclusion (`style={{ bottom: '56px' }}`) from the overlay since native controls will be hidden when the overlay is active -- no need to leave space for them.
+
+3. Keep the tap detection zone covering the full area when overlay is visible (since native controls are hidden), but restore the 56px exclusion when overlay is hidden (so native controls remain tappable).
+
+**File: `src/pages/Watch.tsx`**
+- No changes needed.
 
