@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import { RotateCcw, RotateCw, Play, Pause } from 'lucide-react';
 
 interface VideoDoubleTapOverlayProps {
@@ -13,6 +13,13 @@ export function VideoDoubleTapOverlay({ videoRef, skipSeconds = 10 }: VideoDoubl
   const lastTapRef = useRef<{ time: number; side: 'left' | 'right' }>({ time: 0, side: 'left' });
   const rippleTimer = useRef<ReturnType<typeof setTimeout>>();
   const hideTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  // Sync native controls with overlay visibility
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.controls = !showControls;
+  }, [showControls, videoRef]);
 
   const showControlsOverlay = useCallback(() => {
     setShowControls(true);
@@ -105,7 +112,7 @@ export function VideoDoubleTapOverlay({ videoRef, skipSeconds = 10 }: VideoDoubl
       {/* Tap detection zone — excludes bottom 56px for native video controls */}
       <div
         className="absolute inset-0 z-[58]"
-        style={{ bottom: '56px' }}
+        style={showControls ? undefined : { bottom: '56px' }}
         onTouchStart={handleTouchStart}
         onDoubleClick={handleDoubleClick}
         onClick={handleClick}
@@ -113,7 +120,7 @@ export function VideoDoubleTapOverlay({ videoRef, skipSeconds = 10 }: VideoDoubl
 
       {/* Controls overlay — shown on single tap */}
       {showControls && (
-        <div className="absolute inset-0 z-[59] flex items-center justify-center pointer-events-none" style={{ bottom: '56px' }}>
+        <div className="absolute inset-0 z-[59] flex items-center justify-center pointer-events-none">
           <div className="bg-black/40 absolute inset-0" />
           <div className="relative flex items-center gap-12 pointer-events-auto">
             <button
