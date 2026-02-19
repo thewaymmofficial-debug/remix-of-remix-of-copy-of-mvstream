@@ -8,8 +8,6 @@ interface VideoDoubleTapOverlayProps {
 
 export function VideoDoubleTapOverlay({ videoRef, skipSeconds = 10 }: VideoDoubleTapOverlayProps) {
   const [ripple, setRipple] = useState<'left' | 'right' | null>(null);
-  const lastTapRef = useRef<{ time: number; side: 'left' | 'right' }>({ time: 0, side: 'left' });
-  const singleTapTimer = useRef<ReturnType<typeof setTimeout>>();
   const rippleTimer = useRef<ReturnType<typeof setTimeout>>();
 
   const handleSkip = useCallback((side: 'left' | 'right') => {
@@ -42,20 +40,11 @@ export function VideoDoubleTapOverlay({ videoRef, skipSeconds = 10 }: VideoDoubl
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.touches[0].clientX - rect.left;
     const side: 'left' | 'right' = x < rect.width / 2 ? 'left' : 'right';
-    const now = Date.now();
-    const prev = lastTapRef.current;
 
-    if (now - prev.time < 350 && prev.side === side) {
-      // Double tap detected — skip
-      e.preventDefault();
-      e.stopPropagation();
-      clearTimeout(singleTapTimer.current);
-      handleSkip(side);
-      lastTapRef.current = { time: 0, side };
-    } else {
-      lastTapRef.current = { time: now, side };
-      // Let single taps pass through to toggle native controls
-    }
+    // Single tap triggers skip immediately
+    e.preventDefault();
+    e.stopPropagation();
+    handleSkip(side);
   }, [handleSkip]);
 
   const handleDoubleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
