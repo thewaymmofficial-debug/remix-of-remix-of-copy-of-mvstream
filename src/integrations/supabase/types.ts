@@ -521,6 +521,7 @@ export type Database = {
           admin_note: string | null
           created_at: string
           id: string
+          payment_method: string | null
           plan_duration: string
           plan_id: string | null
           plan_price: string
@@ -537,6 +538,7 @@ export type Database = {
           admin_note?: string | null
           created_at?: string
           id?: string
+          payment_method?: string | null
           plan_duration: string
           plan_id?: string | null
           plan_price: string
@@ -553,6 +555,7 @@ export type Database = {
           admin_note?: string | null
           created_at?: string
           id?: string
+          payment_method?: string | null
           plan_duration?: string
           plan_id?: string | null
           plan_price?: string
