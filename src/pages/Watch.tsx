@@ -8,10 +8,16 @@ import { VideoDoubleTapOverlay } from '@/components/VideoDoubleTapOverlay';
 import Hls from 'hls.js';
 
 const VERCEL_PROXY = 'https://proxies-lake.vercel.app/api/stream';
+const SUPABASE_PROXY = 'https://icnfjixjohbxjxqbnnac.supabase.co/functions/v1/download-proxy';
 
-/** Wrap any URL through the Vercel Edge proxy to bypass ISP blocks */
+/** Wrap URL through Vercel proxy — used ONLY for initial HTML page fetch */
 function proxyUrl(url: string): string {
   return `${VERCEL_PROXY}?url=${encodeURIComponent(url)}`;
+}
+
+/** Wrap URL through Supabase download-proxy — used for actual video streaming (supports Range/206) */
+function streamProxyUrl(url: string): string {
+  return `${SUPABASE_PROXY}?stream=1&url=${encodeURIComponent(url)}`;
 }
 
 /** Fetch the watch page HTML through the proxy and extract the direct video URL */
@@ -43,9 +49,9 @@ async function resolveDirectUrl(watchUrl: string): Promise<string> {
     realUrl = 'https://tw.thewayofthedragg.workers.dev' + realUrl;
   }
 
-  // Wrap the resolved video URL through the proxy too
-  const proxied = proxyUrl(realUrl);
-  console.log('[Watch] Resolved direct URL:', realUrl, '-> proxied:', proxied);
+  // Wrap the resolved video URL through the Supabase streaming proxy
+  const proxied = streamProxyUrl(realUrl);
+  console.log('[Watch] Resolved direct URL:', realUrl, '-> stream proxied:', proxied);
   return proxied;
 }
 
@@ -111,8 +117,8 @@ export default function Watch() {
           videoSrc = await Promise.race([resolveDirectUrl(rawUrl), timeoutPromise]);
           if (cancelled) return;
         } else {
-          // Non-watch URLs also go through proxy
-          videoSrc = proxyUrl(directUrl);
+          // Non-watch URLs also go through Supabase streaming proxy
+          videoSrc = streamProxyUrl(directUrl);
         }
 
         const srcIsHls = videoSrc.includes('.m3u8');
@@ -122,8 +128,8 @@ export default function Watch() {
             hls = new Hls({
               enableWorker: true,
               xhrSetup: (xhr, url) => {
-                // Route HLS segment/playlist requests through the proxy
-                const proxied = proxyUrl(url);
+                // Route HLS segment/playlist requests through Supabase proxy
+                const proxied = streamProxyUrl(url);
                 xhr.open('GET', proxied, true);
               },
             });
