@@ -1,44 +1,70 @@
 
+## Live Data Sync: Real-time Updates Without Refresh
 
-## Fix Payment Method Selection, Screenshot Display, and Transaction ID Placeholder
+### Problem
+Currently, when an admin makes changes (adds movies, updates settings, changes categories, etc.), users need to manually refresh or wait up to 5 minutes (the staleTime) to see updates. In an APK version, this is especially problematic since users can't easily clear cache.
 
-### What Changes
+### Solution
+Create a centralized **Realtime Listener** component that subscribes to Supabase Postgres Changes on key tables and automatically invalidates the relevant React Query caches when data changes. This means users will see admin changes within seconds -- no refresh needed.
 
-**1. Auto-select payment method when user copies account number**
-When a user taps the copy icon on a payment card (e.g., KBZ Pay), that card gets visually selected with a highlight border/ring. This selection is stored and submitted along with the premium request so the admin knows which payment method was used.
+### How It Works
 
-**2. Store payment method name with the request**
-Add a `payment_method` column to the `premium_requests` table to record which payment method the user selected (e.g., "KBZ Pay"). This will also be displayed in the admin detail view.
+```text
+Admin makes a change (e.g., adds a movie)
+        |
+        v
+Supabase Database updated
+        |
+        v
+Supabase Realtime broadcasts change event
+        |
+        v
+User's app receives event via WebSocket
+        |
+        v
+React Query cache invalidated for that table
+        |
+        v
+UI auto-refetches and re-renders with new data
+```
 
-**3. Fix screenshot not showing for admin**
-The screenshot upload and URL storage logic looks correct in code, but the admin detail dialog already displays it if `screenshot_url` is present. The issue may be that the upload is failing silently or the `payment-screenshots` bucket RLS policies block the upload. We will add an RLS policy to allow authenticated users to upload to the `payment-screenshots` bucket.
+### Changes
 
-**4. Fix Transaction ID placeholder text**
-Change the placeholder from `ငွေလွှဲပြေစာမှ Transaction ID ကို...` to `ငွေလွှဲပြေစာမှ Transaction ID နံပါတ်`
+**1. New file: `src/hooks/useRealtimeSync.tsx`**
+A single hook that subscribes to Postgres changes on these key tables:
+- `movies` -- invalidates `['movies']`, `['movie']`, `['trending-movies']`, `['most-viewed-movies']`, `['related-movies']`, `['featured-all']`
+- `site_settings` -- invalidates `['site-settings']`
+- `categories` -- invalidates `['categories']`
+- `tv_channels` -- invalidates `['channels']`, `['broken-channels']`
+- `direct_channels` -- invalidates `['direct-channels']`, `['direct-channels-active']`
+- `football_videos` -- invalidates `['football-videos']`, `['football-categories']`
+- `info_slides` -- invalidates `['info-slides']`
+- `pricing_plans` -- invalidates `['pricing-plans']`
+- `payment_methods` -- invalidates `['payment-methods']`
 
----
+Each table subscription uses a single Supabase channel that listens for INSERT, UPDATE, and DELETE events. On any change, the corresponding React Query keys are invalidated, triggering a background refetch.
 
-### Technical Details
+**2. New file: `src/components/RealtimeSyncProvider.tsx`**
+A component that wraps the hook and is placed in `App.tsx`. It calls `useRealtimeSync()` to activate all subscriptions when the app loads.
 
-**New Migration: Add `payment_method` column to `premium_requests`**
-- `ALTER TABLE premium_requests ADD COLUMN payment_method text;`
-- Add storage RLS policies for `payment-screenshots` bucket to allow authenticated users to upload files.
+**3. Update: `src/App.tsx`**
+Add `<RealtimeSyncProvider />` inside the QueryClientProvider so it has access to the query client.
 
-**File: `src/pages/PremiumRenewal.tsx`**
-- Add `selectedPaymentMethod` state (stores the payment method name string)
-- When user clicks copy icon on a payment card, set `selectedPaymentMethod` to that method's name (and `id`)
-- Add a visual selection indicator on the payment card: a ring/border highlight + checkmark when selected
-- Include `payment_method` in the `submitRequest.mutateAsync()` call
-- Update Transaction ID input placeholder to `ငွေလွှဲပြေစာမှ Transaction ID နံပါတ်`
-- Show the uploaded screenshot as a thumbnail preview (instead of just the file name)
+**4. App Version Check (for code deployments)**
+Add a simple version check using `site_settings`:
+- Store an `app_version` key in `site_settings` (admin can bump it when deploying)
+- The Realtime subscription on `site_settings` will detect the version change
+- If the version doesn't match what the app loaded with, show a toast/banner: "New update available" with a "Refresh" button
+- This handles code changes (new JS bundles) that can't be hot-swapped
 
-**File: `src/hooks/usePremiumRequests.tsx`**
-- Add `payment_method` to the `PremiumRequest` interface
-- Add `payment_method` to the mutation function parameter type
+### What Users Will Experience
+- Movie added by admin? Appears on home page within seconds
+- Settings changed? Announcement banner, prices, contacts update live
+- New TV channel added? Shows up immediately
+- App code updated? Users get a gentle "Update available" prompt
 
-**File: `src/pages/admin/PremiumRequestsAdmin.tsx`**
-- Display the `payment_method` field in the request card and detail dialog so admins can see which payment method was used
-
-**File: `src/integrations/supabase/types.ts`**
-- Update the `premium_requests` type to include the new `payment_method` column
-
+### Technical Notes
+- Uses a single Supabase Realtime connection with multiple channel subscriptions (efficient)
+- Only invalidates cache (doesn't force re-render if user isn't viewing that data)
+- No impact on performance -- WebSocket is lightweight and already used for notifications
+- The `staleTime` of 5 minutes still applies for initial loads, but Realtime events override it when changes happen
