@@ -32,16 +32,23 @@ export default function PremiumRenewal() {
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const [transactionId, setTransactionId] = useState('');
   const [screenshot, setScreenshot] = useState<File | null>(null);
+  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const copyToClipboard = (text: string) => {
+  const copyToClipboard = (text: string, methodName: string) => {
     navigator.clipboard.writeText(text);
+    setSelectedPaymentMethod(methodName);
     toast.success(t('copied'));
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setScreenshot(e.target.files[0]);
+      const file = e.target.files[0];
+      setScreenshot(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setScreenshotPreview(reader.result as string);
+      reader.readAsDataURL(file);
     }
   };
 
@@ -96,6 +103,7 @@ export default function PremiumRenewal() {
         transaction_id: transactionId.trim(),
         screenshot_url: screenshotUrl,
         premium_type: selectedType,
+        payment_method: selectedPaymentMethod,
       });
 
       toast.success('တင်သွင်းပြီးပါပြီ! စစ်ဆေးပြီးအကြောင်းကြားပါမည်');
@@ -295,8 +303,19 @@ export default function PremiumRenewal() {
               {paymentMethods?.map((method) => (
                 <div
                   key={method.id}
-                  className={`${method.gradient} rounded-2xl p-5 relative overflow-hidden`}
+                  onClick={() => setSelectedPaymentMethod(method.name)}
+                  className={cn(
+                    `${method.gradient} rounded-2xl p-5 relative overflow-hidden cursor-pointer transition-all`,
+                    selectedPaymentMethod === method.name
+                      ? 'ring-3 ring-white shadow-lg scale-[1.01]'
+                      : ''
+                  )}
                 >
+                  {selectedPaymentMethod === method.name && (
+                    <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-white flex items-center justify-center z-20">
+                      <Check className="w-4 h-4 text-green-600" />
+                    </div>
+                  )}
                   <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-white/10" />
                   <div className="absolute -right-2 bottom-4 w-16 h-16 rounded-full bg-white/10" />
                   <div className="relative z-10">
@@ -321,7 +340,10 @@ export default function PremiumRenewal() {
                         </p>
                       </div>
                       <button
-                        onClick={() => copyToClipboard(method.account_number)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          copyToClipboard(method.account_number, method.name);
+                        }}
                         className={`p-2.5 rounded-xl bg-white/20 hover:bg-white/30 transition-colors ${method.text_color}`}
                       >
                         <Copy className="w-5 h-5" />
@@ -345,11 +367,9 @@ export default function PremiumRenewal() {
                 className="hidden"
                 onChange={handleFileChange}
               />
-              {screenshot ? (
+              {screenshot && screenshotPreview ? (
                 <div className="space-y-2">
-                  <div className="w-16 h-16 mx-auto bg-emerald-500/20 rounded-full flex items-center justify-center">
-                    <FileText className="w-8 h-8 text-emerald-500" />
-                  </div>
+                  <img src={screenshotPreview} alt="Screenshot preview" className="max-h-40 mx-auto rounded-lg object-contain" />
                   <p className="text-sm font-medium text-foreground">{screenshot.name}</p>
                   <p className="text-xs text-muted-foreground">ပြောင်းလဲရန် နှိပ်ပါ</p>
                 </div>
@@ -372,7 +392,7 @@ export default function PremiumRenewal() {
             <div className="relative">
               <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
-                placeholder="ငွေလွှဲပြေစာမှ Transaction ID ကို..."
+                placeholder="ငွေလွှဲပြေစာမှ Transaction ID နံပါတ်"
                 value={transactionId}
                 onChange={(e) => setTransactionId(e.target.value)}
                 className="pl-10 h-12 bg-card border-border text-foreground"

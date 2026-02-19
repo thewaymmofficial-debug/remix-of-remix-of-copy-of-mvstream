@@ -10,6 +10,7 @@ export interface PremiumRequest {
   plan_price: string;
   transaction_id: string;
   screenshot_url: string | null;
+  payment_method: string | null;
   status: string;
   admin_note: string | null;
   reviewed_by: string | null;
@@ -81,6 +82,7 @@ export function useSubmitPremiumRequest() {
       transaction_id: string;
       screenshot_url: string | null;
       premium_type?: string;
+      payment_method?: string | null;
     }) => {
       const { data, error } = await supabase
         .from('premium_requests')
