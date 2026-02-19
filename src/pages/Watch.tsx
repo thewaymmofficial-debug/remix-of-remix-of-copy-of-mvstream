@@ -64,6 +64,7 @@ export default function Watch() {
 
   const rawUrl = searchParams.get('url') || '';
   const title = searchParams.get('title') || 'Video';
+  const unmountingRef = useRef(false);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -82,6 +83,21 @@ export default function Watch() {
   useEffect(() => {
     if (!rawUrl) navigate('/', { replace: true });
   }, [rawUrl, navigate]);
+
+  // Single back press: when fullscreen exits, navigate back immediately
+  useEffect(() => {
+    const handleFullscreenExit = () => {
+      if (!document.fullscreenElement && !unmountingRef.current) {
+        unmountingRef.current = true;
+        goBack();
+      }
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenExit);
+    return () => {
+      unmountingRef.current = true;
+      document.removeEventListener('fullscreenchange', handleFullscreenExit);
+    };
+  }, [goBack]);
 
   useEffect(() => {
     if (!rawUrl) return;
