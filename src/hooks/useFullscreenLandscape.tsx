@@ -89,10 +89,7 @@ export function useFullscreenLandscape(containerRef: RefObject<HTMLElement | nul
         (screen.orientation as any)?.unlock?.();
       } catch (e) { /* ignore */ }
 
-      // Exit fullscreen
-      if (document.fullscreenElement) {
-        document.exitFullscreen().catch(() => {});
-      }
+      // Don't exit fullscreen here — let Watch.tsx handle navigation on fullscreen exit
     };
   }, [containerRef]);
 
