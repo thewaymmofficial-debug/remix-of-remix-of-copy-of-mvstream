@@ -25,13 +25,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-      .il-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;width:100vw;background:hsl(0 0% 100%);gap:1.5rem}
-      .dark .il-wrap{background:hsl(222 47% 6%)}
+      .il-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;width:100vw;background:hsl(40 20% 94%);gap:1.5rem}
+      .dark .il-wrap{background:hsl(0 0% 4%)}
       .il-logo{position:relative;display:flex;align-items:flex-end;height:2.5rem;overflow:visible}
-      .il-letter{display:inline-block;font-size:1.5rem;font-weight:700;letter-spacing:0.1em;color:hsl(222 47% 11%);opacity:0;animation:il-fade 0.4s ease-out forwards}
-      .dark .il-letter{color:hsl(210 40% 98%)}
+      .il-letter{display:inline-block;font-size:1.5rem;font-weight:700;letter-spacing:0.1em;color:hsl(30 10% 15%);opacity:0;animation:il-loop 2s ease-in-out infinite}
+      .dark .il-letter{color:hsl(0 0% 96%)}
       .il-letter:nth-child(1){animation-delay:0ms}
-      .il-letter:nth-child(2){animation-delay:80ms}
+      .il-letter:nth-child(2){animation:il-loop 2s ease-in-out infinite,il-squish 2s ease-in-out infinite;animation-delay:80ms,80ms}
       .il-letter:nth-child(3){animation-delay:160ms}
       .il-letter:nth-child(4){animation-delay:240ms}
       .il-letter:nth-child(5){animation-delay:320ms}
@@ -39,12 +39,13 @@
       .il-letter:nth-child(7){animation-delay:480ms}
       .il-letter:nth-child(8){animation-delay:560ms}
       .il-letter:nth-child(9){animation-delay:640ms}
-      .il-lamp{position:absolute;top:-0.7em;left:calc(50% - 9px);opacity:0;animation:il-drop 0.5s cubic-bezier(0.34,1.56,0.64,1) 450ms forwards;pointer-events:none}
-      .il-lamp svg{color:hsl(45 93% 47%)}
-      .il-msg{font-size:0.875rem;color:hsl(215 16% 47%);animation:il-pulse 2s ease-in-out infinite}
-      .dark .il-msg{color:hsl(215 20% 65%)}
-      @keyframes il-fade{0%{opacity:0;transform:translateY(12px)}100%{opacity:1;transform:translateY(0)}}
-      @keyframes il-drop{0%{opacity:0;transform:translateY(-20px)}50%{opacity:1;transform:translateY(2px)}70%{transform:translateY(-3px)}100%{opacity:1;transform:translateY(0)}}
+      .il-lamp{position:absolute;top:-0.7em;left:calc(50% - 9px);opacity:0;animation:il-lamp 2s ease-in-out infinite;pointer-events:none}
+      .il-lamp svg{color:hsl(45 93% 47%);filter:drop-shadow(0 0 6px hsl(45 93% 47% / 0.7)) drop-shadow(0 0 14px hsl(45 93% 47% / 0.4))}
+      .il-msg{font-size:0.875rem;color:hsl(30 10% 40%);animation:il-pulse 2s ease-in-out infinite}
+      .dark .il-msg{color:hsl(0 0% 60%)}
+      @keyframes il-loop{0%{opacity:0;transform:translateY(12px)}30%{opacity:1;transform:translateY(0)}70%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-8px)}}
+      @keyframes il-squish{0%,25%{transform:scaleY(1) scaleX(1)}35%{transform:scaleY(0.5) scaleX(1.2)}45%{transform:scaleY(1.15) scaleX(0.9)}55%{transform:scaleY(0.95) scaleX(1.02)}65%,100%{transform:scaleY(1) scaleX(1)}}
+      @keyframes il-lamp{0%,20%{opacity:0;transform:translateY(-20px)}35%{opacity:1;transform:translateY(2px)}42%{transform:translateY(-3px)}50%{opacity:1;transform:translateY(0)}70%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-20px)}}
       @keyframes il-pulse{0%,100%{opacity:1}50%{opacity:0.4}}
     </style>
     <meta property="og:title" content="Cineverse Premium - Your Ultimate Streaming Destination">
