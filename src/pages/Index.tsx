@@ -185,6 +185,44 @@ const Index = () => {
       {!isFiltering && !isLoading && (
         <div className="py-8 relative z-30 bg-background">
           <FadeIn>
+            {/* Continue Watching Row */}
+            {user && continueWatching && continueWatching.length > 0 && (
+              <section className="mb-10">
+                <div className="flex items-center justify-between mb-5 px-4 md:px-8">
+                  <h2 className="text-xl md:text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
+                    Continue Watching
+                  </h2>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => scrollContinueWatching('left')}
+                      className="p-2.5 rounded-full bg-card/80 hover:bg-card border border-border/50 transition-all hover:scale-105"
+                      aria-label="Scroll left"
+                    >
+                      <ChevronLeft className="w-5 h-5 text-foreground" />
+                    </button>
+                    <button
+                      onClick={() => scrollContinueWatching('right')}
+                      className="p-2.5 rounded-full bg-card/80 hover:bg-card border border-border/50 transition-all hover:scale-105"
+                      aria-label="Scroll right"
+                    >
+                      <ChevronRight className="w-5 h-5 text-foreground" />
+                    </button>
+                  </div>
+                </div>
+                <div ref={continueWatchingRef} className="scroll-row px-4 md:px-8">
+                  {continueWatching.map((item) => (
+                    <ContinueWatchingCard
+                      key={item.id}
+                      movie={item.movie}
+                      progressPercent={item.progress_percent}
+                      onResume={() => navigate(`/movie/${item.movie_id}`)}
+                      onRemove={() => removeFromHistory.mutate(item.id)}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
             {/* My Watchlist Row */}
             {user && watchlistMovies.length > 0 && (
               <MovieRow
