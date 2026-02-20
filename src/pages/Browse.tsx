@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { MovieCard } from '@/components/MovieCard';
@@ -31,52 +31,54 @@ const filterConfig: Record<string, { titleEn: string; titleMm: string; emoji: st
 
 const Browse = () => {
   const { filter } = useParams<{ filter: string }>();
+  const [searchParams] = useSearchParams();
+  const categoryFromQuery = searchParams.get('category');
+  const activeFilter = filter || categoryFromQuery || undefined;
   const navigate = useNavigate();
   const { user } = useAuth();
   const { language } = useLanguage();
   
   const [previewMovie, setPreviewMovie] = useState<Movie | null>(null);
 
-  // Determine which category to query based on the filter
   const categoryToQuery = useMemo(() => {
-    if (!filter) return undefined;
-    if (['trending', 'trending-series', 'featured', 'movie', 'series'].includes(filter)) {
-      return undefined; // These use special queries
+    if (!activeFilter) return undefined;
+    if (['trending', 'trending-series', 'featured', 'movie', 'series'].includes(activeFilter)) {
+      return undefined;
     }
-    return filter;
-  }, [filter]);
+    return activeFilter;
+  }, [activeFilter]);
 
   const { data: allMovies, isLoading: moviesLoading, refetch } = useMovies(categoryToQuery);
   const { data: trendingMovies, isLoading: trendingLoading } = useTrendingMovies(50);
   const { data: featuredMovies, isLoading: featuredLoading } = useFeaturedMovies();
 
   const movies = useMemo(() => {
-    if (!filter) return [];
+    if (!activeFilter) return [];
 
-    if (filter === 'trending') {
+    if (activeFilter === 'trending') {
       return (trendingMovies || []).filter(m => m.content_type !== 'series');
     }
-    if (filter === 'trending-series') {
+    if (activeFilter === 'trending-series') {
       return (trendingMovies || []).filter(m => m.content_type === 'series');
     }
-    if (filter === 'featured') {
+    if (activeFilter === 'featured') {
       return featuredMovies || [];
     }
-    if (filter === 'movie') {
+    if (activeFilter === 'movie') {
       return (allMovies || []).filter(m => m.content_type === 'movie' || !m.content_type);
     }
-    if (filter === 'series') {
+    if (activeFilter === 'series') {
       return (allMovies || []).filter(m => m.content_type === 'series');
     }
     return allMovies || [];
-  }, [filter, allMovies, trendingMovies, featuredMovies]);
+  }, [activeFilter, allMovies, trendingMovies, featuredMovies]);
 
-  const isLoading = moviesLoading || (filter === 'trending' || filter === 'trending-series' ? trendingLoading : false) || (filter === 'featured' ? featuredLoading : false);
+  const isLoading = moviesLoading || (activeFilter === 'trending' || activeFilter === 'trending-series' ? trendingLoading : false) || (activeFilter === 'featured' ? featuredLoading : false);
 
-  const config = filter ? filterConfig[filter] : undefined;
+  const config = activeFilter ? filterConfig[activeFilter] : undefined;
   const title = config
     ? `${config.emoji} ${language === 'mm' ? config.titleMm : config.titleEn}`
-    : filter || 'Browse';
+    : activeFilter || 'Browse';
 
   const handleMovieClick = (movie: Movie) => {
     if (!user) {
