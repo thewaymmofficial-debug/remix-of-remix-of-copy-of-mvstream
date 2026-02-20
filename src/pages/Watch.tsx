@@ -253,8 +253,18 @@ export default function Watch() {
     : undefined;
 
   return (
-    <div ref={containerRef} className="fixed inset-0 z-50 bg-black flex flex-col" style={rotationStyle}>
-      <button onClick={goBack} className="absolute top-4 left-4 z-[60] bg-black/60 hover:bg-black/80 text-white rounded-full p-2 backdrop-blur-sm transition-colors" aria-label="Go back">
+    <div ref={containerRef} className="fixed inset-0 z-50 bg-black flex flex-col" style={{
+      ...rotationStyle,
+      paddingTop: 'env(safe-area-inset-top)',
+      paddingBottom: 'env(safe-area-inset-bottom)',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      width: '100vw',
+      height: '100dvh',
+    }}>
+      <button onClick={goBack} className="absolute top-4 left-4 z-[60] bg-black/60 hover:bg-black/80 text-white rounded-full p-2 backdrop-blur-sm transition-colors" style={{ top: 'max(1rem, env(safe-area-inset-top))' }} aria-label="Go back">
         <ArrowLeft className="w-6 h-6" />
       </button>
 

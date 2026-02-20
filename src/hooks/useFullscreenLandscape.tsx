@@ -44,15 +44,20 @@ export function useFullscreenLandscape(containerRef: RefObject<HTMLElement | nul
       if (!isMobile) return;
 
       try {
-        // Try standard fullscreen
+        // Try standard fullscreen with navigation UI hidden
         if (container.requestFullscreen) {
-          await container.requestFullscreen();
+          await container.requestFullscreen({ navigationUI: 'hide' } as any);
           return;
         }
         // Webkit fallback (iOS Safari)
         const webkitContainer = container as any;
         if (webkitContainer.webkitRequestFullscreen) {
           webkitContainer.webkitRequestFullscreen();
+          return;
+        }
+        // Webkit (older Android WebView)
+        if (webkitContainer.webkitEnterFullscreen) {
+          webkitContainer.webkitEnterFullscreen();
           return;
         }
       } catch (e) {
@@ -68,7 +73,18 @@ export function useFullscreenLandscape(containerRef: RefObject<HTMLElement | nul
       }
     };
 
+    // Attempt fullscreen immediately, and also on first user interaction
     enterFullscreen();
+
+    const handleInteraction = () => {
+      if (!document.fullscreenElement && isMobile) {
+        enterFullscreen();
+      }
+      document.removeEventListener('touchstart', handleInteraction);
+      document.removeEventListener('click', handleInteraction);
+    };
+    document.addEventListener('touchstart', handleInteraction, { once: true });
+    document.addEventListener('click', handleInteraction, { once: true });
 
     // Listen for orientation changes to toggle CSS fallback
     const portraitQuery = window.matchMedia('(orientation: portrait)');
@@ -83,6 +99,8 @@ export function useFullscreenLandscape(containerRef: RefObject<HTMLElement | nul
       cancelled = true;
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       portraitQuery.removeEventListener('change', handleOrientationChange);
+      document.removeEventListener('touchstart', handleInteraction);
+      document.removeEventListener('click', handleInteraction);
 
       // Unlock orientation
       try {
