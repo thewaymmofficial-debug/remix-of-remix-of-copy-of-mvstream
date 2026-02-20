@@ -346,7 +346,16 @@ export default function MovieDetails() {
         streamUrl={movie.stream_url}
         telegramUrl={movie.telegram_url}
         megaUrl={movie.mega_url}
+        downloadUrl={(movie as any).download_url}
         type="play"
+        movieInfo={{
+          movieId: movie.id,
+          title: movie.title,
+          posterUrl: movie.poster_url,
+          year: movie.year,
+          resolution: movie.resolution,
+          fileSize: movie.file_size,
+        }}
       />
       {movie.content_type !== 'series' && (
         <ServerDrawer
