@@ -148,15 +148,25 @@ export default function Downloads() {
                 <div className="flex flex-col gap-1 flex-shrink-0">
                   {/* Open with external player (completed downloads) */}
                   {dl.status === 'complete' && dl.url && (
-                    <a
-                      href={dl.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      onClick={() => {
+                        const videoUrl = dl.url;
+                        // Try intent:// scheme to open Android player chooser directly
+                        const intentUrl = `intent:${videoUrl}#Intent;type=video/*;end`;
+                        const link = document.createElement('a');
+                        link.href = intentUrl;
+                        link.click();
+                        
+                        // Fallback: if intent doesn't work (iOS/desktop), open URL directly
+                        setTimeout(() => {
+                          window.open(videoUrl, '_blank');
+                        }, 500);
+                      }}
                       className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
                       title="Open with external player"
                     >
                       <ExternalLink className="w-4 h-4 text-primary" />
-                    </a>
+                    </button>
                   )}
                   {/* Pause / Resume */}
                   {dl.status === 'downloading' && (
