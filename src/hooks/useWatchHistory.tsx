@@ -63,7 +63,7 @@ export function useContinueWatching() {
         .eq('user_id', user.id)
         .gt('progress', 30) // Only show if watched more than 30 seconds
         .order('last_watched_at', { ascending: false })
-        .limit(10);
+        .limit(1);
 
       if (error) throw error;
 

@@ -139,7 +139,7 @@ export default function MovieDetails() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => navigate('/')}
+          onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/')}
           className="text-foreground"
         >
           <ArrowLeft className="w-6 h-6" />
