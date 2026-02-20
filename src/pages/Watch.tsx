@@ -77,6 +77,24 @@ export default function Watch() {
   const [bufferPercent, setBufferPercent] = useState(0);
   const [muted, setMuted] = useState(false);
   const [showUnmute, setShowUnmute] = useState(false);
+  const [showControls, setShowControls] = useState(true);
+  const controlsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const hideControlsAfterDelay = useCallback(() => {
+    if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current);
+    controlsTimerRef.current = setTimeout(() => setShowControls(false), 3000);
+  }, []);
+
+  const handleScreenTap = useCallback(() => {
+    setShowControls(prev => {
+      if (!prev) {
+        hideControlsAfterDelay();
+        return true;
+      }
+      if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current);
+      return false;
+    });
+  }, [hideControlsAfterDelay]);
 
   const isWatchUrl = rawUrl.includes('/watch/');
   const directUrl = rawUrl.includes('/watch/') ? rawUrl.replace('/watch/', '/') : rawUrl;
@@ -156,6 +174,7 @@ export default function Watch() {
         await v.play();
         setMuted(false);
         setShowUnmute(false);
+        hideControlsAfterDelay();
       } catch {
         // Autoplay with audio blocked — mute and retry
         v.muted = true;
@@ -253,7 +272,7 @@ export default function Watch() {
     : undefined;
 
   return (
-    <div ref={containerRef} className="fixed inset-0 z-50 bg-black flex flex-col" style={{
+    <div ref={containerRef} className="fixed inset-0 z-50 bg-black flex flex-col" onClick={handleScreenTap} style={{
       ...rotationStyle,
       paddingTop: 'env(safe-area-inset-top)',
       paddingBottom: 'env(safe-area-inset-bottom)',
@@ -264,9 +283,11 @@ export default function Watch() {
       width: '100vw',
       height: '100dvh',
     }}>
-      <button onClick={goBack} className="absolute top-4 left-4 z-[60] bg-black/60 hover:bg-black/80 text-white rounded-full p-2 backdrop-blur-sm transition-colors" style={{ top: 'max(1rem, env(safe-area-inset-top))' }} aria-label="Go back">
-        <ArrowLeft className="w-6 h-6" />
-      </button>
+      {showControls && (
+        <button onClick={(e) => { e.stopPropagation(); goBack(); }} className="absolute top-4 left-4 z-[60] bg-black/60 hover:bg-black/80 text-white rounded-full p-2 backdrop-blur-sm transition-all duration-300" style={{ top: 'max(1rem, env(safe-area-inset-top))' }} aria-label="Go back">
+          <ArrowLeft className="w-6 h-6" />
+        </button>
+      )}
 
       {!loading && !error && bufferPercent > 0 && bufferPercent < 100 && (
         <div className="absolute top-0 left-0 right-0 z-[60] h-[3px] bg-white/10">
