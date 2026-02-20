@@ -149,22 +149,17 @@ export default function Downloads() {
                   {/* Open with external player (completed downloads) */}
                   {dl.status === 'complete' && dl.url && (
                     <button
-                      onClick={async () => {
+                      onClick={() => {
                         const videoUrl = dl.url;
-                        // Use Web Share API (works in Android WebView/APK)
-                        if (navigator.share) {
-                          try {
-                            await navigator.share({
-                              title: dl.title,
-                              url: videoUrl,
-                            });
-                            return;
-                          } catch (e) {
-                            // User cancelled or share failed, fall through
-                          }
+                        try {
+                          // Build Android Intent URI to VIEW the video directly in a player
+                          const urlObj = new URL(videoUrl);
+                          const intentUrl = `intent://${urlObj.host}${urlObj.pathname}${urlObj.search}#Intent;scheme=${urlObj.protocol.replace(':', '')};action=android.intent.action.VIEW;type=video/*;end`;
+                          window.location.href = intentUrl;
+                        } catch {
+                          // Fallback for non-Android or if intent fails
+                          window.open(videoUrl, '_blank');
                         }
-                        // Fallback: open in new tab
-                        window.open(videoUrl, '_blank');
                       }}
                       className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
                       title="Open with external player"
