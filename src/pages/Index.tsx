@@ -181,53 +181,12 @@ const Index = () => {
       {/* Category Grid Section */}
       <CategoryGrid />
 
-      {/* Movie Rows - show when filtering via search/navbar */}
-      {isFiltering && (
-      <div className="py-8 relative z-30 bg-background">
-        {isLoading ? (
-          <LoadingSpinner message="Loading movies..." />
-        ) : isError ? (
-          <div className="text-center py-20 px-4">
-            <p className="text-destructive text-lg mb-4">
-              Failed to load movies. Please try again.
-            </p>
-            <p className="text-muted-foreground text-sm mb-6">
-              {error instanceof Error ? error.message : 'Network error'}
-            </p>
-            <button
-              onClick={handleRefresh}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Try Again
-            </button>
-          </div>
-        ) : hasNoResults ? (
-          <div className="text-center py-20">
-            {isFiltering ? (
-              <p className="text-muted-foreground text-lg">
-                No movies match your filters. Try adjusting your search.
-              </p>
-            ) : (
-              <div>
-                <p className="text-muted-foreground text-lg mb-4">
-                  No movies available yet. Check back soon!
-                </p>
-                <button
-                  onClick={handleRefresh}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-muted hover:bg-muted/80 rounded-lg transition-colors"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  Refresh
-                </button>
-              </div>
-            )}
-          </div>
-        ) : (
+      {/* Default home view (not filtering) */}
+      {!isFiltering && !isLoading && (
+        <div className="py-8 relative z-30 bg-background">
           <FadeIn>
-          <>
             {/* Continue Watching Row */}
-            {user && continueWatching && continueWatching.length > 0 && !isFiltering && (
+            {user && continueWatching && continueWatching.length > 0 && (
               <section className="mb-10">
                 <div className="flex items-center justify-between mb-5 px-4 md:px-8">
                   <h2 className="text-xl md:text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
@@ -265,7 +224,7 @@ const Index = () => {
             )}
 
             {/* Trending This Week */}
-            {trendingMovies && trendingMovies.length > 0 && !isFiltering && (
+            {trendingMovies && trendingMovies.length > 0 && (
               <MovieRow
                 title="🔥 Trending This Week"
                 movies={trendingMovies}
@@ -274,7 +233,7 @@ const Index = () => {
             )}
 
             {/* Personalized Recommendations */}
-            {user && recommendations && recommendations.length > 0 && !isFiltering && (
+            {user && recommendations && recommendations.length > 0 && (
               <section className="mb-10">
                 <div className="flex items-center justify-between mb-5 px-4 md:px-8">
                   <h2 className="text-xl md:text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
@@ -295,7 +254,7 @@ const Index = () => {
             )}
 
             {/* My Watchlist Row */}
-            {user && watchlistMovies.length > 0 && !isFiltering && (
+            {user && watchlistMovies.length > 0 && (
               <section className="mb-10">
                 <div className="flex items-center justify-between mb-5 px-4 md:px-8">
                   <h2 className="text-xl md:text-2xl font-bold text-foreground tracking-tight">My Watchlist</h2>
@@ -321,10 +280,38 @@ const Index = () => {
                 onMovieClick={handleMovieClick}
               />
             ))}
-          </>
           </FadeIn>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Filtered results (only when searching/filtering) */}
+      {isFiltering && (
+        <div className="py-8 relative z-30 bg-background">
+          {isLoading ? (
+            <LoadingSpinner message="Loading movies..." />
+          ) : hasNoResults ? (
+            <div className="text-center py-20">
+              <p className="text-muted-foreground text-lg">
+                No movies match your filters. Try adjusting your search.
+              </p>
+            </div>
+          ) : (
+            <FadeIn>
+              {sortedCategories.map((category) => (
+                <MovieRow
+                  key={category}
+                  title={category}
+                  movies={filteredMoviesByCategory[category]}
+                  onMovieClick={handleMovieClick}
+                />
+              ))}
+            </FadeIn>
+          )}
+        </div>
+      )}
+
+      {isLoading && !isFiltering && (
+        <LoadingSpinner message="Loading movies..." />
       )}
 
 
