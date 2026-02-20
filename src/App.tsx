@@ -12,6 +12,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { DevicePresenceMonitor } from "@/components/DevicePresenceMonitor";
 import { RealtimeSyncProvider } from "@/components/RealtimeSyncProvider";
+import { PageTransition } from "@/components/PageTransition";
 import { useNetworkRefresh } from "@/hooks/useNetworkRefresh";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -89,6 +90,7 @@ const App = () => (
               <Sonner />
               <BrowserRouter>
                 <ErrorBoundary>
+                <PageTransition>
                 <Routes>
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/" element={<Index />} />
@@ -130,6 +132,7 @@ const App = () => (
                   </Route>
                   <Route path="*" element={<NotFound />} />
                 </Routes>
+                </PageTransition>
                 </ErrorBoundary>
               </BrowserRouter>
             </TooltipProvider>
