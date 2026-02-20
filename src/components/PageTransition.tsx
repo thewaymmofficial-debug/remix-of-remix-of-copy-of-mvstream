@@ -16,7 +16,6 @@ export function PageTransition({ children }: PageTransitionProps) {
       prevPathRef.current = location.pathname;
       setStage('fading-out');
     } else {
-      // Same path, just update children directly
       setDisplayChildren(children);
     }
   }, [location.pathname, children]);
@@ -27,26 +26,34 @@ export function PageTransition({ children }: PageTransitionProps) {
         setDisplayChildren(children);
         window.scrollTo(0, 0);
         setStage('fading-in');
-      }, 120);
+      }, 150);
       return () => clearTimeout(timeout);
     }
     if (stage === 'fading-in') {
-      const timeout = setTimeout(() => setStage('visible'), 200);
+      const timeout = setTimeout(() => setStage('visible'), 250);
       return () => clearTimeout(timeout);
     }
   }, [stage, children]);
 
-  return (
-    <div
-      style={{
-        opacity: stage === 'fading-out' ? 0 : 1,
-        transform: stage === 'fading-out' ? 'translateY(6px)' : stage === 'fading-in' ? 'translateY(0)' : undefined,
-        transition: stage === 'fading-out'
-          ? 'opacity 120ms ease-out, transform 120ms ease-out'
-          : 'opacity 200ms ease-out, transform 200ms ease-out',
-      }}
-    >
-      {displayChildren}
-    </div>
-  );
+  const style: React.CSSProperties =
+    stage === 'fading-out'
+      ? {
+          opacity: 0,
+          transform: 'scale(0.985) translateY(8px)',
+          transition: 'opacity 150ms cubic-bezier(.4,0,.6,1), transform 150ms cubic-bezier(.4,0,.6,1)',
+          willChange: 'opacity, transform',
+        }
+      : stage === 'fading-in'
+        ? {
+            opacity: 1,
+            transform: 'scale(1) translateY(0)',
+            transition: 'opacity 250ms cubic-bezier(0,0,.2,1), transform 250ms cubic-bezier(0,0,.2,1)',
+            willChange: 'opacity, transform',
+          }
+        : {
+            opacity: 1,
+            transform: 'none',
+          };
+
+  return <div style={style}>{displayChildren}</div>;
 }
