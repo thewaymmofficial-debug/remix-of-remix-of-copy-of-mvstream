@@ -57,7 +57,8 @@ export function ServerDrawer({
       navigate('/downloads');
     } else if (useInAppPlayer && type === 'play') {
       const title = movieInfo?.title || 'Video';
-      navigate(`/watch?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}`);
+      const movieId = movieInfo?.movieId || '';
+      navigate(`/watch?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}&movieId=${encodeURIComponent(movieId)}`);
     } else {
       window.open(url, '_blank', 'noopener,noreferrer');
     }

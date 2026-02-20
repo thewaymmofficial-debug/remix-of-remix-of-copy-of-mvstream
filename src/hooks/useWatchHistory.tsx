@@ -67,12 +67,14 @@ export function useContinueWatching() {
 
       if (error) throw error;
 
-      return (data || []).map((entry: any) => ({
-        ...entry,
-        progress_percent: entry.duration 
-          ? Math.min((entry.progress / entry.duration) * 100, 95)
-          : 0,
-      })) as ContinueWatchingEntry[];
+      return ((data || []) as any[])
+        .map((entry: any) => ({
+          ...entry,
+          progress_percent: entry.duration
+            ? Math.min((entry.progress / entry.duration) * 100, 95)
+            : 0,
+        }))
+        .filter((entry: any) => entry.progress_percent < 95) as ContinueWatchingEntry[];
     },
     enabled: !!user,
   });

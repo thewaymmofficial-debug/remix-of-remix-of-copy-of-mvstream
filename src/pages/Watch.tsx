@@ -4,6 +4,7 @@ import { ArrowLeft, AlertCircle, RefreshCw, Volume2, VolumeX } from 'lucide-reac
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useFullscreenLandscape } from '@/hooks/useFullscreenLandscape';
+import { useUpdateProgress } from '@/hooks/useWatchHistory';
 import Hls from 'hls.js';
 
 const VERCEL_PROXY = 'https://proxies-lake.vercel.app/api/stream';
@@ -63,7 +64,11 @@ export default function Watch() {
 
   const rawUrl = searchParams.get('url') || '';
   const title = searchParams.get('title') || 'Video';
+  const movieId = searchParams.get('movieId') || '';
   const unmountingRef = useRef(false);
+  const updateProgress = useUpdateProgress();
+  const lastSaveRef = useRef(0);
+  const progressRef = useRef({ current: 0, duration: 0 });
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -82,6 +87,38 @@ export default function Watch() {
   useEffect(() => {
     if (!rawUrl) navigate('/', { replace: true });
   }, [rawUrl, navigate]);
+
+  // Save progress periodically via timeupdate
+  useEffect(() => {
+    if (!movieId) return;
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleTimeUpdate = () => {
+      const now = Date.now();
+      progressRef.current = { current: video.currentTime, duration: video.duration || 0 };
+      if (now - lastSaveRef.current < 10000) return; // throttle to every 10s
+      lastSaveRef.current = now;
+      updateProgress.mutate({
+        movieId,
+        progressSeconds: Math.floor(video.currentTime),
+        durationSeconds: Math.floor(video.duration || 0),
+      });
+    };
+
+    video.addEventListener('timeupdate', handleTimeUpdate);
+    return () => {
+      video.removeEventListener('timeupdate', handleTimeUpdate);
+      // Save final progress on unmount
+      if (progressRef.current.current > 5) {
+        updateProgress.mutate({
+          movieId,
+          progressSeconds: Math.floor(progressRef.current.current),
+          durationSeconds: Math.floor(progressRef.current.duration),
+        });
+      }
+    };
+  }, [movieId]);
 
   // Single back press: when fullscreen exits, navigate back immediately
   useEffect(() => {
