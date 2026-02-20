@@ -1,33 +1,21 @@
 
 
-## Fix Lamp Position and Add Smooth Fade-Out Transition
+## Fix React forwardRef Warnings
 
-### Issues
-1. **Lamp is centered in the middle of the entire logo** (`left: calc(50% - 9px)`) instead of being positioned over the "I" (2nd letter)
-2. **Abrupt switch** when React takes over -- the loader disappears instantly with no transition
+Two non-blocking console warnings need to be resolved for a cleaner production console.
 
 ### Changes
 
-**File: `index.html`**
+**1. `src/components/ui/sheet.tsx`**
+- Update the `SheetPortal` usage. The Radix UI `DialogPortal` component no longer accepts a `ref` in newer versions. We'll remove the intermediate variable and use `SheetPrimitive.Portal` directly (which is already what's happening, but we need to ensure no ref is being forwarded to it).
 
-**Fix lamp position over "I":**
-- Remove the static `left: calc(50% - 9px)` from the `.il-lamp` CSS
-- Add a small inline `<script>` right after the loader HTML that dynamically calculates the "I" letter's center position and sets the lamp's `left` value accordingly -- this is the same approach the React `LoadingSpinner` component uses
-- The script finds the 2nd `.il-letter` span, gets its bounding rect center relative to the `.il-logo` container, and positions the lamp SVG over it
+**2. `src/components/MobileBottomNav.tsx`**
+- The `SheetTrigger` wraps a plain `<button>` element via `asChild`. The warning occurs because the inner `<button>` is not wrapped with `forwardRef`. We'll convert the inline button into a proper `forwardRef` component, or simply use a `Button` component (already imported) which already supports ref forwarding.
 
-**Add fade-out transition:**
-- Add a CSS class `.il-fade-out` with `opacity: 0` and `transition: opacity 0.4s ease-out`
-- The `.il-wrap` element gets a base `transition: opacity 0.4s ease-out` so it can fade
+### Technical Details
 
-**File: `src/main.tsx`**
+- In `MobileBottomNav.tsx`, replace the raw `<button>` inside `<SheetTrigger asChild>` with the existing `<Button>` component (which uses `forwardRef` via Radix Slot). This will apply `variant="ghost"` and matching styles.
+- In `sheet.tsx`, the `SheetPortal` alias currently just re-exports `SheetPrimitive.Portal`. Since newer Radix versions may not support ref on Portal, we'll keep the alias as-is (it's already not using `forwardRef`) -- the real fix is ensuring no parent passes a ref to it. We'll verify and clean up any stale ref usage.
 
-**Trigger fade-out before React renders:**
-- Before calling `createRoot().render()`, check if the `.il-wrap` loader element exists inside `#root`
-- If it exists, add the `.il-fade-out` class to trigger the CSS transition
-- Wait for the transition to complete (400ms) using a `setTimeout`, then proceed with React rendering
-- This ensures the loader smoothly fades out before React replaces the DOM content
-
-### Result
-- Lamp will be correctly positioned directly above the "I" letter, matching the in-app `LoadingSpinner` and `CineverseLogo` components
-- When React finishes loading, the initial loader will smoothly fade out over 0.4 seconds before the app appears -- no abrupt switch
+These are minimal, safe changes with zero impact on functionality or appearance.
 
