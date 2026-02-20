@@ -95,6 +95,7 @@ const App = () => (
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/" element={<Index />} />
                   <Route path="/movie/:id" element={<MovieDetails />} />
+                  <Route path="/browse" element={<Browse />} />
                   <Route path="/browse/:filter" element={<Browse />} />
                   <Route path="/search" element={<SearchPage />} />
                   <Route path="/welcome" element={<ProtectedRoute><Welcome /></ProtectedRoute>} />
