@@ -4,7 +4,7 @@ import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { MovieCard } from '@/components/MovieCard';
 import { MovieQuickPreview } from '@/components/MovieQuickPreview';
-import { LoginModal } from '@/components/LoginModal';
+
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { FadeIn } from '@/components/FadeIn';
@@ -34,7 +34,7 @@ const Browse = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { language } = useLanguage();
-  const [showLoginModal, setShowLoginModal] = useState(false);
+  
   const [previewMovie, setPreviewMovie] = useState<Movie | null>(null);
 
   // Determine which category to query based on the filter
@@ -80,7 +80,7 @@ const Browse = () => {
 
   const handleMovieClick = (movie: Movie) => {
     if (!user) {
-      setShowLoginModal(true);
+      navigate('/auth');
     } else {
       setPreviewMovie(movie);
     }
@@ -137,7 +137,7 @@ const Browse = () => {
       </div>
 
       <MobileBottomNav />
-      <LoginModal open={showLoginModal} onOpenChange={setShowLoginModal} />
+      
       <MovieQuickPreview
         movie={previewMovie}
         open={!!previewMovie}

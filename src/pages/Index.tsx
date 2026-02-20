@@ -6,7 +6,7 @@ import { Navbar } from '@/components/Navbar';
 import { MovieRow } from '@/components/MovieRow';
 import { MovieCard } from '@/components/MovieCard';
 import { ContinueWatchingCard } from '@/components/ContinueWatchingCard';
-import { LoginRequiredModal } from '@/components/LoginRequiredModal';
+
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { MovieQuickPreview } from '@/components/MovieQuickPreview';
 import { SkeletonRow } from '@/components/SkeletonCard';
@@ -43,7 +43,7 @@ const Index = () => {
   const { data: trendingMovies } = useTrendingMovies();
   const { data: recommendations } = useRecommendations();
   const removeFromHistory = useRemoveFromHistory();
-  const [showLoginModal, setShowLoginModal] = useState(false);
+  
   const [previewMovie, setPreviewMovie] = useState<Movie | null>(null);
   const { searchQuery, selectedCategory, selectedYear } = useFilter();
   const continueWatchingRef = useRef<HTMLDivElement>(null);
@@ -106,7 +106,7 @@ const Index = () => {
 
   const handleMovieClick = (movie: Movie) => {
     if (!user) {
-      setShowLoginModal(true);
+      navigate('/auth');
     } else {
       setPreviewMovie(movie);
     }
@@ -114,7 +114,7 @@ const Index = () => {
 
   const handlePlay = (movie: Movie) => {
     if (!user) {
-      setShowLoginModal(true);
+      navigate('/auth');
     } else {
       navigate(`/movie/${movie.id}`);
     }
@@ -122,7 +122,7 @@ const Index = () => {
 
   const handleMoreInfo = (movie: Movie) => {
     if (!user) {
-      setShowLoginModal(true);
+      navigate('/auth');
     } else {
       navigate(`/movie/${movie.id}`);
     }
@@ -329,7 +329,7 @@ const Index = () => {
 
 
       <MobileBottomNav />
-      <LoginRequiredModal open={showLoginModal} onOpenChange={setShowLoginModal} />
+      
       <MovieQuickPreview 
         movie={previewMovie} 
         open={!!previewMovie} 
