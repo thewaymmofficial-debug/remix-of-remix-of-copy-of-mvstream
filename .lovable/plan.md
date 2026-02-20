@@ -1,31 +1,48 @@
 
 
-## Two Fixes: Persistent Continue Watching + Smart Back Navigation
+## Add "Recently Watched" Section and Pagination to Browse Pages
 
-### Issue 1: Continue Watching Should Show Only the Last 1 Video (Persistent)
+### Overview
+Add a "Recently Watched" row showing the last 5 watched items at the top of the Browse page (for both `/browse/movie` and `/browse/series`), and paginate the main movie/series grid with responsive page sizes (20 on mobile, 30 on desktop) with Previous/Next buttons.
 
-Currently the "Continue Watching" row fetches up to 10 in-progress videos and can disappear when you re-enter from watching. The fix:
+### Changes
 
-- Change `useContinueWatching` to `.limit(1)` -- only fetch the single most recently watched in-progress video
-- This makes it persistent: even after tapping "Continue Watching" and coming back, that same video stays visible (as long as it's not 95%+ completed)
-- The card will show the timestamp badge and progress bar as before, with the resume button taking the user directly to the saved position
+**1. New hook: `useRecentlyWatched` in `src/hooks/useWatchHistory.tsx`**
+- Add a new exported hook that fetches the last 5 watch history entries filtered by content type (`movie` or `series`)
+- Joins with `movies` table to get full movie data
+- Distinct from "Continue Watching" -- this shows any recently watched content regardless of progress
 
-### Issue 2: Back Button on Movie/Series Details Should Return to Browse Page
+**2. Update `src/pages/Browse.tsx`**
+- Import `useRecentlyWatched` and `useIsMobile`
+- Add pagination state (`page`) with items per page: 20 on mobile, 30 on desktop
+- Slice the `movies` array based on current page
+- Show a "Recently Watched" horizontal row (last 5 items) at the top of the page, only when filter is `movie` or `series` and user is logged in
+- Add Previous/Next pagination buttons below the grid
+- Show page indicator (e.g., "Page 1 of 5")
 
-Currently the back arrow on `MovieDetails.tsx` always navigates to `/` (homepage). The fix:
-
-- Change `navigate('/')` to `navigate(-1)` so the back button goes to the previous page in browser history
-- This means if you entered from `/browse/series`, you go back to `/browse/series`; if from `/browse/movie`, back to `/browse/movie`; if from homepage, back to homepage
-- The fallback (if there's no history) will be `/` (homepage)
+**3. Recently Watched row UI**
+- Horizontal scrollable row of 5 `MovieCard` components
+- Section title: "Recently Watched" with a small clock icon
+- Only visible when the user has watch history for that content type
+- Clicking a card opens the movie quick preview (same as existing behavior)
 
 ### Technical Details
 
-**File: `src/hooks/useWatchHistory.tsx`**
-- In `useContinueWatching`, change `.limit(10)` to `.limit(1)` so only the last played video appears
+**`src/hooks/useWatchHistory.tsx`** -- add new hook:
+```typescript
+export function useRecentlyWatched(contentType: 'movie' | 'series', limit = 5) {
+  // Query watch_history joined with movies, filtered by content_type
+  // Order by last_watched_at DESC, limit to 5
+}
+```
 
-**File: `src/pages/MovieDetails.tsx`**
-- Change the back button from `navigate('/')` to `navigate(-1)` with a fallback to `'/'` if history length is <= 1
-
-**File: `src/pages/Index.tsx`**
-- Since only 1 item shows, remove the left/right scroll buttons from the Continue Watching section (they're unnecessary for a single card)
+**`src/pages/Browse.tsx`** -- add pagination + recently watched:
+- `const isMobile = useIsMobile()` to determine page size
+- `const pageSize = isMobile ? 20 : 30`
+- `const [page, setPage] = useState(1)` for current page
+- Reset page to 1 when filter changes
+- Compute `totalPages = Math.ceil(movies.length / pageSize)`
+- Slice movies: `movies.slice((page - 1) * pageSize, page * pageSize)`
+- Render Previous/Next buttons at the bottom with disabled states at boundaries
+- Render "Recently Watched" section above the grid when `activeFilter` is `movie` or `series`
 
