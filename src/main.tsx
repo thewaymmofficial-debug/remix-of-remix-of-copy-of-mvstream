@@ -17,7 +17,10 @@ const renderApp = () => {
 
 if (loader) {
   loader.classList.add("il-fade-out");
-  setTimeout(renderApp, 400);
+  setTimeout(() => {
+    loader.remove();
+    renderApp();
+  }, 700);
 } else {
   renderApp();
 }
