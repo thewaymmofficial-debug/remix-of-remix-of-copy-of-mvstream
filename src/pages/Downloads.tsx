@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, FileText, Trash2, Sun, Moon, AlertCircle, RotateCcw, Pause, Play } from 'lucide-react';
+import { ArrowLeft, FileText, Trash2, Sun, Moon, AlertCircle, RotateCcw, Pause, Play, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useDownloadManager } from '@/contexts/DownloadContext';
@@ -146,6 +146,18 @@ export default function Downloads() {
 
                 {/* Action buttons */}
                 <div className="flex flex-col gap-1 flex-shrink-0">
+                  {/* Open with external player (completed downloads) */}
+                  {dl.status === 'complete' && dl.url && (
+                    <a
+                      href={dl.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
+                      title="Open with external player"
+                    >
+                      <ExternalLink className="w-4 h-4 text-primary" />
+                    </a>
+                  )}
                   {/* Pause / Resume */}
                   {dl.status === 'downloading' && (
                     <button
