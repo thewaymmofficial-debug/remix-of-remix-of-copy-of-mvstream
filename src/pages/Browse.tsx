@@ -1,17 +1,18 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, RefreshCw } from 'lucide-react';
+import { ArrowLeft, RefreshCw, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { MovieCard } from '@/components/MovieCard';
 import { MovieQuickPreview } from '@/components/MovieQuickPreview';
-
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { FadeIn } from '@/components/FadeIn';
 import { useMovies, useFeaturedMovies } from '@/hooks/useMovies';
 import { useTrendingMovies } from '@/hooks/useTrending';
+import { useRecentlyWatched } from '@/hooks/useWatchHistory';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 import type { Movie } from '@/types/database';
 
 const filterConfig: Record<string, { titleEn: string; titleMm: string; emoji: string }> = {
@@ -37,8 +38,20 @@ const Browse = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { language } = useLanguage();
-  
+  const isMobile = useIsMobile();
+
   const [previewMovie, setPreviewMovie] = useState<Movie | null>(null);
+  const [page, setPage] = useState(1);
+
+  // Reset page when filter changes
+  useEffect(() => {
+    setPage(1);
+  }, [activeFilter]);
+
+  const pageSize = isMobile ? 20 : 30;
+
+  const recentlyWatchedType = activeFilter === 'movie' || activeFilter === 'series' ? activeFilter : undefined;
+  const { data: recentlyWatched } = useRecentlyWatched(recentlyWatchedType, 5);
 
   const categoryToQuery = useMemo(() => {
     if (!activeFilter) return undefined;
@@ -80,6 +93,10 @@ const Browse = () => {
     ? `${config.emoji} ${language === 'mm' ? config.titleMm : config.titleEn}`
     : activeFilter || 'Browse';
 
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(movies.length / pageSize));
+  const paginatedMovies = movies.slice((page - 1) * pageSize, page * pageSize);
+
   const handleMovieClick = (movie: Movie) => {
     if (!user) {
       navigate(`/auth?returnUrl=${encodeURIComponent(`/movie/${movie.id}`)}`);
@@ -105,6 +122,29 @@ const Browse = () => {
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">{title}</h1>
         </div>
 
+        {/* Recently Watched Section */}
+        {user && recentlyWatched && recentlyWatched.length > 0 && (
+          <FadeIn>
+            <div className="mb-8">
+              <div className="flex items-center gap-2 mb-3">
+                <Clock className="w-4 h-4 text-muted-foreground" />
+                <h2 className="text-lg font-semibold text-foreground">
+                  {language === 'mm' ? 'မကြာသေးမီကကြည့်ခဲ့သည်' : 'Recently Watched'}
+                </h2>
+              </div>
+              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                {recentlyWatched.map((entry) => (
+                  <MovieCard
+                    key={entry.id}
+                    movie={entry.movie}
+                    onClick={() => handleMovieClick(entry.movie)}
+                  />
+                ))}
+              </div>
+            </div>
+          </FadeIn>
+        )}
+
         {/* Content */}
         {isLoading ? (
           <LoadingSpinner message="Loading movies..." />
@@ -126,7 +166,7 @@ const Browse = () => {
         ) : (
           <FadeIn>
             <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
-              {movies.map((movie) => (
+              {paginatedMovies.map((movie) => (
                 <MovieCard
                   key={movie.id}
                   movie={movie}
@@ -134,6 +174,31 @@ const Browse = () => {
                 />
               ))}
             </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-4 mt-8">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-card border border-border hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <span className="text-sm font-medium">Prev</span>
+                </button>
+                <span className="text-sm text-muted-foreground">
+                  Page {page} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-card border border-border hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <span className="text-sm font-medium">Next</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </FadeIn>
         )}
       </div>
