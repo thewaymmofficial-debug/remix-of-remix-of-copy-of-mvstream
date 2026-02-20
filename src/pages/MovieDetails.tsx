@@ -21,7 +21,7 @@ import { LoginRequiredModal } from '@/components/LoginRequiredModal';
 import { CastSection } from '@/components/CastSection';
 import { useAuth } from '@/hooks/useAuth';
 import { useMovie, useIsInWatchlist, useAddToWatchlist, useRemoveFromWatchlist } from '@/hooks/useMovies';
-import { useUpdateProgress } from '@/hooks/useWatchHistory';
+
 import { useMovieViews, useIncrementView } from '@/hooks/useMovieViews';
 import { StarRating } from '@/components/StarRating';
 import { useToast } from '@/hooks/use-toast';
@@ -37,7 +37,7 @@ export default function MovieDetails() {
   const { data: isInWatchlist, isLoading: watchlistLoading } = useIsInWatchlist(id || '');
   const addToWatchlist = useAddToWatchlist();
   const removeFromWatchlist = useRemoveFromWatchlist();
-  const updateProgress = useUpdateProgress();
+  
   const { data: viewCount } = useMovieViews(id || '');
   const incrementView = useIncrementView();
   const [showPremiumModal, setShowPremiumModal] = useState(false);
@@ -49,14 +49,10 @@ export default function MovieDetails() {
   const { toast } = useToast();
   const { t } = useLanguage();
 
-  // Track view when page loads
+  // Track view when page loads (only increment view count, don't touch watch progress)
   useEffect(() => {
     if (id && user) {
-      updateProgress.mutate({
-        movieId: id,
-        progressSeconds: 0,
-        durationSeconds: undefined,
-      });
+      incrementView.mutate(id);
     }
   }, [id, user]);
 

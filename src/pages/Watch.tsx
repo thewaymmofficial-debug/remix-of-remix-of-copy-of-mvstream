@@ -65,6 +65,8 @@ export default function Watch() {
   const rawUrl = searchParams.get('url') || '';
   const title = searchParams.get('title') || 'Video';
   const movieId = searchParams.get('movieId') || '';
+  const startTime = parseFloat(searchParams.get('t') || '0');
+  const seekedRef = useRef(false);
   const unmountingRef = useRef(false);
   const updateProgress = useUpdateProgress();
   const lastSaveRef = useRef(0);
@@ -144,6 +146,11 @@ export default function Watch() {
     let cancelled = false;
 
     const tryPlay = async (v: HTMLVideoElement) => {
+      // Seek to saved timestamp if provided
+      if (startTime > 0 && !seekedRef.current) {
+        seekedRef.current = true;
+        v.currentTime = startTime;
+      }
       v.muted = false;
       try {
         await v.play();
