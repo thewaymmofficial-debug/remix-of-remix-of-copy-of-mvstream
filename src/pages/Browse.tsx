@@ -179,7 +179,7 @@ const Browse = () => {
             {totalPages > 1 && (
               <div className="flex items-center justify-center gap-4 mt-8">
                 <button
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  onClick={() => { setPage(p => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                   disabled={page === 1}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-card border border-border hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
@@ -190,7 +190,7 @@ const Browse = () => {
                   Page {page} of {totalPages}
                 </span>
                 <button
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  onClick={() => { setPage(p => Math.min(totalPages, p + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                   disabled={page === totalPages}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-card border border-border hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
