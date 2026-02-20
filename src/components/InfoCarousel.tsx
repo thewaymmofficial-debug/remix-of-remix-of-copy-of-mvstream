@@ -51,6 +51,7 @@ export function InfoCarousel() {
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
+    touchEndX.current = e.touches[0].clientX;
     isSwiping.current = false;
   };
 
@@ -63,6 +64,7 @@ export function InfoCarousel() {
   };
 
   const handleTouchEnd = () => {
+    if (!isSwiping.current) return;
     const diff = touchStartX.current - touchEndX.current;
     const minSwipe = 50;
     if (Math.abs(diff) > minSwipe) {
