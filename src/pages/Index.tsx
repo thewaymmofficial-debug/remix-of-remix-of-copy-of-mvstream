@@ -215,7 +215,16 @@ const Index = () => {
                       key={item.id}
                       movie={item.movie}
                       progressPercent={item.progress_percent}
-                      onResume={() => navigate(`/movie/${item.movie_id}`)}
+                      progressSeconds={item.progress}
+                      onResume={(startAt) => {
+                        const movie = item.movie;
+                        const streamUrl = movie.stream_url;
+                        if (streamUrl) {
+                          navigate(`/watch?url=${encodeURIComponent(streamUrl)}&title=${encodeURIComponent(movie.title)}&movieId=${encodeURIComponent(item.movie_id)}&t=${Math.floor(startAt)}`);
+                        } else {
+                          navigate(`/movie/${item.movie_id}`);
+                        }
+                      }}
                       onRemove={() => removeFromHistory.mutate(item.id)}
                     />
                   ))}

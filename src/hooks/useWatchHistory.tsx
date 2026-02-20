@@ -99,21 +99,43 @@ export function useUpdateProgress() {
     }) => {
       if (!user) throw new Error('Must be logged in');
 
-      const { error } = await supabase
+      // Check if entry exists
+      let query = supabase
         .from('watch_history')
-        .upsert({
-          user_id: user.id,
-          movie_id: movieId,
-          episode_id: episodeId,
-          progress: progressSeconds,
-          duration: durationSeconds || 0,
-          last_watched_at: new Date().toISOString(),
-        } as any);
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('movie_id', movieId);
+      if (episodeId) {
+        query = query.eq('episode_id', episodeId);
+      } else {
+        query = query.is('episode_id', null);
+      }
+      const { data: existing } = await query.maybeSingle();
 
-      if (error) throw error;
+      if (existing) {
+        const { error } = await supabase
+          .from('watch_history')
+          .update({
+            progress: progressSeconds,
+            duration: durationSeconds || 0,
+            last_watched_at: new Date().toISOString(),
+          })
+          .eq('id', existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('watch_history')
+          .insert({
+            user_id: user.id,
+            movie_id: movieId,
+            episode_id: episodeId,
+            progress: progressSeconds,
+            duration: durationSeconds || 0,
+            last_watched_at: new Date().toISOString(),
+          } as any);
+        if (error) throw error;
+      }
 
-      // Increment view count
-      await supabase.rpc('increment_view_count', { _movie_id: movieId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['watch-history'] });
