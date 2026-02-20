@@ -232,6 +232,16 @@ const Index = () => {
               />
             )}
 
+            {/* My Watchlist Row */}
+            {user && watchlistMovies.length > 0 && (
+              <MovieRow
+                title="My Watchlist"
+                movies={watchlistMovies}
+                onMovieClick={handleMovieClick}
+                seeAllPath="/watchlist"
+              />
+            )}
+
             {/* Personalized Recommendations */}
             {user && recommendations && recommendations.length > 0 && (
               <section className="mb-10">
@@ -247,24 +257,6 @@ const Index = () => {
                       key={rec.movie.id}
                       movie={rec.movie}
                       onClick={() => handleMovieClick(rec.movie)}
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* My Watchlist Row */}
-            {user && watchlistMovies.length > 0 && (
-              <section className="mb-10">
-                <div className="flex items-center justify-between mb-5 px-4 md:px-8">
-                  <h2 className="text-xl md:text-2xl font-bold text-foreground tracking-tight">My Watchlist</h2>
-                </div>
-                <div className="flex gap-3 overflow-x-auto pb-4 px-4 md:px-8 scrollbar-hide">
-                  {watchlistMovies.map((movie) => (
-                    <MovieCard
-                      key={movie.id}
-                      movie={movie}
-                      onClick={() => handleMovieClick(movie)}
                     />
                   ))}
                 </div>
