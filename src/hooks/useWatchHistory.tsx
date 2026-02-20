@@ -202,6 +202,39 @@ export function useClearHistory() {
   });
 }
 
+// Fetch recently watched movies/series (last 5, any progress)
+export function useRecentlyWatched(contentType?: 'movie' | 'series', limit = 5) {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['recently-watched', user?.id, contentType, limit],
+    queryFn: async () => {
+      if (!user) return [];
+
+      const { data, error } = await supabase
+        .from('watch_history')
+        .select(`
+          *,
+          movie:movies(*)
+        `)
+        .eq('user_id', user.id)
+        .order('last_watched_at', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+
+      const entries = (data || []) as unknown as WatchHistoryEntry[];
+      if (!contentType) return entries;
+
+      return entries.filter(e => {
+        if (contentType === 'movie') return e.movie?.content_type === 'movie' || !e.movie?.content_type;
+        return e.movie?.content_type === contentType;
+      }).slice(0, limit);
+    },
+    enabled: !!user && !!contentType,
+  });
+}
+
 // Remove a single item from history
 export function useRemoveFromHistory() {
   const queryClient = useQueryClient();
