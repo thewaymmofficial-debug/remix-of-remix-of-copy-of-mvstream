@@ -47,8 +47,9 @@
       .dark .il-msg{color:hsl(0 0% 60%)}
       .il-progress{width:clamp(160px,40vw,280px);height:3px;background:hsl(30 10% 15% / 0.12);border-radius:2px;overflow:hidden;margin-top:-0.5rem}
       .dark .il-progress{background:hsl(0 0% 96% / 0.1)}
-      .il-progress-bar{height:100%;width:0;background:linear-gradient(90deg,hsl(45 93% 47%),hsl(45 93% 57%));border-radius:2px;animation:il-fill 3s cubic-bezier(0.4,0.0,0.2,1) forwards}
+      .il-progress-bar{height:100%;width:0;background:linear-gradient(90deg,hsl(45 93% 47%),hsl(45 93% 57%));border-radius:2px;animation:il-fill 3s cubic-bezier(0.4,0.0,0.2,1) forwards;box-shadow:0 0 6px hsl(45 93% 47% / 0.6),0 0 14px hsl(45 93% 47% / 0.3);filter:brightness(1);animation:il-fill 3s cubic-bezier(0.4,0,0.2,1) forwards,il-bar-glow 2s ease-in-out infinite}
       @keyframes il-fill{0%{width:0}40%{width:55%}70%{width:78%}90%{width:88%}100%{width:95%}}
+      @keyframes il-bar-glow{0%,100%{box-shadow:0 0 4px hsl(45 93% 47% / 0.5),0 0 10px hsl(45 93% 47% / 0.2);filter:brightness(1)}50%{box-shadow:0 0 8px hsl(45 93% 47% / 0.8),0 0 20px hsl(45 93% 47% / 0.4);filter:brightness(1.15)}}
       @keyframes il-loop{0%{opacity:0;transform:translateY(12px)}30%{opacity:1;transform:translateY(0)}70%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-8px)}}
       @keyframes il-squish{0%,25%{transform:scaleY(1) scaleX(1)}35%{transform:scaleY(0.5) scaleX(1.2)}45%{transform:scaleY(1.15) scaleX(0.9)}55%{transform:scaleY(0.95) scaleX(1.02)}65%,100%{transform:scaleY(1) scaleX(1)}}
       @keyframes il-lamp{0%,20%{opacity:0;transform:translateY(-20px)}35%{opacity:1;transform:translateY(2px)}42%{transform:translateY(-3px)}50%{opacity:1;transform:translateY(0)}70%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-20px)}}
