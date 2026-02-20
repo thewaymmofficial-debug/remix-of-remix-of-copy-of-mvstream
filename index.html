@@ -39,7 +39,9 @@
       .il-letter:nth-child(7){animation-delay:480ms}
       .il-letter:nth-child(8){animation-delay:560ms}
       .il-letter:nth-child(9){animation-delay:640ms}
-      .il-lamp{position:absolute;top:-0.7em;left:calc(50% - 9px);opacity:0;animation:il-lamp 2s ease-in-out infinite;pointer-events:none}
+      .il-lamp{position:absolute;top:-0.7em;opacity:0;animation:il-lamp 2s ease-in-out infinite;pointer-events:none}
+      .il-wrap{transition:opacity 0.4s ease-out}
+      .il-fade-out{opacity:0!important}
       .il-lamp svg{color:hsl(45 93% 47%);filter:drop-shadow(0 0 6px hsl(45 93% 47% / 0.7)) drop-shadow(0 0 14px hsl(45 93% 47% / 0.4))}
       .il-msg{font-size:0.875rem;color:hsl(30 10% 40%);animation:il-pulse 2s ease-in-out infinite}
       .dark .il-msg{color:hsl(0 0% 60%)}
@@ -72,7 +74,10 @@
         }
       } catch(e) {}
     </script>
-    <div id="root"><div class="il-wrap"><div class="il-logo"><span class="il-letter">C</span><span class="il-letter">I</span><span class="il-letter">N</span><span class="il-letter">E</span><span class="il-letter">V</span><span class="il-letter">E</span><span class="il-letter">R</span><span class="il-letter">S</span><span class="il-letter">E</span><span class="il-lamp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2 L8 10 L16 10 Z" fill="currentColor"/><rect x="10" y="10" width="4" height="2" rx="0.5" fill="currentColor"/><path d="M6 14 L12 11 L18 14" stroke="currentColor" stroke-width="0.5" fill="hsla(45,93%,47%,0.3)"/></svg></span></div><p class="il-msg">Loading...</p></div></div>
+    <div id="root"><div class="il-wrap"><div class="il-logo"><span class="il-letter">C</span><span class="il-letter" id="il-i">I</span><span class="il-letter">N</span><span class="il-letter">E</span><span class="il-letter">V</span><span class="il-letter">E</span><span class="il-letter">R</span><span class="il-letter">S</span><span class="il-letter">E</span><span class="il-lamp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2 L8 10 L16 10 Z" fill="currentColor"/><rect x="10" y="10" width="4" height="2" rx="0.5" fill="currentColor"/><path d="M6 14 L12 11 L18 14" stroke="currentColor" stroke-width="0.5" fill="hsla(45,93%,47%,0.3)"/></svg></span></div><p class="il-msg">Loading...</p></div></div>
+    <script>
+      (function(){var i=document.getElementById('il-i'),l=document.querySelector('.il-lamp'),c=document.querySelector('.il-logo');if(i&&l&&c){var cr=c.getBoundingClientRect(),ir=i.getBoundingClientRect();l.style.left=(ir.left+ir.width/2-cr.left-9)+'px'}})();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
