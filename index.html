@@ -25,7 +25,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-      .il-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;width:100vw;background:hsl(40 20% 94%);gap:1.5rem}
+      .il-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;width:100vw;position:fixed;top:0;left:0;z-index:9999;background:hsl(40 20% 94%);gap:1.5rem}
       .dark .il-wrap{background:hsl(0 0% 4%)}
       .il-logo{position:relative;display:flex;align-items:flex-end;height:2.5rem;overflow:visible}
       .il-letter{display:inline-block;font-size:1.5rem;font-weight:700;letter-spacing:0.1em;color:hsl(30 10% 15%);opacity:0;animation:il-loop 2s ease-in-out infinite}
@@ -40,8 +40,8 @@
       .il-letter:nth-child(8){animation-delay:560ms}
       .il-letter:nth-child(9){animation-delay:640ms}
       .il-lamp{position:absolute;top:-0.7em;opacity:0;animation:il-lamp 2s ease-in-out infinite;pointer-events:none}
-      .il-wrap{transition:opacity 0.4s ease-out,transform 0.4s ease-out,filter 0.4s ease-out}
-      .il-fade-out{opacity:0!important;transform:scale(1.08)!important;filter:blur(6px)!important}
+      .il-wrap{transition:opacity 0.7s ease-out,transform 0.7s ease-out,filter 0.7s ease-out}
+      .il-fade-out{opacity:0!important;transform:scale(1.08)!important;filter:blur(6px)!important;pointer-events:none!important}
       .il-lamp svg{color:hsl(45 93% 47%);filter:drop-shadow(0 0 6px hsl(45 93% 47% / 0.7)) drop-shadow(0 0 14px hsl(45 93% 47% / 0.4))}
       .il-msg{font-size:0.875rem;color:hsl(30 10% 40%);animation:il-pulse 2s ease-in-out infinite}
       .dark .il-msg{color:hsl(0 0% 60%)}
