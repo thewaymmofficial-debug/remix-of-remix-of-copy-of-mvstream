@@ -4,12 +4,14 @@ import { ArrowLeft, RefreshCw, ChevronLeft, ChevronRight, Clock } from 'lucide-r
 import { Navbar } from '@/components/Navbar';
 import { MovieCard } from '@/components/MovieCard';
 import { MovieQuickPreview } from '@/components/MovieQuickPreview';
+import { MovieRow } from '@/components/MovieRow';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { FadeIn } from '@/components/FadeIn';
 import { useMovies, useFeaturedMovies } from '@/hooks/useMovies';
 import { useTrendingMovies } from '@/hooks/useTrending';
 import { useRecentlyWatched } from '@/hooks/useWatchHistory';
+import { useCategories } from '@/hooks/useCategories';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -43,16 +45,19 @@ const Browse = () => {
   const [previewMovie, setPreviewMovie] = useState<Movie | null>(null);
   const [page, setPage] = useState(1);
 
-  // Reset page when filter changes
   useEffect(() => {
     setPage(1);
   }, [activeFilter]);
 
   const pageSize = isMobile ? 20 : 30;
 
-  const recentlyWatchedType = activeFilter === 'movie' || activeFilter === 'series' ? activeFilter : undefined;
+  // Whether to show category-row layout
+  const isCategoryView = activeFilter === 'movie' || activeFilter === 'series';
+
+  const recentlyWatchedType = isCategoryView ? activeFilter : undefined;
   const { data: recentlyWatched } = useRecentlyWatched(recentlyWatchedType, 5);
 
+  // Fetch all movies for category view or specific category
   const categoryToQuery = useMemo(() => {
     if (!activeFilter) return undefined;
     if (['trending', 'trending-series', 'featured', 'movie', 'series'].includes(activeFilter)) {
@@ -64,9 +69,32 @@ const Browse = () => {
   const { data: allMovies, isLoading: moviesLoading, refetch } = useMovies(categoryToQuery);
   const { data: trendingMovies, isLoading: trendingLoading } = useTrendingMovies(50);
   const { data: featuredMovies, isLoading: featuredLoading } = useFeaturedMovies();
+  const { data: categories } = useCategories();
 
+  // For category view: group movies by category
+  const categoryGroups = useMemo(() => {
+    if (!isCategoryView || !allMovies || !categories) return [];
+
+    const contentType = activeFilter as 'movie' | 'series';
+    const filtered = allMovies.filter(m =>
+      contentType === 'movie'
+        ? m.content_type === 'movie' || !m.content_type
+        : m.content_type === 'series'
+    );
+
+    return categories
+      .map(cat => {
+        const moviesInCat = filtered.filter(m =>
+          m.category && m.category.includes(cat.name)
+        );
+        return { name: cat.name, movies: moviesInCat, count: moviesInCat.length };
+      })
+      .filter(g => g.movies.length > 0);
+  }, [isCategoryView, allMovies, categories, activeFilter]);
+
+  // For flat grid views (trending, featured, specific category, etc.)
   const movies = useMemo(() => {
-    if (!activeFilter) return [];
+    if (!activeFilter || isCategoryView) return [];
 
     if (activeFilter === 'trending') {
       return (trendingMovies || []).filter(m => m.content_type !== 'series');
@@ -77,14 +105,8 @@ const Browse = () => {
     if (activeFilter === 'featured') {
       return featuredMovies || [];
     }
-    if (activeFilter === 'movie') {
-      return (allMovies || []).filter(m => m.content_type === 'movie' || !m.content_type);
-    }
-    if (activeFilter === 'series') {
-      return (allMovies || []).filter(m => m.content_type === 'series');
-    }
     return allMovies || [];
-  }, [activeFilter, allMovies, trendingMovies, featuredMovies]);
+  }, [activeFilter, isCategoryView, allMovies, trendingMovies, featuredMovies]);
 
   const isLoading = moviesLoading || (activeFilter === 'trending' || activeFilter === 'trending-series' ? trendingLoading : false) || (activeFilter === 'featured' ? featuredLoading : false);
 
@@ -93,7 +115,7 @@ const Browse = () => {
     ? `${config.emoji} ${language === 'mm' ? config.titleMm : config.titleEn}`
     : activeFilter || 'Browse';
 
-  // Pagination
+  // Pagination (only for flat grid)
   const totalPages = Math.max(1, Math.ceil(movies.length / pageSize));
   const paginatedMovies = movies.slice((page - 1) * pageSize, page * pageSize);
 
@@ -148,6 +170,38 @@ const Browse = () => {
         {/* Content */}
         {isLoading ? (
           <LoadingSpinner message="Loading movies..." />
+        ) : isCategoryView ? (
+          /* Category Row Layout for Movies / Series */
+          categoryGroups.length === 0 ? (
+            <FadeIn>
+              <div className="text-center py-20">
+                <p className="text-muted-foreground text-lg mb-4">
+                  No content available yet. Check back soon!
+                </p>
+                <button
+                  onClick={() => refetch()}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-muted hover:bg-muted/80 rounded-lg transition-colors"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Refresh
+                </button>
+              </div>
+            </FadeIn>
+          ) : (
+            <FadeIn>
+              <div className="-mx-4 md:-mx-8">
+                {categoryGroups.map((group) => (
+                  <MovieRow
+                    key={group.name}
+                    title={`${group.name} (${group.count})`}
+                    movies={group.movies.slice(0, 20)}
+                    onMovieClick={handleMovieClick}
+                    seeAllPath={`/browse?category=${encodeURIComponent(group.name)}`}
+                  />
+                ))}
+              </div>
+            </FadeIn>
+          )
         ) : movies.length === 0 ? (
           <FadeIn>
             <div className="text-center py-20">
