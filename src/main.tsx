@@ -3,8 +3,21 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
-createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+const rootEl = document.getElementById("root")!;
+const loader = rootEl.querySelector(".il-wrap") as HTMLElement | null;
+const root = createRoot(rootEl);
+
+const renderApp = () => {
+  root.render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
+};
+
+if (loader) {
+  loader.classList.add("il-fade-out");
+  setTimeout(renderApp, 400);
+} else {
+  renderApp();
+}
