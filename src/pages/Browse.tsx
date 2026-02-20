@@ -135,7 +135,7 @@ const Browse = () => {
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           <button
-            onClick={() => navigate('/')}
+            onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/')}
             className="p-2 rounded-full bg-card border border-border hover:bg-muted transition-colors"
             aria-label="Go back"
           >
