@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { User, Eye, EyeOff, Moon, Sun, AlertTriangle, Smartphone, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,8 @@ import type { UserDevice } from '@/hooks/useDevices';
 
 export default function Auth() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnUrl = searchParams.get('returnUrl');
   const { user, signIn, signUp, isLoading: authLoading } = useAuth();
   const { t } = useLanguage();
   const { theme, setTheme } = useTheme();
@@ -33,7 +35,7 @@ export default function Auth() {
 
   useEffect(() => {
     if (user && !authLoading && !showDeviceLimitModal && !isCheckingDevices) {
-      navigate('/welcome');
+      navigate(returnUrl || '/welcome');
     }
   }, [user, authLoading, navigate, showDeviceLimitModal, isCheckingDevices]);
 
@@ -152,7 +154,7 @@ export default function Auth() {
       setShowDeviceLimitModal(false);
       setBlockedUserId(null);
       toast.success('Welcome back!');
-      navigate('/welcome');
+      navigate(returnUrl || '/welcome');
     }
   };
 
@@ -207,7 +209,7 @@ export default function Auth() {
           }
           setIsCheckingDevices(false);
           toast.success('Welcome back!');
-          navigate('/welcome');
+          navigate(returnUrl || '/welcome');
         }
       }
     } catch {
