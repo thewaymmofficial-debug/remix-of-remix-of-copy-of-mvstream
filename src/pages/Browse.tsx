@@ -80,7 +80,7 @@ const Browse = () => {
 
   const handleMovieClick = (movie: Movie) => {
     if (!user) {
-      navigate('/auth');
+      navigate(`/auth?returnUrl=${encodeURIComponent(`/movie/${movie.id}`)}`);
     } else {
       setPreviewMovie(movie);
     }

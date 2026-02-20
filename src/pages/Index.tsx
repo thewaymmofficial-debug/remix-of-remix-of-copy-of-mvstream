@@ -106,7 +106,7 @@ const Index = () => {
 
   const handleMovieClick = (movie: Movie) => {
     if (!user) {
-      navigate('/auth');
+      navigate(`/auth?returnUrl=${encodeURIComponent(`/movie/${movie.id}`)}`);
     } else {
       setPreviewMovie(movie);
     }
@@ -114,7 +114,7 @@ const Index = () => {
 
   const handlePlay = (movie: Movie) => {
     if (!user) {
-      navigate('/auth');
+      navigate(`/auth?returnUrl=${encodeURIComponent(`/movie/${movie.id}`)}`);
     } else {
       navigate(`/movie/${movie.id}`);
     }
@@ -122,7 +122,7 @@ const Index = () => {
 
   const handleMoreInfo = (movie: Movie) => {
     if (!user) {
-      navigate('/auth');
+      navigate(`/auth?returnUrl=${encodeURIComponent(`/movie/${movie.id}`)}`);
     } else {
       navigate(`/movie/${movie.id}`);
     }
