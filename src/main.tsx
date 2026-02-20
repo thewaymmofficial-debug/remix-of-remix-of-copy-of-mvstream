@@ -16,11 +16,19 @@ const renderApp = () => {
 };
 
 if (loader) {
-  loader.classList.add("il-fade-out");
+  const bar = document.getElementById("il-bar");
+  if (bar) {
+    bar.style.animation = "none";
+    bar.style.width = "100%";
+    bar.style.transition = "width 0.3s ease-out";
+  }
   setTimeout(() => {
-    loader.remove();
-    renderApp();
-  }, 700);
+    loader.classList.add("il-fade-out");
+    setTimeout(() => {
+      loader.remove();
+      renderApp();
+    }, 700);
+  }, 350);
 } else {
   renderApp();
 }
