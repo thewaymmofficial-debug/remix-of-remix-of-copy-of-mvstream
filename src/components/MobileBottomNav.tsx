@@ -96,10 +96,11 @@ export function MobileBottomNav() {
           {user ? (
             <Sheet open={profileSheetOpen} onOpenChange={setProfileSheetOpen}>
               <SheetTrigger asChild>
-                <button
+                <Button
+                  variant="ghost"
                   onClick={() => handleTap('profile')}
                   className={cn(
-                    "flex flex-col items-center justify-center gap-0.5 py-2 px-1 flex-1 min-w-0 rounded-lg transition-all",
+                    "flex flex-col items-center justify-center gap-0.5 py-2 px-1 flex-1 min-w-0 rounded-lg transition-all h-auto",
                     (location.pathname === '/profile') 
                       ? "text-cineverse-red" 
                       : "text-cineverse-gray hover:text-foreground"
@@ -120,7 +121,7 @@ export function MobileBottomNav() {
                   )}>
                     Profile
                   </span>
-                </button>
+                </Button>
               </SheetTrigger>
               <SheetContent side="bottom" className="rounded-t-xl">
                 <SheetHeader className="text-left pb-4">
