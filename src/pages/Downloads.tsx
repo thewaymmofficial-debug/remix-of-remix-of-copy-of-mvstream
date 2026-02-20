@@ -149,18 +149,22 @@ export default function Downloads() {
                   {/* Open with external player (completed downloads) */}
                   {dl.status === 'complete' && dl.url && (
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         const videoUrl = dl.url;
-                        // Try intent:// scheme to open Android player chooser directly
-                        const intentUrl = `intent:${videoUrl}#Intent;type=video/*;end`;
-                        const link = document.createElement('a');
-                        link.href = intentUrl;
-                        link.click();
-                        
-                        // Fallback: if intent doesn't work (iOS/desktop), open URL directly
-                        setTimeout(() => {
-                          window.open(videoUrl, '_blank');
-                        }, 500);
+                        // Use Web Share API (works in Android WebView/APK)
+                        if (navigator.share) {
+                          try {
+                            await navigator.share({
+                              title: dl.title,
+                              url: videoUrl,
+                            });
+                            return;
+                          } catch (e) {
+                            // User cancelled or share failed, fall through
+                          }
+                        }
+                        // Fallback: open in new tab
+                        window.open(videoUrl, '_blank');
                       }}
                       className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
                       title="Open with external player"
