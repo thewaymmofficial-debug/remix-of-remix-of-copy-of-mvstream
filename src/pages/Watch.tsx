@@ -74,7 +74,7 @@ export default function Watch() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [bufferPercent, setBufferPercent] = useState(0);
+  
   const [muted, setMuted] = useState(false);
   const [showUnmute, setShowUnmute] = useState(false);
   const [showControls, setShowControls] = useState(true);
@@ -248,19 +248,8 @@ export default function Watch() {
 
     setupVideo();
 
-    const handleProgress = () => {
-      if (!video || !video.duration) return;
-      const len = video.buffered.length;
-      if (len > 0) {
-        const end = video.buffered.end(len - 1);
-        setBufferPercent(Math.round((end / video.duration) * 100));
-      }
-    };
-    video.addEventListener('progress', handleProgress);
-
     return () => {
       cancelled = true;
-      video.removeEventListener('progress', handleProgress);
       if (hls) hls.destroy();
     };
   }, [rawUrl, isWatchUrl, directUrl]);
@@ -289,12 +278,8 @@ export default function Watch() {
         </button>
       )}
 
-      {!loading && !error && bufferPercent > 0 && bufferPercent < 100 && (
-        <div className="absolute top-0 left-0 right-0 z-[60] h-[3px] bg-white/10">
-          <div className="h-full bg-primary transition-all duration-500 ease-out" style={{ width: `${bufferPercent}%` }} />
-          <span className="absolute right-2 top-1 text-[10px] text-white/60 font-mono">{bufferPercent}%</span>
-        </div>
-      )}
+
+
 
       {loading && (
         <div className="absolute inset-0 z-[55] bg-black flex items-center justify-center">
