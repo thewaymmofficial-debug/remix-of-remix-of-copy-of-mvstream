@@ -382,6 +382,7 @@ export type Database = {
           is_featured: boolean | null
           is_premium: boolean | null
           mega_url: string | null
+          mx_player_url: string | null
           poster_url: string | null
           rating_count: number | null
           resolution: string | null
@@ -406,6 +407,7 @@ export type Database = {
           is_featured?: boolean | null
           is_premium?: boolean | null
           mega_url?: string | null
+          mx_player_url?: string | null
           poster_url?: string | null
           rating_count?: number | null
           resolution?: string | null
@@ -430,6 +432,7 @@ export type Database = {
           is_featured?: boolean | null
           is_premium?: boolean | null
           mega_url?: string | null
+          mx_player_url?: string | null
           poster_url?: string | null
           rating_count?: number | null
           resolution?: string | null

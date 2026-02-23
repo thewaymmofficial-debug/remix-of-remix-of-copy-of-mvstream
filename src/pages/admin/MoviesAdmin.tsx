@@ -54,6 +54,7 @@ const defaultMovie: MovieInsert = {
   telegram_url: '',
   mega_url: '',
   download_url: '',
+  mx_player_url: '',
   is_premium: false,
   is_featured: false,
   content_type: 'movie',
@@ -111,6 +112,7 @@ export default function MoviesAdmin() {
       telegram_url: movie.telegram_url || '',
       mega_url: movie.mega_url || '',
       download_url: (movie as any).download_url || '',
+      mx_player_url: (movie as any).mx_player_url || '',
       is_premium: movie.is_premium,
       is_featured: movie.is_featured,
       content_type: movie.content_type || 'movie',
@@ -804,6 +806,19 @@ export default function MoviesAdmin() {
                     setFormData({ ...formData, download_url: e.target.value })
                   }
                   placeholder="https://download-link..."
+                  className="bg-muted"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="mx_player_url">MX Player URL</Label>
+                <Input
+                  id="mx_player_url"
+                  value={formData.mx_player_url || ''}
+                  onChange={(e) =>
+                    setFormData({ ...formData, mx_player_url: e.target.value })
+                  }
+                  placeholder="https://video-url-for-mx-player..."
                   className="bg-muted"
                 />
               </div>
