@@ -46,8 +46,8 @@ export function ServerDrawer({
 
   const handleMxPlayer = (url: string) => {
     try {
-      const urlObj = new URL(url);
-      const intentUri = `intent://${urlObj.host}${urlObj.pathname}${urlObj.search}#Intent;scheme=${urlObj.protocol.replace(':', '')};action=android.intent.action.VIEW;type=video/*;package=com.mxtech.videoplayer.ad;end`;
+      const title = movieInfo?.title || 'Video';
+      const intentUri = `intent:${url}#Intent;action=android.intent.action.VIEW;type=video/*;package=com.mxtech.videoplayer.ad;S.title=${encodeURIComponent(title)};end`;
       window.location.href = intentUri;
     } catch {
       // Fallback: open URL directly
