@@ -818,9 +818,10 @@ export default function MoviesAdmin() {
                   onChange={(e) =>
                     setFormData({ ...formData, mx_player_url: e.target.value })
                   }
-                  placeholder="https://video-url-for-mx-player..."
+                  placeholder="Direct video link (.mp4, .mkv, .m3u8)"
                   className="bg-muted"
                 />
+                <p className="text-xs text-muted-foreground">Must be a direct file URL, not a proxy page. MX Player cannot follow redirects or browser-based auth.</p>
               </div>
             </div>
 
