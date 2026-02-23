@@ -47,7 +47,9 @@ export function ServerDrawer({
   const handleMxPlayer = (url: string) => {
     try {
       const title = movieInfo?.title || 'Video';
-      const intentUri = `intent:${url}#Intent;action=android.intent.action.VIEW;type=video/*;package=com.mxtech.videoplayer.ad;S.title=${encodeURIComponent(title)};end`;
+      // Route through Supabase download-proxy to bypass ISP blocks
+      const proxyUrl = `https://icnfjixjohbxjxqbnnac.supabase.co/functions/v1/download-proxy?url=${encodeURIComponent(url)}&stream=1`;
+      const intentUri = `intent:${proxyUrl}#Intent;action=android.intent.action.VIEW;type=video/*;package=com.mxtech.videoplayer.ad;S.title=${encodeURIComponent(title)};end`;
       window.location.href = intentUri;
     } catch {
       // Fallback: open URL directly
