@@ -1,41 +1,38 @@
 
 
-## Add "MX Player" External Player Option
+## Fix MX Player "Can't play this link" Issue
 
-### Overview
-Add a new "MX Player" URL field to movies so admins can provide a direct video link. When users tap "MX Player" in the play drawer, it opens the video directly in MX Player via an Android intent URI.
+### Problem
+MX Player opens via the Android intent but shows "Can't play this link." The video URL (`https://tw.thewayofthedragg.workers.dev/watch/...`) is a Cloudflare Workers proxy that likely requires browser-specific headers (cookies, referer) or performs redirects that MX Player cannot follow. MX Player needs a **direct video file URL** that serves the raw video stream without web-based authentication.
 
-### Changes
+### Solution (Two Parts)
 
-#### 1. Database: Add `mx_player_url` column
-- Run a migration to add `mx_player_url TEXT` to the `movies` table.
+#### Part 1: Improve the Intent URI Format
+Update `handleMxPlayer` in `src/components/ServerDrawer.tsx` to use a cleaner intent format and pass the movie title as extra data so MX Player shows it:
 
-#### 2. Types: Update `Movie` and `MovieInsert`
-- In `src/types/database.ts`, add `mx_player_url: string | null` to `Movie` and `mx_player_url?: string | null` to `MovieInsert`.
-
-#### 3. Admin Panel: Add MX Player URL input
-- In `src/pages/admin/MoviesAdmin.tsx`, add a text input field for "MX Player URL" in the movie form (next to the existing stream/telegram/mega/download URL fields).
-- Add `mx_player_url: ''` to the `defaultMovie` object.
-
-#### 4. ServerDrawer: Add MX Player option
-- In `src/components/ServerDrawer.tsx`:
-  - Add `mxPlayerUrl?: string | null` prop.
-  - In the play servers list, add an "MX Player" entry when the URL is provided.
-  - When tapped, construct an Android intent URI: `intent://...#Intent;scheme=https;action=android.intent.action.VIEW;type=video/*;package=com.mxtech.videoplayer.ad;end` to open directly in MX Player.
-  - Falls back to opening the URL in browser if not on Android.
-
-#### 5. MovieDetails: Pass `mxPlayerUrl` to ServerDrawer
-- In `src/pages/MovieDetails.tsx`, pass `movie.mx_player_url` (or `(movie as any).mx_player_url`) to both play and download `ServerDrawer` instances.
-
-#### 6. SeasonEpisodeList (if applicable)
-- If episodes also use `ServerDrawer`, pass `mx_player_url` there too (check if `episodes` table needs the same column -- will add if the pattern already exists for other URL fields).
-
-### Technical Details
-
-The MX Player intent URI format:
 ```text
-intent://<host><path><query>#Intent;scheme=https;action=android.intent.action.VIEW;type=video/*;package=com.mxtech.videoplayer.ad;end
+intent://<full-url>#Intent;
+  action=android.intent.action.VIEW;
+  type=video/*;
+  package=com.mxtech.videoplayer.ad;
+  S.title=<movie-title>;
+end
 ```
 
-This targets MX Player specifically via its package name. If MX Player is not installed, Android will show a "not found" message or redirect to the Play Store.
+Also add a fallback to try MX Player Pro (`com.mxtech.videoplayer.pro`) package if the free version is not installed.
+
+#### Part 2: Admin Guidance on URL Requirements
+The MX Player URL field in the admin panel must contain a **direct video file link** (ending in .mp4, .mkv, .m3u8, etc.) that serves raw video bytes -- not a web proxy page. If the current Workers proxy requires browser headers, the admin should:
+- Use the Telegram direct file URL instead, or
+- Configure the Workers proxy to serve the file without authentication when accessed from external apps
+
+### Technical Changes
+
+**File: `src/components/ServerDrawer.tsx`**
+- Update `handleMxPlayer` to pass the full URL directly using `S.url` extra and the movie title via `S.title`
+- Pass `movieInfo` into the handler for the title
+- Add helper text in admin panel for the MX Player URL field explaining it must be a direct video link
+
+**File: `src/pages/admin/MoviesAdmin.tsx`**
+- Add placeholder/helper text to the MX Player URL input: "Direct video link (.mp4, .mkv, .m3u8) -- must be a direct file URL, not a proxy page"
 
