@@ -35,6 +35,7 @@ export interface Movie {
   telegram_url: string | null;
   mega_url: string | null;
   download_url: string | null;
+  mx_player_url: string | null;
   is_premium: boolean;
   is_featured: boolean;
   content_type: ContentType;
@@ -59,6 +60,7 @@ export interface MovieInsert {
   telegram_url?: string | null;
   mega_url?: string | null;
   download_url?: string | null;
+  mx_player_url?: string | null;
   is_premium?: boolean;
   is_featured?: boolean;
   content_type?: ContentType;

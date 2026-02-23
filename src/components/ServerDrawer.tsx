@@ -17,6 +17,7 @@ interface ServerDrawerProps {
   telegramUrl?: string | null;
   megaUrl?: string | null;
   downloadUrl?: string | null;
+  mxPlayerUrl?: string | null;
   type: 'play' | 'download';
   movieInfo?: {
     movieId: string;
@@ -35,12 +36,25 @@ export function ServerDrawer({
   telegramUrl,
   megaUrl,
   downloadUrl,
+  mxPlayerUrl,
   type,
   movieInfo,
 }: ServerDrawerProps) {
   const { t } = useLanguage();
   const { startDownload } = useDownloadManager();
   const navigate = useNavigate();
+
+  const handleMxPlayer = (url: string) => {
+    try {
+      const urlObj = new URL(url);
+      const intentUri = `intent://${urlObj.host}${urlObj.pathname}${urlObj.search}#Intent;scheme=${urlObj.protocol.replace(':', '')};action=android.intent.action.VIEW;type=video/*;package=com.mxtech.videoplayer.ad;end`;
+      window.location.href = intentUri;
+    } catch {
+      // Fallback: open URL directly
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+    onOpenChange(false);
+  };
 
   const handleOpen = (url: string, useInAppPlayer: boolean = false) => {
     // In-app download with progress tracking
@@ -75,6 +89,7 @@ export function ServerDrawer({
     : [
         // In play mode: show streaming sources
         ...(streamUrl ? [{ name: 'Main Server', url: streamUrl, icon: 'main' as const, inApp: true }] : []),
+        ...(mxPlayerUrl ? [{ name: 'MX Player', url: mxPlayerUrl, icon: 'mxplayer' as const, inApp: false }] : []),
         ...(downloadUrl ? [{ name: 'Direct Download', url: downloadUrl, icon: 'download' as const, inApp: false }] : []),
         ...(telegramUrl ? [{ name: 'Telegram', url: telegramUrl, icon: 'telegram' as const, inApp: false }] : []),
         ...(megaUrl ? [{ name: 'MEGA', url: megaUrl, icon: 'mega' as const, inApp: false }] : []),
@@ -97,7 +112,7 @@ export function ServerDrawer({
           {servers.map((server) => (
             <button
               key={server.name}
-              onClick={() => handleOpen(server.url, server.inApp)}
+              onClick={() => server.icon === 'mxplayer' ? handleMxPlayer(server.url) : handleOpen(server.url, server.inApp)}
               className="w-full flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:bg-muted/50 transition-colors"
             >
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">

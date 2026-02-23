@@ -343,6 +343,7 @@ export default function MovieDetails() {
         telegramUrl={movie.telegram_url}
         megaUrl={movie.mega_url}
         downloadUrl={(movie as any).download_url}
+        mxPlayerUrl={(movie as any).mx_player_url}
         type="play"
         movieInfo={{
           movieId: movie.id,
@@ -361,6 +362,7 @@ export default function MovieDetails() {
           telegramUrl={movie.telegram_url}
           megaUrl={movie.mega_url}
           downloadUrl={(movie as any).download_url}
+          mxPlayerUrl={(movie as any).mx_player_url}
           type="download"
           movieInfo={{
             movieId: movie.id,
