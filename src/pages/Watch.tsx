@@ -45,8 +45,9 @@ async function resolveDirectUrl(watchUrl: string): Promise<string> {
 
   let realUrl = srcMatch[1];
   if (realUrl.startsWith('/')) {
-    // Relative path from CF worker — build full CF worker URL for proxying
-    realUrl = 'https://tw.thewayofthedragg.workers.dev' + realUrl;
+    // Relative path — build full URL using the original page's origin
+    const origin = new URL(watchUrl).origin;
+    realUrl = origin + realUrl;
   }
 
   // Wrap the resolved video URL through the Supabase streaming proxy
