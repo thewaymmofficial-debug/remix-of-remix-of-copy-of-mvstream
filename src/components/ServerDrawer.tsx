@@ -62,7 +62,7 @@ export function ServerDrawer({
       const movieId = movieInfo?.movieId || '';
       navigate(`/watch?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}&movieId=${encodeURIComponent(movieId)}`);
     } else {
-      window.open(url, '_blank', 'noopener,noreferrer');
+      window.location.href = url;
     }
     onOpenChange(false);
   };
