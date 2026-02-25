@@ -1,44 +1,36 @@
 
 
-## Fix MX Player: Route Through Download Proxy
+## Plan: Replace "MX Player" with "External Server" (In-App Proxied Playback)
 
-### Problem
-The `mx_player_url` points to a Cloudflare Workers domain (`tw.thewayofthedragg.workers.dev`) which is blocked by Myanmar ISPs. MX Player on the user's device cannot reach it directly, causing "Can't play this link."
-
-### Solution
-Instead of passing the raw CF Workers URL to MX Player, construct a **Supabase download-proxy URL** that streams the video server-side. The download-proxy already supports `stream=1` mode which serves raw video bytes without `Content-Disposition: attachment` -- perfect for external players.
-
-The proxy URL format:
-```text
-https://icnfjixjohbxjxqbnnac.supabase.co/functions/v1/download-proxy?url=<encoded_cf_url>&stream=1
-```
-
-MX Player receives this URL, which serves a standard HTTP video stream it can play.
+### Summary
+Replace the MX Player integration with an "External Server" option. URLs like `https://av-f2l-bot.avbotz26.workers.dev/watch/32379/AV_BOTZ.mkv?hash=AgADEA` will play **in-app** through the existing Watch page, which already knows how to fetch the HTML page, extract the `<source src="...">` video URL, and stream it through the Supabase download-proxy to bypass Myanmar ISP blocks.
 
 ### Changes
 
-#### File: `src/components/ServerDrawer.tsx`
-- Update `handleMxPlayer` to wrap the video URL in the download-proxy with `stream=1`
-- The proxy URL becomes the video source for MX Player's intent URI
-- Keep the movie title in `S.title` extra data
-- Add a loading state while constructing the URL (instant, no async needed)
+#### 1. `src/components/ServerDrawer.tsx`
+- Remove `handleMxPlayer` function entirely (no more Android intent/MX Player logic)
+- Rename `'MX Player'` to `'External Server'` in the servers list
+- Change icon from `'mxplayer'` to `'external'`
+- Set `inApp: true` so it routes through the in-app Watch player
+- Remove the special `mxplayer` click handler check -- use standard `handleOpen` with `inApp: true`
+- The prop name `mxPlayerUrl` stays the same internally (maps to `mx_player_url` DB column)
 
-```text
-Before: intent:<cf-workers-url>#Intent;...
-After:  intent:<supabase-proxy-url>?url=<encoded-cf-url>&stream=1#Intent;...
-```
+#### 2. `src/pages/Watch.tsx`
+- Update `resolveDirectUrl` to handle the new `avbotz26.workers.dev` domain alongside the existing `thewayofthedragg.workers.dev` domain
+- When a relative path is extracted from the HTML, build the full URL using the original page's origin (not hardcoded to one CF worker domain)
 
-#### No other files need changes
-- The download-proxy edge function already handles streaming perfectly
-- The admin panel, MovieDetails, and database remain unchanged
+#### 3. `src/pages/admin/MoviesAdmin.tsx`
+- Rename label from "MX Player URL" to "External Server URL"
+- Update placeholder to `e.g. https://av-f2l-bot.avbotz26.workers.dev/watch/...`
 
-### Technical Details
+### How It Works (Flow)
+1. Admin adds External Server URL: `https://av-f2l-bot.avbotz26.workers.dev/watch/32379/AV_BOTZ.mkv?hash=AgADEA`
+2. User taps "External Server" in play drawer
+3. App navigates to `/watch?url=<encoded_url>&title=...`
+4. Watch page detects `/watch/` in URL, fetches the HTML through Vercel proxy, extracts `<source src="...">` direct video URL
+5. Streams video through Supabase download-proxy, bypassing ISP blocks
+6. Video plays in-app with full controls, seek support, and progress tracking
 
-The `handleMxPlayer` function will:
-1. Take the original video URL (CF Workers proxy)
-2. Construct the Supabase download-proxy URL: `https://<project>.supabase.co/functions/v1/download-proxy?url=${encodeURIComponent(originalUrl)}&stream=1`
-3. Pass this proxy URL to MX Player via the Android intent
-4. MX Player makes a standard HTTP GET to the proxy, which fetches from CF Workers server-side (bypassing ISP blocks) and streams the video back
-
-This leverages the existing infrastructure without any new edge functions or database changes.
+### Technical Detail
+The key fix in `Watch.tsx` line 49 currently hardcodes `tw.thewayofthedragg.workers.dev` for relative paths. This will be changed to dynamically use the origin from the original URL, so it works with any CF Workers domain.
 
