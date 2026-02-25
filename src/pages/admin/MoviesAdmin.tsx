@@ -811,17 +811,17 @@ export default function MoviesAdmin() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="mx_player_url">MX Player URL</Label>
+                <Label htmlFor="mx_player_url">External Server URL</Label>
                 <Input
                   id="mx_player_url"
                   value={formData.mx_player_url || ''}
                   onChange={(e) =>
                     setFormData({ ...formData, mx_player_url: e.target.value })
                   }
-                  placeholder="Direct video link (.mp4, .mkv, .m3u8)"
+                  placeholder="e.g. https://av-f2l-bot.avbotz26.workers.dev/watch/..."
                   className="bg-muted"
                 />
-                <p className="text-xs text-muted-foreground">Must be a direct file URL, not a proxy page. MX Player cannot follow redirects or browser-based auth.</p>
+                <p className="text-xs text-muted-foreground">Watch page URL from external server. Will be proxied and played in-app.</p>
               </div>
             </div>
 
