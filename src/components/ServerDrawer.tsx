@@ -116,7 +116,7 @@ export function ServerDrawer({
       ]
     : [
         ...(streamUrl ? [{ name: 'Main Server', url: streamUrl, icon: 'main' as const, inApp: true }] : []),
-        ...(mxPlayerUrl ? [{ name: 'External Server', url: mxPlayerUrl, icon: 'external' as const, inApp: false }] : []),
+        ...(mxPlayerUrl ? [{ name: 'External Server', url: mxPlayerUrl, icon: 'external' as const, inApp: false, realHref: true }] : []),
         ...(downloadUrl ? [{ name: 'Direct Download', url: downloadUrl, icon: 'download' as const, inApp: false }] : []),
         ...(telegramUrl ? [{ name: 'Telegram', url: telegramUrl, icon: 'telegram' as const, inApp: false }] : []),
         ...(megaUrl ? [{ name: 'MEGA', url: megaUrl, icon: 'mega' as const, inApp: false }] : []),
@@ -145,25 +145,57 @@ export function ServerDrawer({
             </DrawerTitle>
           </DrawerHeader>
           <div className="px-4 pb-8 space-y-3">
-            {servers.map((server) => (
-              <button
-                key={server.name}
-                onClick={() => handleOpen(server.url, server.inApp)}
-                className="w-full flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:bg-muted/50 transition-colors"
-              >
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <Server className="w-6 h-6 text-primary" />
-                </div>
-                <span className="flex-1 text-left font-medium text-foreground text-lg">
-                  {server.name}
-                </span>
-                {type === 'play' ? (
-                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                ) : (
-                  <ExternalLink className="w-5 h-5 text-muted-foreground" />
-                )}
-              </button>
-            ))}
+            {servers.map((server) => {
+              const sharedClassName = "w-full flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:bg-muted/50 transition-colors";
+              const inner = (
+                <>
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Server className="w-6 h-6 text-primary" />
+                  </div>
+                  <span className="flex-1 text-left font-medium text-foreground text-lg">
+                    {server.name}
+                  </span>
+                  {type === 'play' ? (
+                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                  ) : (
+                    <ExternalLink className="w-5 h-5 text-muted-foreground" />
+                  )}
+                </>
+              );
+
+              if ((server as any).realHref) {
+                return (
+                  <a
+                    key={server.name}
+                    href={server.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => {
+                      setRedirecting(true);
+                      onOpenChange(false);
+                      toast({
+                        title: "Opening external link...",
+                        description: "Tap back to return to Cineverse",
+                        duration: 5000,
+                      });
+                    }}
+                    className={sharedClassName}
+                  >
+                    {inner}
+                  </a>
+                );
+              }
+
+              return (
+                <button
+                  key={server.name}
+                  onClick={() => handleOpen(server.url, server.inApp)}
+                  className={sharedClassName}
+                >
+                  {inner}
+                </button>
+              );
+            })}
           </div>
         </DrawerContent>
       </Drawer>
