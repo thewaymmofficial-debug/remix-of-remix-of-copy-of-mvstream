@@ -25,6 +25,32 @@ function buildIntentUrl(url: string): string {
   }
 }
 
+function openExternal(url: string): void {
+  // Strategy 1: Anchor click with target="_blank" (most reliable in WebView)
+  try {
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } catch { /* continue */ }
+
+  // Strategy 2: Direct location (1.5s delay)
+  setTimeout(() => {
+    if (document.visibilityState !== 'visible') return;
+    try { window.location.href = url; } catch { /* continue */ }
+
+    // Strategy 3: Intent URL (another 1.2s)
+    setTimeout(() => {
+      if (document.visibilityState !== 'visible') return;
+      try { window.location.href = buildIntentUrl(url); } catch { /* continue */ }
+    }, 1200);
+  }, 1500);
+}
+
 interface ServerDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -97,7 +123,7 @@ export function ServerDrawer({
       return;
     }
 
-    // External link flow — show overlay, then redirect immediately (preserve user gesture in WebView)
+    // External link flow — show overlay, then use multi-strategy redirect
     setRedirecting(true);
     onOpenChange(false);
 
@@ -107,37 +133,19 @@ export function ServerDrawer({
       duration: 5000,
     });
 
-    const webView = isWebView();
-    const primaryUrl = webView ? buildIntentUrl(url) : url;
-    const fallbackUrl = webView ? url : buildIntentUrl(url);
+    // Use multi-strategy approach (anchor click → location → intent)
+    openExternal(url);
 
-    try {
-      window.location.href = primaryUrl;
-    } catch {
-      // ignore and continue to fallback checks
-    }
-
-    // If still visible, first attempt likely failed in-app; try fallback once
+    // Final safety: if still visible after all strategies, show error
     setTimeout(() => {
       if (document.visibilityState !== 'visible') return;
-
-      try {
-        window.location.href = fallbackUrl;
-      } catch {
-        // ignore and continue to final failure UI
-      }
-
-      // Final safety: if still visible, show error and remove overlay
-      setTimeout(() => {
-        if (document.visibilityState !== 'visible') return;
-        setRedirecting(false);
-        toast({
-          title: "Couldn't open link",
-          description: "Try opening in your browser",
-          variant: "destructive",
-        });
-      }, 1200);
-    }, 1500);
+      setRedirecting(false);
+      toast({
+        title: "Couldn't open link",
+        description: "Try opening in your browser",
+        variant: "destructive",
+      });
+    }, 4000);
   };
 
   const servers = type === 'download'
