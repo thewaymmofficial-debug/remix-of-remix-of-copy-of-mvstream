@@ -1,4 +1,5 @@
-import { Server, ChevronRight, Play, ExternalLink, Download } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Server, ChevronRight, Play, ExternalLink, Download, Loader2 } from 'lucide-react';
 import {
   Drawer,
   DrawerContent,
@@ -8,7 +9,21 @@ import {
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useDownloadManager } from '@/contexts/DownloadContext';
 import { useNavigate } from 'react-router-dom';
+import { toast } from '@/hooks/use-toast';
 
+function isWebView(): boolean {
+  const ua = navigator.userAgent || '';
+  return /wv|WebView/i.test(ua) || (ua.includes('Android') && ua.includes('Version/'));
+}
+
+function buildIntentUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return `intent://${parsed.host}${parsed.pathname}${parsed.search}#Intent;scheme=${parsed.protocol.replace(':', '')};action=android.intent.action.VIEW;end`;
+  } catch {
+    return url;
+  }
+}
 
 interface ServerDrawerProps {
   open: boolean;
@@ -43,6 +58,19 @@ export function ServerDrawer({
   const { t } = useLanguage();
   const { startDownload } = useDownloadManager();
   const navigate = useNavigate();
+  const [redirecting, setRedirecting] = useState(false);
+
+  // Clean up redirecting state if user navigates back
+  useEffect(() => {
+    if (!redirecting) return;
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        setRedirecting(false);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [redirecting]);
 
   const handleOpen = (url: string, useInAppPlayer: boolean = false) => {
     // In-app download with progress tracking
@@ -57,25 +85,54 @@ export function ServerDrawer({
         url: url,
       });
       navigate('/downloads');
-    } else if (useInAppPlayer && type === 'play') {
+      onOpenChange(false);
+      return;
+    }
+
+    if (useInAppPlayer && type === 'play') {
       const title = movieInfo?.title || 'Video';
       const movieId = movieInfo?.movieId || '';
       navigate(`/watch?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}&movieId=${encodeURIComponent(movieId)}`);
-    } else {
-      window.location.href = url;
+      onOpenChange(false);
+      return;
     }
+
+    // External link flow — show overlay, then redirect
+    setRedirecting(true);
     onOpenChange(false);
+
+    toast({
+      title: "Opening external link...",
+      description: "Tap back to return to Cineverse",
+      duration: 5000,
+    });
+
+    setTimeout(() => {
+      if (isWebView()) {
+        window.location.href = buildIntentUrl(url);
+      } else {
+        window.location.href = url;
+      }
+
+      // Safety: if still on page after 3s, redirect may have failed
+      setTimeout(() => {
+        setRedirecting(false);
+        toast({
+          title: "Couldn't open link",
+          description: "Try opening in your browser",
+          variant: "destructive",
+        });
+      }, 3000);
+    }, 300);
   };
 
   const servers = type === 'download'
     ? [
-        // In download mode: only show actual download sources, not the stream/watch page
         ...(downloadUrl ? [{ name: 'Main Server', url: downloadUrl, icon: 'download' as const, inApp: false }] : []),
         ...(telegramUrl ? [{ name: 'Telegram', url: telegramUrl, icon: 'telegram' as const, inApp: false }] : []),
         ...(megaUrl ? [{ name: 'MEGA', url: megaUrl, icon: 'mega' as const, inApp: false }] : []),
       ]
     : [
-        // In play mode: show streaming sources
         ...(streamUrl ? [{ name: 'Main Server', url: streamUrl, icon: 'main' as const, inApp: true }] : []),
         ...(mxPlayerUrl ? [{ name: 'External Server', url: mxPlayerUrl, icon: 'external' as const, inApp: false }] : []),
         ...(downloadUrl ? [{ name: 'Direct Download', url: downloadUrl, icon: 'download' as const, inApp: false }] : []),
@@ -83,41 +140,51 @@ export function ServerDrawer({
         ...(megaUrl ? [{ name: 'MEGA', url: megaUrl, icon: 'mega' as const, inApp: false }] : []),
       ];
 
-  if (servers.length === 0) return null;
+  if (servers.length === 0 && !redirecting) return null;
 
   const title = type === 'play' ? t('chooseServer') : t('chooseDownloader');
-  const ActionIcon = type === 'play' ? Play : Download;
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="bg-background">
-        <DrawerHeader className="text-left">
-          <DrawerTitle className="text-2xl font-bold text-foreground">
-            {title}
-          </DrawerTitle>
-        </DrawerHeader>
-        <div className="px-4 pb-8 space-y-3">
-          {servers.map((server) => (
-            <button
-              key={server.name}
-              onClick={() => handleOpen(server.url, server.inApp)}
-              className="w-full flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:bg-muted/50 transition-colors"
-            >
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <Server className="w-6 h-6 text-primary" />
-              </div>
-              <span className="flex-1 text-left font-medium text-foreground text-lg">
-                {server.name}
-              </span>
-              {type === 'play' ? (
-                <ChevronRight className="w-5 h-5 text-muted-foreground" />
-              ) : (
-                <ExternalLink className="w-5 h-5 text-muted-foreground" />
-              )}
-            </button>
-          ))}
+    <>
+      {/* Full-screen loading overlay */}
+      {redirecting && (
+        <div className="fixed inset-0 z-[100] bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center gap-4">
+          <Loader2 className="w-12 h-12 text-primary animate-spin" />
+          <p className="text-lg font-semibold text-foreground">Opening external link...</p>
+          <p className="text-sm text-muted-foreground">You'll be redirected to your browser</p>
         </div>
-      </DrawerContent>
-    </Drawer>
+      )}
+
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent className="bg-background">
+          <DrawerHeader className="text-left">
+            <DrawerTitle className="text-2xl font-bold text-foreground">
+              {title}
+            </DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 pb-8 space-y-3">
+            {servers.map((server) => (
+              <button
+                key={server.name}
+                onClick={() => handleOpen(server.url, server.inApp)}
+                className="w-full flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:bg-muted/50 transition-colors"
+              >
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <Server className="w-6 h-6 text-primary" />
+                </div>
+                <span className="flex-1 text-left font-medium text-foreground text-lg">
+                  {server.name}
+                </span>
+                {type === 'play' ? (
+                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                ) : (
+                  <ExternalLink className="w-5 h-5 text-muted-foreground" />
+                )}
+              </button>
+            ))}
+          </div>
+        </DrawerContent>
+      </Drawer>
+    </>
   );
 }
