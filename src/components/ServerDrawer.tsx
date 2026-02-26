@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Server, ChevronRight, Play, ExternalLink, Download, Loader2 } from 'lucide-react';
+import { buildBrowserIntentUrl } from '@/lib/externalLinks';
 import {
   Drawer,
   DrawerContent,
@@ -167,8 +168,7 @@ export function ServerDrawer({
                 return (
                   <a
                     key={server.name}
-                    href={server.url}
-                    target="_blank"
+                    href={buildBrowserIntentUrl(server.url)}
                     rel="noopener noreferrer"
                     onClick={() => {
                       setRedirecting(true);
