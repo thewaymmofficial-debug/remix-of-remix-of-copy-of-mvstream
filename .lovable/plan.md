@@ -1,36 +1,52 @@
 
 
-## Why It Still Doesn't Work
+## Problem
 
-The current `<a href="https://..." target="_blank">` is still being intercepted by the WebToApp WebView. WebToApp converters override **all** URL loading — including `target="_blank"` anchor taps — and keep navigation inside the WebView.
+The `intent://` href approach is also blocked by the WebToApp APK (com.w2a.bmob). The `onClick` fires (showing the loading overlay), but the WebView swallows the `intent://` navigation, so the user sees an infinite "Opening external link..." spinner with nothing happening.
 
-The one thing Android WebView **cannot** intercept is an `intent://` URL set directly as the `href` attribute of a real anchor tag. When the user physically taps an anchor with `href="intent://..."`, the Android system handles it before the WebView can intercept it.
+**Root cause**: This specific WebToApp converter intercepts ALL URL schemes including `intent://`. No code-only approach can force the system browser from inside this locked WebView.
 
-## Solution: Use Intent URL as the Actual href
+## Solution: Fallback Dialog with Copy Link
 
-For External Server, set the `<a>` tag's `href` to the `intent://` URL (built by `buildBrowserIntentUrl`) instead of the raw `https://` URL. This forces Android to route the tap to the system browser.
+Since we cannot force the browser open, we add a **timeout-based fallback**. If the user is still on the page 2 seconds after tapping "External Server", we replace the loading overlay with a dialog offering:
+- **Copy Link** button (uses `navigator.clipboard.writeText`)  
+- The URL displayed as selectable text (manual copy fallback)
+- A "Try Again" button that retries `window.location.href = intentUrl`
+
+The intent href stays as-is (it works on some devices), but we gracefully handle failure.
 
 ## Changes
 
 ### `src/components/ServerDrawer.tsx`
 
-1. Import `buildBrowserIntentUrl` from `@/lib/externalLinks`
-2. In the `realHref` anchor tag (line 170), change `href={server.url}` to `href={buildBrowserIntentUrl(server.url)}`
-3. Keep the raw URL as a data attribute for fallback display
+1. Add state: `fallbackUrl` (string | null) — when set, shows the fallback dialog instead of the loading spinner
+2. In the `realHref` anchor's `onClick`, start a 2-second timeout. If `document.visibilityState` is still `'visible'` after 2s, set `fallbackUrl = server.url` and `setRedirecting(false)`
+3. In the existing `useEffect` for `redirecting`, also clear `fallbackUrl` when visibility changes to `'visible'` (user came back from browser)
+4. Add a fallback dialog UI (rendered when `fallbackUrl` is set):
 
-```tsx
-// Before
-<a href={server.url} target="_blank" rel="noopener noreferrer" ...>
-
-// After
-<a href={buildBrowserIntentUrl(server.url)} rel="noopener noreferrer" ...>
+```text
+┌──────────────────────────────┐
+│  Couldn't open browser       │
+│                              │
+│  Copy the link below and     │
+│  paste it in your browser:   │
+│                              │
+│  [https://av-f2l-bot...]     │  ← selectable text, truncated
+│                              │
+│  [ 📋 Copy Link ]            │  ← primary button
+│  [ 🔄 Try Again ]  [ Close ] │
+└──────────────────────────────┘
 ```
 
-The `target="_blank"` is removed since intent URLs don't use it — Android handles intent URLs at the OS level.
+- **Copy Link**: `navigator.clipboard.writeText(fallbackUrl)`, show success toast
+- **Try Again**: retry `window.location.href = buildBrowserIntentUrl(fallbackUrl)`
+- **Close**: set `fallbackUrl = null`
+
+5. Clean up the timeout on unmount or if visibility changes
 
 ### No other files changed
 
 | File | Change |
 |------|--------|
-| `src/components/ServerDrawer.tsx` | Use `buildBrowserIntentUrl(url)` as `href` for External Server anchor |
+| `src/components/ServerDrawer.tsx` | Add timeout fallback dialog with Copy Link when intent:// fails |
 
