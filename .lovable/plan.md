@@ -1,32 +1,36 @@
 
 
-## Plan: Use Real Anchor Tags for External Server Button
+## Why It Still Doesn't Work
 
-### Why Current Approach Fails
-All 4 strategies use **programmatic** navigation (creating elements in JS and calling `.click()` or `.dispatchEvent()`). Android WebView's `shouldOverrideUrlLoading` distinguishes between **real user taps** and **programmatic** navigations. Programmatic clicks are silently swallowed. No amount of fallback strategies will work if they're all programmatic.
+The current `<a href="https://..." target="_blank">` is still being intercepted by the WebToApp WebView. WebToApp converters override **all** URL loading — including `target="_blank"` anchor taps — and keep navigation inside the WebView.
 
-### Solution
-For the **External Server** button specifically, render it as a **real `<a href target="_blank">` HTML element** instead of a `<button>` with an `onClick` handler. When the user physically taps a real anchor tag, Android WebView processes it through `shouldOverrideUrlLoading` which most WebToApp builders configure to open `_blank` links in the system browser.
+The one thing Android WebView **cannot** intercept is an `intent://` URL set directly as the `href` attribute of a real anchor tag. When the user physically taps an anchor with `href="intent://..."`, the Android system handles it before the WebView can intercept it.
 
-### Changes
+## Solution: Use Intent URL as the Actual href
 
-**`src/components/ServerDrawer.tsx`**
+For External Server, set the `<a>` tag's `href` to the `intent://` URL (built by `buildBrowserIntentUrl`) instead of the raw `https://` URL. This forces Android to route the tap to the system browser.
 
-1. Add a `realHref` property to server items — only set for External Server (`mxPlayerUrl`)
-2. For servers with `realHref`, render an `<a href={url} target="_blank" rel="noopener noreferrer">` element instead of a `<button>` with `onClick`
-3. The anchor tag gets the same styling as the button
-4. Keep the `onClick` on the anchor to still handle the overlay/toast UX, but **do not `preventDefault`** — let the browser handle the actual navigation natively
-5. All other servers (Main Server, Telegram, MEGA, Direct Download) keep their current `<button>` behavior unchanged
+## Changes
 
-```text
-Before (External Server):
-  <button onClick={() => handleOpen(url, false)}>External Server</button>
-  └── JS creates anchor → dispatchEvent → blocked by WebView
+### `src/components/ServerDrawer.tsx`
 
-After (External Server):
-  <a href={url} target="_blank" onClick={() => showOverlay()}>External Server</a>
-  └── Real user tap on real anchor → WebView opens system browser
+1. Import `buildBrowserIntentUrl` from `@/lib/externalLinks`
+2. In the `realHref` anchor tag (line 170), change `href={server.url}` to `href={buildBrowserIntentUrl(server.url)}`
+3. Keep the raw URL as a data attribute for fallback display
+
+```tsx
+// Before
+<a href={server.url} target="_blank" rel="noopener noreferrer" ...>
+
+// After
+<a href={buildBrowserIntentUrl(server.url)} rel="noopener noreferrer" ...>
 ```
 
-No changes to `src/lib/externalLinks.ts` or any other file.
+The `target="_blank"` is removed since intent URLs don't use it — Android handles intent URLs at the OS level.
+
+### No other files changed
+
+| File | Change |
+|------|--------|
+| `src/components/ServerDrawer.tsx` | Use `buildBrowserIntentUrl(url)` as `href` for External Server anchor |
 
