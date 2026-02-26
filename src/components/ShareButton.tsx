@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Share2, Copy, Check, Twitter, Facebook, MessageCircle } from 'lucide-react';
+import { openExternalUrl } from '@/lib/externalLinks';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -67,17 +68,17 @@ export function ShareButton({
 
   const shareToTwitter = () => {
     const twitterUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}`;
-    window.open(twitterUrl, '_blank', 'noopener,noreferrer');
+    openExternalUrl(twitterUrl);
   };
 
   const shareToFacebook = () => {
     const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
-    window.open(facebookUrl, '_blank', 'noopener,noreferrer');
+    openExternalUrl(facebookUrl);
   };
 
   const shareToWhatsApp = () => {
     const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareUrl)}`;
-    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+    openExternalUrl(whatsappUrl);
   };
 
   // Use native share on mobile if available

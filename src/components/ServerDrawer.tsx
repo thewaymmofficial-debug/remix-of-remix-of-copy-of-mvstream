@@ -10,54 +10,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useDownloadManager } from '@/contexts/DownloadContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
-
-function isWebView(): boolean {
-  const ua = navigator.userAgent || '';
-  return /wv|WebView/i.test(ua) || (ua.includes('Android') && ua.includes('Version/'));
-}
-
-function buildIntentUrl(url: string): string {
-  try {
-    const parsed = new URL(url);
-    return `intent://${parsed.host}${parsed.pathname}${parsed.search}#Intent;scheme=${parsed.protocol.replace(':', '')};action=android.intent.action.VIEW;end`;
-  } catch {
-    return url;
-  }
-}
-
-function openExternal(url: string): void {
-  // Strategy 1: window.open — triggers onCreateWindow in WebView
-  // which most WebToApp APKs route to the system browser
-  try {
-    const win = window.open(url, '_blank');
-    if (win) return; // Success — new window/tab opened
-  } catch { /* continue */ }
-
-  // Strategy 2: Anchor click (300ms delay)
-  setTimeout(() => {
-    if (document.visibilityState !== 'visible') return;
-    try {
-      const a = document.createElement('a');
-      a.href = url;
-      a.target = '_blank';
-      a.rel = 'noopener noreferrer';
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    } catch { /* continue */ }
-
-    // Strategy 3: Intent with browser_fallback_url (1s later)
-    setTimeout(() => {
-      if (document.visibilityState !== 'visible') return;
-      try {
-        const parsed = new URL(url);
-        const intentUrl = `intent://${parsed.host}${parsed.pathname}${parsed.search}#Intent;scheme=${parsed.protocol.replace(':', '')};action=android.intent.action.VIEW;S.browser_fallback_url=${encodeURIComponent(url)};end`;
-        window.location.href = intentUrl;
-      } catch { /* continue */ }
-    }, 1000);
-  }, 300);
-}
+import { openExternalUrl } from '@/lib/externalLinks';
 
 interface ServerDrawerProps {
   open: boolean;
@@ -141,19 +94,18 @@ export function ServerDrawer({
       duration: 5000,
     });
 
-    // Use multi-strategy approach (anchor click → location → intent)
-    openExternal(url);
-
-    // Final safety: if still visible after all strategies, show error
-    setTimeout(() => {
-      if (document.visibilityState !== 'visible') return;
-      setRedirecting(false);
-      toast({
-        title: "Couldn't open link",
-        description: "Try opening in your browser",
-        variant: "destructive",
-      });
-    }, 4000);
+    openExternalUrl(url, {
+      useIntent: true,
+      strategyDelay: 400,
+      onFail: () => {
+        setRedirecting(false);
+        toast({
+          title: "Couldn't open link",
+          description: "Try opening in your browser",
+          variant: "destructive",
+        });
+      },
+    });
   };
 
   const servers = type === 'download'

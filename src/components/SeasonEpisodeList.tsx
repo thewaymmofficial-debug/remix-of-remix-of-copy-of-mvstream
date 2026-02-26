@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, Play, Film, Clock, Download } from 'lucide-react';
+import { openExternalUrl } from '@/lib/externalLinks';
 import { Button } from '@/components/ui/button';
 import { useSeasonsWithEpisodes } from '@/hooks/useSeasons';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -57,7 +58,7 @@ export function SeasonEpisodeList({
     if (!userIsPremium) {
       onPremiumRequired();
     } else if (episode.stream_url) {
-      window.open(episode.stream_url, '_blank', 'noopener,noreferrer');
+      openExternalUrl(episode.stream_url);
     }
   };
 
