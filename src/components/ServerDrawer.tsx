@@ -26,29 +26,37 @@ function buildIntentUrl(url: string): string {
 }
 
 function openExternal(url: string): void {
-  // Strategy 1: Anchor click with target="_blank" (most reliable in WebView)
+  // Strategy 1: window.open — triggers onCreateWindow in WebView
+  // which most WebToApp APKs route to the system browser
   try {
-    const a = document.createElement('a');
-    a.href = url;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    const win = window.open(url, '_blank');
+    if (win) return; // Success — new window/tab opened
   } catch { /* continue */ }
 
-  // Strategy 2: Direct location (1.5s delay)
+  // Strategy 2: Anchor click (300ms delay)
   setTimeout(() => {
     if (document.visibilityState !== 'visible') return;
-    try { window.location.href = url; } catch { /* continue */ }
+    try {
+      const a = document.createElement('a');
+      a.href = url;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch { /* continue */ }
 
-    // Strategy 3: Intent URL (another 1.2s)
+    // Strategy 3: Intent with browser_fallback_url (1s later)
     setTimeout(() => {
       if (document.visibilityState !== 'visible') return;
-      try { window.location.href = buildIntentUrl(url); } catch { /* continue */ }
-    }, 1200);
-  }, 1500);
+      try {
+        const parsed = new URL(url);
+        const intentUrl = `intent://${parsed.host}${parsed.pathname}${parsed.search}#Intent;scheme=${parsed.protocol.replace(':', '')};action=android.intent.action.VIEW;S.browser_fallback_url=${encodeURIComponent(url)};end`;
+        window.location.href = intentUrl;
+      } catch { /* continue */ }
+    }, 1000);
+  }, 300);
 }
 
 interface ServerDrawerProps {
