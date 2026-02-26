@@ -1,58 +1,80 @@
 
 
-## Plan: Fix External Server Redirect in APK
+## Plan: Force "External Server" to Open in Device's Default Browser
 
 ### Problem
-The current redirect chain (intent:// → direct URL → error) is failing entirely in the WebToApp APK's WebView. Both `window.location.href` with intent:// and direct URLs are being silently blocked, resulting in the "Couldn't open link" error every time.
+All three redirect strategies (anchor click, `window.location.href`, `intent://`) are being silently swallowed by the WebToApp WebView. The anchor click with `target="_blank"` doesn't work because the WebView is configured to handle all navigations internally. Nothing actually leaves the app.
 
 ### Root Cause
-WebToApp APKs typically configure their WebView to intercept all navigations and keep them in-app. Both `window.location.href` and intent:// schemes get swallowed. However, **programmatic anchor tag clicks** with `target="_blank"` are often handled differently by WebView — they trigger the `shouldOverrideUrlLoading` callback which can open the system browser.
+WebToApp APKs override `shouldOverrideUrlLoading` to keep everything in-app. Programmatic anchor clicks and `window.location.href` are both intercepted. The intent URL format we're using (`action=android.intent.action.VIEW`) should theoretically work, but the WebView may not be forwarding intents at all.
 
-### Solution
-For the **External Server** button only, use a multi-strategy redirect approach:
+### Solution: Use `window.open()` as Primary Strategy
 
-1. **Strategy 1**: Create a temporary `<a>` element with `target="_blank"`, append it to the DOM, and `.click()` it. This is the most reliable method for WebView because Android's `shouldOverrideUrlLoading` intercepts anchor navigations differently.
-2. **Strategy 2** (fallback): Try `window.location.href` with the direct URL.
-3. **Strategy 3** (fallback): Try intent:// URL.
-4. **Final fallback**: If all fail after 2.7 seconds, hide the overlay and show the error toast.
+The key insight is that many WebToApp configurations **do** respect `window.open(url, '_system')` or `window.open(url, '_blank')` because it triggers a different WebView callback (`onCreateWindow`) which is often configured to open the system browser. We'll restructure the fallback chain:
 
-Keep the full-screen loading overlay for visual feedback during the attempt.
+**New fallback chain for External Server only:**
+
+1. **`window.open(url, '_blank')`** — This triggers `onCreateWindow` in WebView, which most WebToApp builders configure to open the system browser. This is synchronous and preserves the user gesture.
+2. **Anchor click fallback** (500ms) — If still visible, try the existing anchor-click approach.
+3. **Intent URL fallback** (1.5s) — If still visible, try `intent://` with `S.browser_fallback_url` parameter (tells Android to fall back to opening the URL in a browser if no app handles the intent).
+4. **Final error** (3s) — Show error toast with a "Copy Link" option so user can manually paste in browser.
 
 ### Changes: `src/components/ServerDrawer.tsx`
 
-Update `handleOpen` to use a new helper `openExternal(url)` that runs the multi-strategy chain:
+**Update `openExternal` function:**
 
 ```typescript
 function openExternal(url: string): void {
-  // Strategy 1: Anchor click (most reliable in WebView)
+  // Strategy 1: window.open — triggers onCreateWindow in WebView
+  // which most WebToApp APKs route to the system browser
   try {
-    const a = document.createElement('a');
-    a.href = url;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    const win = window.open(url, '_blank');
+    if (win) return; // Success — new window/tab opened
   } catch { /* continue */ }
 
-  // Strategy 2: Direct location (1.5s delay)
+  // Strategy 2: Anchor click (300ms delay)
   setTimeout(() => {
     if (document.visibilityState !== 'visible') return;
-    try { window.location.href = url; } catch { /* continue */ }
+    try {
+      const a = document.createElement('a');
+      a.href = url;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch { /* continue */ }
 
-    // Strategy 3: Intent URL (another 1.2s)
+    // Strategy 3: Intent with browser_fallback_url (1s later)
     setTimeout(() => {
       if (document.visibilityState !== 'visible') return;
-      try { window.location.href = buildIntentUrl(url); } catch { /* continue */ }
-    }, 1200);
-  }, 1500);
+      try {
+        const parsed = new URL(url);
+        const intentUrl = `intent://${parsed.host}${parsed.pathname}${parsed.search}#Intent;scheme=${parsed.protocol.replace(':', '')};action=android.intent.action.VIEW;S.browser_fallback_url=${encodeURIComponent(url)};end`;
+        window.location.href = intentUrl;
+      } catch { /* continue */ }
+    }, 1000);
+  }, 300);
 }
 ```
 
-The existing `handleOpen` function changes only for the external link path (non-inApp, non-download). Instead of the current primary/fallback logic, call `openExternal(url)`.
+Key differences from current code:
+- **`window.open` is now first** — this is the most likely to work in WebToApp because it uses a different WebView callback path
+- **Added `S.browser_fallback_url`** to the intent URL — this tells Android "if no app handles this intent, open this URL in a browser instead"
+- **`window.open` returns a reference** — if it returns a Window object, we know it worked and skip the rest
+- Timing tightened: 300ms → 1.3s → 3s total before error
 
-The overlay, toast, visibility listener, and final error timeout all remain as-is.
+**No changes to the overlay, toast, or visibility listener logic** — those stay exactly as they are.
 
-### No other files change.
+### Scope
+- **External Server button only** (play mode, `inApp: false`, icon `external`)
+- All other buttons (Telegram, MEGA, Direct Download, Main Server) keep current behavior
+- Loading overlay remains
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/components/ServerDrawer.tsx` | Rewrite `openExternal()` with `window.open` as primary strategy, add `S.browser_fallback_url` to intent |
 
