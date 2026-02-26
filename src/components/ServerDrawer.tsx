@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Server, ChevronRight, Play, ExternalLink, Download, Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Server, ChevronRight, Play, ExternalLink, Download, Loader2, Copy, RefreshCw, X } from 'lucide-react';
 import { buildBrowserIntentUrl } from '@/lib/externalLinks';
 import {
   Drawer,
@@ -12,6 +12,7 @@ import { useDownloadManager } from '@/contexts/DownloadContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 import { openExternalUrl } from '@/lib/externalLinks';
+import { Button } from '@/components/ui/button';
 
 interface ServerDrawerProps {
   open: boolean;
@@ -47,6 +48,8 @@ export function ServerDrawer({
   const { startDownload } = useDownloadManager();
   const navigate = useNavigate();
   const [redirecting, setRedirecting] = useState(false);
+  const [fallbackUrl, setFallbackUrl] = useState<string | null>(null);
+  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Clean up redirecting state if user navigates back
   useEffect(() => {
@@ -54,11 +57,22 @@ export function ServerDrawer({
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         setRedirecting(false);
+        if (fallbackTimerRef.current) {
+          clearTimeout(fallbackTimerRef.current);
+          fallbackTimerRef.current = null;
+        }
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [redirecting]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (fallbackTimerRef.current) clearTimeout(fallbackTimerRef.current);
+    };
+  }, []);
 
   const handleOpen = (url: string, useInAppPlayer: boolean = false) => {
     // In-app download with progress tracking
@@ -178,6 +192,13 @@ export function ServerDrawer({
                         description: "Tap back to return to Cineverse",
                         duration: 5000,
                       });
+                      // Fallback: if still visible after 2s, show copy dialog
+                      fallbackTimerRef.current = setTimeout(() => {
+                        if (document.visibilityState === 'visible') {
+                          setRedirecting(false);
+                          setFallbackUrl(server.url);
+                        }
+                      }, 2000);
                     }}
                     className={sharedClassName}
                   >
@@ -199,6 +220,62 @@ export function ServerDrawer({
           </div>
         </DrawerContent>
       </Drawer>
+
+      {/* Fallback dialog when intent:// fails */}
+      {fallbackUrl && (
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-sm p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-foreground">Couldn't open browser</h3>
+              <button onClick={() => setFallbackUrl(null)} className="text-muted-foreground hover:text-foreground">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Copy the link below and paste it in your browser:
+            </p>
+            <div className="bg-muted rounded-lg p-3 break-all text-xs text-foreground select-all font-mono">
+              {fallbackUrl}
+            </div>
+            <div className="flex flex-col gap-2">
+              <Button
+                onClick={() => {
+                  navigator.clipboard.writeText(fallbackUrl).then(() => {
+                    toast({ title: "Link copied!", description: "Paste it in your browser", duration: 3000 });
+                  }).catch(() => {
+                    toast({ title: "Couldn't copy", description: "Long-press the link above to copy manually", variant: "destructive" });
+                  });
+                }}
+                className="w-full gap-2"
+              >
+                <Copy className="w-4 h-4" />
+                Copy Link
+              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1 gap-2"
+                  onClick={() => {
+                    window.location.href = buildBrowserIntentUrl(fallbackUrl);
+                    setRedirecting(true);
+                    fallbackTimerRef.current = setTimeout(() => {
+                      if (document.visibilityState === 'visible') {
+                        setRedirecting(false);
+                      }
+                    }, 2000);
+                  }}
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Try Again
+                </Button>
+                <Button variant="ghost" className="flex-1" onClick={() => setFallbackUrl(null)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
