@@ -1,80 +1,134 @@
 
 
-## Plan: Force "External Server" to Open in Device's Default Browser
+## Plan: Centralized External Link Handling for WebToApp APK Compatibility
 
 ### Problem
-All three redirect strategies (anchor click, `window.location.href`, `intent://`) are being silently swallowed by the WebToApp WebView. The anchor click with `target="_blank"` doesn't work because the WebView is configured to handle all navigations internally. Nothing actually leaves the app.
+External links throughout the app (External Server, share buttons, episode play, info carousel, download player) do nothing when the app runs as a WebToApp APK. The WebView intercepts all navigation attempts (`window.open`, `window.location.href`) and keeps them in-app.
 
-### Root Cause
-WebToApp APKs override `shouldOverrideUrlLoading` to keep everything in-app. Programmatic anchor clicks and `window.location.href` are both intercepted. The intent URL format we're using (`action=android.intent.action.VIEW`) should theoretically work, but the WebView may not be forwarding intents at all.
+### Solution
+Create a centralized utility module `src/lib/externalLinks.ts` with robust multi-strategy redirect functions, then replace all scattered `window.open` calls across 5 files.
 
-### Solution: Use `window.open()` as Primary Strategy
+---
 
-The key insight is that many WebToApp configurations **do** respect `window.open(url, '_system')` or `window.open(url, '_blank')` because it triggers a different WebView callback (`onCreateWindow`) which is often configured to open the system browser. We'll restructure the fallback chain:
+### File 1: NEW `src/lib/externalLinks.ts`
 
-**New fallback chain for External Server only:**
+Utility module with the following exports:
 
-1. **`window.open(url, '_blank')`** — This triggers `onCreateWindow` in WebView, which most WebToApp builders configure to open the system browser. This is synchronous and preserves the user gesture.
-2. **Anchor click fallback** (500ms) — If still visible, try the existing anchor-click approach.
-3. **Intent URL fallback** (1.5s) — If still visible, try `intent://` with `S.browser_fallback_url` parameter (tells Android to fall back to opening the URL in a browser if no app handles the intent).
-4. **Final error** (3s) — Show error toast with a "Copy Link" option so user can manually paste in browser.
+- **`isAndroidWebView()`** — Detects WebView via user agent (`wv`, `WebView`, Android `Version/` pattern)
+- **`buildBrowserIntentUrl(url)`** — Builds `intent://` URL with `action=android.intent.action.VIEW`, `category=android.intent.category.BROWSABLE`, and `S.browser_fallback_url`
+- **`buildVideoIntentUrl(videoUrl, title)`** — Builds intent URL with `type=video/*` for generic video player chooser
+- **`buildPlayerIntentUrl(videoUrl, player, title)`** — Builds intent URL targeting specific packages:
+  - MX Player: `com.mxtech.videoplayer.ad`
+  - VLC: `org.videolan.vlc`
+  - PlayIt: `com.playit.videoplayer`
+- **`openExternalUrl(url, options?)`** — Main function with 4-strategy chain:
+  1. Anchor element with `target="_system"`, dispatch click event (preserves user gesture)
+  2. Android Intent URL with `browser_fallback_url` via `window.location.href`
+  3. `window.open(url, '_blank')` fallback
+  4. Direct `window.location.href = url` as last resort
+  - Accepts optional `{ useIntent, strategyDelay, onFail }` options
+  - Each strategy checks `document.visibilityState` before proceeding
+- **`openVideoExternal(videoUrl, options?)`** — For opening videos in external player apps using `buildVideoIntentUrl`, with fallback to `openExternalUrl`
 
-### Changes: `src/components/ServerDrawer.tsx`
+---
 
-**Update `openExternal` function:**
+### File 2: UPDATE `src/components/ServerDrawer.tsx`
 
-```typescript
-function openExternal(url: string): void {
-  // Strategy 1: window.open — triggers onCreateWindow in WebView
-  // which most WebToApp APKs route to the system browser
-  try {
-    const win = window.open(url, '_blank');
-    if (win) return; // Success — new window/tab opened
-  } catch { /* continue */ }
+- Import `openExternalUrl` from `@/lib/externalLinks`
+- Remove the local `isWebView()`, `buildIntentUrl()`, and `openExternal()` functions (lines 14-60)
+- In `handleOpen`, replace `openExternal(url)` call with `openExternalUrl(url, { useIntent: true, strategyDelay: 400, onFail: () => { setRedirecting(false); toast error } })`
+- Remove the separate `setTimeout` error handler at line 148-156 since `onFail` handles it
 
-  // Strategy 2: Anchor click (300ms delay)
-  setTimeout(() => {
-    if (document.visibilityState !== 'visible') return;
-    try {
-      const a = document.createElement('a');
-      a.href = url;
-      a.target = '_blank';
-      a.rel = 'noopener noreferrer';
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    } catch { /* continue */ }
+---
 
-    // Strategy 3: Intent with browser_fallback_url (1s later)
-    setTimeout(() => {
-      if (document.visibilityState !== 'visible') return;
-      try {
-        const parsed = new URL(url);
-        const intentUrl = `intent://${parsed.host}${parsed.pathname}${parsed.search}#Intent;scheme=${parsed.protocol.replace(':', '')};action=android.intent.action.VIEW;S.browser_fallback_url=${encodeURIComponent(url)};end`;
-        window.location.href = intentUrl;
-      } catch { /* continue */ }
-    }, 1000);
-  }, 300);
-}
+### File 3: UPDATE `src/pages/Downloads.tsx`
+
+- Import `openVideoExternal` from `@/lib/externalLinks`
+- Replace the external player button's onClick handler (lines 152-163) with: `openVideoExternal(dl.url, { player: 'generic', title: dl.title })`
+- This removes the inline intent URL building and provides proper fallback
+
+---
+
+### File 4: UPDATE `src/components/ShareButton.tsx`
+
+- Import `openExternalUrl` from `@/lib/externalLinks`
+- Replace `window.open(twitterUrl, '_blank', 'noopener,noreferrer')` in `shareToTwitter` with `openExternalUrl(twitterUrl)`
+- Replace `window.open(facebookUrl, '_blank', 'noopener,noreferrer')` in `shareToFacebook` with `openExternalUrl(facebookUrl)`
+- Replace `window.open(whatsappUrl, '_blank', 'noopener,noreferrer')` in `shareToWhatsApp` with `openExternalUrl(whatsappUrl)`
+
+---
+
+### File 5: UPDATE `src/components/SeasonEpisodeList.tsx`
+
+- Import `openExternalUrl` from `@/lib/externalLinks`
+- In `handlePlay` (line 60), replace `window.open(episode.stream_url, '_blank', 'noopener,noreferrer')` with `openExternalUrl(episode.stream_url)`
+
+---
+
+### File 6: UPDATE `src/components/InfoCarousel.tsx`
+
+- Import `openExternalUrl` from `@/lib/externalLinks`
+- In `handleClick` (line 84), replace `window.open(link, '_blank', 'noopener,noreferrer')` with `openExternalUrl(link)`
+
+---
+
+### Strategy Details
+
+The 4-strategy chain in `openExternalUrl`:
+
+```text
+User clicks button
+    │
+    ▼
+Strategy 1: Create <a href=url target="_system">, dispatchEvent(click)
+    │ (immediate, synchronous — best chance to preserve gesture context)
+    │
+    ├── visibilityState !== 'visible' → Success, stop
+    │
+    ▼ (after strategyDelay ms, default 400)
+Strategy 2: window.location.href = intent://...browser_fallback_url
+    │ (Android-specific, tells OS to open in browser)
+    │
+    ├── visibilityState !== 'visible' → Success, stop
+    │
+    ▼ (after another delay)
+Strategy 3: window.open(url, '_blank')
+    │
+    ├── returns Window → Success, stop
+    │
+    ▼ (after another delay)
+Strategy 4: window.location.href = url
+    │ (last resort — may navigate in-app but at least loads the URL)
+    │
+    ▼ (after final timeout)
+onFail callback or silent fail
 ```
 
-Key differences from current code:
-- **`window.open` is now first** — this is the most likely to work in WebToApp because it uses a different WebView callback path
-- **Added `S.browser_fallback_url`** to the intent URL — this tells Android "if no app handles this intent, open this URL in a browser instead"
-- **`window.open` returns a reference** — if it returns a Window object, we know it worked and skip the rest
-- Timing tightened: 300ms → 1.3s → 3s total before error
+### Intent URL Formats
 
-**No changes to the overlay, toast, or visibility listener logic** — those stay exactly as they are.
+**Browser intent:**
+```
+intent://{host}{pathname}{search}#Intent;scheme={protocol};action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;S.browser_fallback_url={encodedUrl};end
+```
 
-### Scope
-- **External Server button only** (play mode, `inApp: false`, icon `external`)
-- All other buttons (Telegram, MEGA, Direct Download, Main Server) keep current behavior
-- Loading overlay remains
+**Video player intent (generic):**
+```
+intent:{videoUrl}#Intent;action=android.intent.action.VIEW;type=video/*;S.browser_fallback_url={encodedUrl};end
+```
 
-### Files Changed
+**Video player intent (specific app):**
+```
+intent:{videoUrl}#Intent;package={packageName};type=video/*;S.browser_fallback_url={encodedUrl};end
+```
 
-| File | Change |
+### Files Changed Summary
+
+| File | Action |
 |------|--------|
-| `src/components/ServerDrawer.tsx` | Rewrite `openExternal()` with `window.open` as primary strategy, add `S.browser_fallback_url` to intent |
+| `src/lib/externalLinks.ts` | **Create** — centralized external link utilities |
+| `src/components/ServerDrawer.tsx` | **Update** — use `openExternalUrl`, remove local helpers |
+| `src/pages/Downloads.tsx` | **Update** — use `openVideoExternal` for player button |
+| `src/components/ShareButton.tsx` | **Update** — use `openExternalUrl` for share links |
+| `src/components/SeasonEpisodeList.tsx` | **Update** — use `openExternalUrl` for episode play |
+| `src/components/InfoCarousel.tsx` | **Update** — use `openExternalUrl` for slide links |
 
