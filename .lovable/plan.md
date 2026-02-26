@@ -1,109 +1,58 @@
 
 
-## Plan: External Link Loading Overlay + APK-Compatible Redirect (ServerDrawer)
+## Plan: Fix External Server Redirect in APK
 
 ### Problem
-1. When users tap External Server / Telegram / MEGA / Direct Download in the ServerDrawer, there is no visual feedback -- the page seems frozen for a moment then suddenly blinks to the external site.
-2. In the WebToApp APK, `window.location.href` does not always work for external URLs. The WebView silently ignores clicks, and users see nothing happening.
-3. There is no "back to app" hint after redirecting.
+The current redirect chain (intent:// → direct URL → error) is failing entirely in the WebToApp APK's WebView. Both `window.location.href` with intent:// and direct URLs are being silently blocked, resulting in the "Couldn't open link" error every time.
+
+### Root Cause
+WebToApp APKs typically configure their WebView to intercept all navigations and keep them in-app. Both `window.location.href` and intent:// schemes get swallowed. However, **programmatic anchor tag clicks** with `target="_blank"` are often handled differently by WebView — they trigger the `shouldOverrideUrlLoading` callback which can open the system browser.
 
 ### Solution
+For the **External Server** button only, use a multi-strategy redirect approach:
 
-#### 1. `src/components/ServerDrawer.tsx` -- Full rewrite of `handleOpen` for external links
+1. **Strategy 1**: Create a temporary `<a>` element with `target="_blank"`, append it to the DOM, and `.click()` it. This is the most reliable method for WebView because Android's `shouldOverrideUrlLoading` intercepts anchor navigations differently.
+2. **Strategy 2** (fallback): Try `window.location.href` with the direct URL.
+3. **Strategy 3** (fallback): Try intent:// URL.
+4. **Final fallback**: If all fail after 2.7 seconds, hide the overlay and show the error toast.
 
-**Loading overlay**: When an external (non in-app) link is tapped:
-- Show a full-screen overlay with a spinner and message: "Opening external link..."
-- Close the drawer immediately so users see the overlay
+Keep the full-screen loading overlay for visual feedback during the attempt.
 
-**APK-compatible redirect with fallback chain**:
-```text
-1. Detect WebView → try Android intent:// URL
-2. If not WebView → use window.location.href
-3. After 3 seconds, if still on page → show error toast with "Open in browser" fallback
-```
+### Changes: `src/components/ServerDrawer.tsx`
 
-The intent URL format for generic URLs:
-```
-intent://{host}{path}{search}#Intent;scheme={http/https};action=android.intent.action.VIEW;end
-```
-
-**Back-to-app toast**: After initiating the redirect, show a toast: "Tap back to return to Cineverse" that persists for 5 seconds.
-
-**New state**: Add `redirecting` state + `redirectLabel` to track which server is being opened. Render a fixed overlay when `redirecting` is true.
-
-#### 2. WebView detection utility
-
-Add a small helper function `isWebView()` inside ServerDrawer (or reuse from DownloadContext if already exported):
-```typescript
-function isWebView(): boolean {
-  const ua = navigator.userAgent || '';
-  return /wv|WebView/i.test(ua) || (ua.includes('Android') && ua.includes('Version/'));
-}
-```
-
-#### 3. Intent URL builder
+Update `handleOpen` to use a new helper `openExternal(url)` that runs the multi-strategy chain:
 
 ```typescript
-function buildIntentUrl(url: string): string {
-  const parsed = new URL(url);
-  return `intent://${parsed.host}${parsed.pathname}${parsed.search}#Intent;scheme=${parsed.protocol.replace(':', '')};action=android.intent.action.VIEW;end`;
-}
-```
+function openExternal(url: string): void {
+  // Strategy 1: Anchor click (most reliable in WebView)
+  try {
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } catch { /* continue */ }
 
-#### 4. Redirect flow detail
-
-```typescript
-const handleOpen = (url: string, inApp: boolean) => {
-  if (inApp) {
-    // existing navigate to /watch
-    onOpenChange(false);
-    return;
-  }
-  if (type === 'download' && movieInfo) {
-    // existing download flow
-    onOpenChange(false);
-    return;
-  }
-
-  // External link flow
-  setRedirecting(true);
-  setRedirectLabel(url);
-  onOpenChange(false); // close drawer, show overlay
-
-  // Show "back to app" toast
-  toast({ title: "Opening external link...", description: "Tap back to return to Cineverse" });
-
+  // Strategy 2: Direct location (1.5s delay)
   setTimeout(() => {
-    if (isWebView()) {
-      // Try intent first for WebView/APK
-      window.location.href = buildIntentUrl(url);
-    } else {
-      window.location.href = url;
-    }
+    if (document.visibilityState !== 'visible') return;
+    try { window.location.href = url; } catch { /* continue */ }
 
-    // Safety timeout: if still on page after 3s, hide overlay and show error
+    // Strategy 3: Intent URL (another 1.2s)
     setTimeout(() => {
-      setRedirecting(false);
-      // If we're still here, the redirect may have failed
-      toast({ title: "Couldn't open link", description: "Try opening in your browser", variant: "destructive" });
-    }, 3000);
-  }, 300); // small delay so overlay renders first
-};
+      if (document.visibilityState !== 'visible') return;
+      try { window.location.href = buildIntentUrl(url); } catch { /* continue */ }
+    }, 1200);
+  }, 1500);
+}
 ```
 
-#### 5. Overlay UI (inside ServerDrawer return)
+The existing `handleOpen` function changes only for the external link path (non-inApp, non-download). Instead of the current primary/fallback logic, call `openExternal(url)`.
 
-A fixed full-screen overlay rendered when `redirecting === true`:
-- Black semi-transparent background
-- Centered spinner icon (Loader2 from lucide, spinning)
-- Text: "Opening external link..."
-- Subtext: "You'll be redirected to your browser"
+The overlay, toast, visibility listener, and final error timeout all remain as-is.
 
-### Files Changed
-
-| File | Change |
-|------|--------|
-| `src/components/ServerDrawer.tsx` | Add loading overlay, WebView detection, intent fallback, back-to-app toast |
-
-### No other files need changes. The Sonner toaster is already in App.tsx. The overlay is self-contained within ServerDrawer.
+### No other files change.
 
