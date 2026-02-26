@@ -97,7 +97,7 @@ export function ServerDrawer({
       return;
     }
 
-    // External link flow — show overlay, then redirect
+    // External link flow — show overlay, then redirect immediately (preserve user gesture in WebView)
     setRedirecting(true);
     onOpenChange(false);
 
@@ -107,23 +107,37 @@ export function ServerDrawer({
       duration: 5000,
     });
 
+    const webView = isWebView();
+    const primaryUrl = webView ? buildIntentUrl(url) : url;
+    const fallbackUrl = webView ? url : buildIntentUrl(url);
+
+    try {
+      window.location.href = primaryUrl;
+    } catch {
+      // ignore and continue to fallback checks
+    }
+
+    // If still visible, first attempt likely failed in-app; try fallback once
     setTimeout(() => {
-      if (isWebView()) {
-        window.location.href = buildIntentUrl(url);
-      } else {
-        window.location.href = url;
+      if (document.visibilityState !== 'visible') return;
+
+      try {
+        window.location.href = fallbackUrl;
+      } catch {
+        // ignore and continue to final failure UI
       }
 
-      // Safety: if still on page after 3s, redirect may have failed
+      // Final safety: if still visible, show error and remove overlay
       setTimeout(() => {
+        if (document.visibilityState !== 'visible') return;
         setRedirecting(false);
         toast({
           title: "Couldn't open link",
           description: "Try opening in your browser",
           variant: "destructive",
         });
-      }, 3000);
-    }, 300);
+      }, 1200);
+    }, 1500);
   };
 
   const servers = type === 'download'
