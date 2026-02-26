@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useInfoSlides } from '@/hooks/useInfoSlides';
 import { proxyImageUrl } from '@/lib/utils';
+import { openExternalUrl } from '@/lib/externalLinks';
 
 export function InfoCarousel() {
   const [current, setCurrent] = useState(0);
@@ -81,7 +82,7 @@ export function InfoCarousel() {
     if (!slide.redirect_link) return;
     const link = slide.redirect_link;
     if (link.startsWith('http://') || link.startsWith('https://')) {
-      window.open(link, '_blank', 'noopener,noreferrer');
+      openExternalUrl(link);
     } else {
       navigate(link);
     }

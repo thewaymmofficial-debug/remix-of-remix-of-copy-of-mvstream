@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, FileText, Trash2, Sun, Moon, AlertCircle, RotateCcw, Pause, Play, ExternalLink } from 'lucide-react';
+import { openVideoExternal } from '@/lib/externalLinks';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useDownloadManager } from '@/contexts/DownloadContext';
@@ -149,18 +150,7 @@ export default function Downloads() {
                   {/* Open with external player (completed downloads) */}
                   {dl.status === 'complete' && dl.url && (
                     <button
-                      onClick={() => {
-                        const videoUrl = dl.url;
-                        try {
-                          // Build Android Intent URI to VIEW the video directly in a player
-                          const urlObj = new URL(videoUrl);
-                          const intentUrl = `intent://${urlObj.host}${urlObj.pathname}${urlObj.search}#Intent;scheme=${urlObj.protocol.replace(':', '')};action=android.intent.action.VIEW;type=video/*;end`;
-                          window.location.href = intentUrl;
-                        } catch {
-                          // Fallback for non-Android or if intent fails
-                          window.open(videoUrl, '_blank');
-                        }
-                      }}
+                      onClick={() => openVideoExternal(dl.url, { player: 'generic', title: dl.title })}
                       className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
                       title="Open with external player"
                     >
